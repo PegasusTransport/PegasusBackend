@@ -11,6 +11,7 @@ namespace PegasusBackend
 
             // Add services to the container.
             builder.Services.AddConnectionString(builder.Configuration);
+            builder.Services.AddApplicationServices(); // Alla DIs ska in hit!
 
 
             builder.Services.AddControllers();

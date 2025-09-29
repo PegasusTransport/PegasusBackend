@@ -1,5 +1,6 @@
-
 using RestrurantPG.Configurations;
+using Scalar.AspNetCore;
+using Microsoft.OpenApi.Models;
 
 namespace PegasusBackend
 {
@@ -9,30 +10,41 @@ namespace PegasusBackend
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
             builder.Services.AddConnectionString(builder.Configuration);
             builder.Services.AddApplicationServices(); // Alla DIs ska in hit!
 
-
             builder.Services.AddControllers();
-
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "Pegasus Backend API",
+                    Version = "v1"
+                });
+            });
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Pegasus Backend API v1");
+                });
+
+                app.MapScalarApiReference(options =>
+                {
+                    options.Title = "Pegasus backend";
+                    options.Theme = ScalarTheme.BluePlanet;
+                    options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
+                    options.OpenApiRoutePattern = "/swagger/v1/swagger.json";
+                });
             }
 
             app.UseHttpsRedirection();
-
             app.UseAuthorization();
-
-
             app.MapControllers();
 
             app.Run();

@@ -25,10 +25,16 @@ namespace PegasusBackend.Models
         public DateTime PickUpDateTime { get; set; }
 
         [Required]
-        public double PickUpCoordinate { get; set; }
+        public double PickUpLatitude { get; set; }
 
         [Required]
-        public double DropOffCoordinate { get; set; }
+        public double PickUpLongitude { get; set; }
+
+        [Required]
+        public double DropOffLatitude { get; set; }
+
+        [Required]
+        public double DropOffLongitude { get; set; }
 
         [MaxLength(20)]
         public string? Flightnumber { get; set; }

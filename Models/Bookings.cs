@@ -24,11 +24,21 @@ namespace PegasusBackend.Models
         [Required]
         public DateTime PickUpDateTime { get; set; }
 
-        [Required]
-        public double PickUpCoordinate { get; set; }
+        //public string PickUpAdress { get; set; } Google maps api skickar med adress också. 
 
         [Required]
-        public double DropOffCoordinate { get; set; }
+        public double PickUpLatitude { get; set; }
+
+        [Required]
+        public double PickUpLongitude { get; set; }
+
+        //public string DropOffAdress { get; set; } Google maps api skickar med adress också. 
+
+        [Required]
+        public double DropOffLatitude { get; set; }
+
+        [Required]
+        public double DropOffLongitude { get; set; }
 
         [MaxLength(20)]
         public string? Flightnumber { get; set; }

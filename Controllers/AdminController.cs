@@ -27,7 +27,7 @@ namespace PegasusBackend.Controllers
                 return NotFound("Inga priser hittades i databasen!");
             }
 
-            return Ok(prices.TaxiSettings);
+            return Ok(prices.Data);
         }
 
         [HttpPost("CreateNewTaxiPrices")]
@@ -40,7 +40,7 @@ namespace PegasusBackend.Controllers
                 return BadRequest("Kunde inte uppdatera Taxameter priset.");
             }
 
-            return Ok(newSettings.TaxiSettings);
+            return Ok(newSettings.Data);
         }
 
 

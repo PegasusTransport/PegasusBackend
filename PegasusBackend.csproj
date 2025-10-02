@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="DTOs\Records\**" />
+    <Content Remove="DTOs\Records\**" />
+    <EmbeddedResource Remove="DTOs\Records\**" />
+    <None Remove="DTOs\Records\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.20" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
@@ -23,7 +30,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DTOs\Records\" />
     <Folder Include="Migrations\" />
   </ItemGroup>
 

@@ -24,7 +24,7 @@ namespace PegasusBackend.Controllers
                 return BadRequest("Kunde inte kalkylera priset.");
             }
 
-            return Ok(result.Price);
+            return Ok(result);
         }
     }
 }

@@ -1,12 +1,13 @@
 ﻿using PegasusBackend.DTOs;
 using PegasusBackend.Models;
+using PegasusBackend.Responses;
 
 namespace PegasusBackend.Services.Interfaces
 {
     public interface IAdminService
     {
-        Task<(bool Success, TaxiSettings? TaxiSettings, string Massage)> GetTaxiPricesAsync();
-        Task<(bool Success, TaxiSettings? TaxiSettings, string Massage)> CreatePricesAsync(NewTaxiSettingsDTO taxiSettingsDTO);
+        Task<ServiceResponse<TaxiSettings>> GetTaxiPricesAsync();
+        Task<ServiceResponse<TaxiSettings>> CreatePricesAsync(NewTaxiSettingsDTO taxiSettingsDTO);
 
     }
 }

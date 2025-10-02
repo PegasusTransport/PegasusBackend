@@ -1,6 +1,7 @@
 ﻿using PegasusBackend.DTOs;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
+using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 
 namespace PegasusBackend.Services.Implementations
@@ -14,23 +15,30 @@ namespace PegasusBackend.Services.Implementations
             _adminRepo = adminRepo;
         }
 
-        public async Task<(bool Success, TaxiSettings? TaxiSettings, string Massage)> GetTaxiPricesAsync()
+        public async Task<ServiceResponse<TaxiSettings>> GetTaxiPricesAsync()
         {
             var taxiSettings = await _adminRepo.GetTaxiPricesAsync();
 
             if (taxiSettings is null)
             {
-                return (false, null, "Inga prislistor hittades i databasen");
+                return ServiceResponse<TaxiSettings>.FailResponse(
+                    "Inga prislistor hittades i databasen"
+                );
             }
 
-            return (true, taxiSettings, "Hämtade den senaste prislistan.");
+            return ServiceResponse<TaxiSettings>.SuccessResponse(
+                taxiSettings,
+                "Hämtade den senaste prislistan."
+            );
         }
 
-        public async Task<(bool Success, TaxiSettings? TaxiSettings, string Massage)> CreatePricesAsync(NewTaxiSettingsDTO taxiSettingsDTO)
+        public async Task<ServiceResponse<TaxiSettings>> CreatePricesAsync(NewTaxiSettingsDTO taxiSettingsDTO)
         {
             if (taxiSettingsDTO == null)
             {
-                return (false, null, "Inga nya priser skickades in.");
+                return ServiceResponse<TaxiSettings>.FailResponse(
+                    "Inga nya priser skickades in."
+                );
             }
 
             var newPrices = new TaxiSettings
@@ -42,16 +50,19 @@ namespace PegasusBackend.Services.Implementations
                 UpdatedAt = DateTime.UtcNow
             };
 
-
             var newTaxiSettings = await _adminRepo.CreateTaxiPricesAsync(newPrices);
 
             if (newTaxiSettings == null)
             {
-                return (false, null, "Kunde inte uppdatera prislistan.");
+                return ServiceResponse<TaxiSettings>.FailResponse(
+                    "Kunde inte uppdatera prislistan."
+                );
             }
 
-            return (true, newTaxiSettings, "Prislistan har uppdaterats.");
+            return ServiceResponse<TaxiSettings>.SuccessResponse(
+                newTaxiSettings,
+                "Prislistan har uppdaterats."
+            );
         }
-
     }
 }

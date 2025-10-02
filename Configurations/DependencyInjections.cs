@@ -13,6 +13,8 @@ namespace RestrurantPG.Configurations
             services.AddScoped<IAdminRepo, AdminRepo>();
             services.AddScoped<IAdminService, AdminService>();
 
+            services.AddScoped<IPriceService, PriceService>();
+
             return services;
         }
     }

@@ -22,4 +22,9 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="DTOs\Records\" />
+    <Folder Include="Migrations\" />
+  </ItemGroup>
+
 </Project>

@@ -1,4 +1,5 @@
-﻿using PegasusBackend.Helpers.ZoneHelper;
+﻿using PegasusBackend.DTOs;
+using PegasusBackend.Helpers.ZoneHelper;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Services.Interfaces;
 
@@ -52,18 +53,8 @@ namespace PegasusBackend.Services.Implementations
         }
 
 
-
-        public async Task<(bool Success, decimal? Price, string Massange)> CalculateTotalPriceAsync(
-            string pickupAdress,
-            string dropoffAdress,
-            decimal distanceKm,
-            decimal durationMinutes,
-            string? firstStopAdress,
-            decimal? firstStopDistanceKm,
-            decimal? firstStopDurationMinutes,
-            string? secondStopAdress,
-            decimal? secondStopDistanceKm,
-            decimal? secondStopDurationMinutes)
+        // Ta emot lista av adresser istället för att få 3 adresser. Då kan man ha valfri antal stopp!!
+        public async Task<(bool Success, decimal? Price, string Massange)> CalculateTotalPriceAsync(PriceCalculationRequestDto Dto)
         {
             var prices = await _adminRepo.GetTaxiPricesAsync();
 
@@ -74,24 +65,35 @@ namespace PegasusBackend.Services.Implementations
 
             var zonePrice = prices.ZonePrice;
 
-            if (firstStopAdress is null)
+            if (Dto.FirstStopAdress is null)
             {
-                var totalPrice = await StopPriceCalculator(pickupAdress.ToLower().Trim(), dropoffAdress.ToLower().Trim(), durationMinutes, distanceKm, zonePrice);
+                var totalPrice = await StopPriceCalculator(Dto.PickupAdress.ToLower().Trim(), Dto.DropoffAdress.ToLower().Trim(), Dto.LastDurationMinutes, Dto.LastDistanceKm, zonePrice);
                 return (true, totalPrice.Price, "Pris beräknat utan stopp.");
             }
 
             decimal total = 0;
 
-            // Måste räkna mellan första stopp till sista stopp. 
-            
+            // Räknar mellan pickup till stopp, och stopp till dropoff.  
+            var FirstPart = await StopPriceCalculator(Dto.PickupAdress.ToLower().Trim(), Dto.FirstStopAdress.ToLower().Trim(), Dto.FirstStopDurationMinutes, Dto.FirstStopDistanceKm, zonePrice);
+           
+
+            total += FirstPart.Price ?? 0;
 
             // om andra stopp inte är null....
+            if (Dto.SecondStopAdress is not null)
+            {
+ 
+                var secondPart = await StopPriceCalculator(Dto.FirstStopAdress.ToLower().Trim(), Dto.SecondStopAdress.ToLower().Trim(), Dto.SecondStopDurationMinutes, Dto.SecondStopDistanceKm, zonePrice);
+                var thirdPart = await StopPriceCalculator(Dto.SecondStopAdress.ToLower().Trim(), Dto.DropoffAdress.ToLower().Trim(), Dto.LastDurationMinutes, Dto.LastDistanceKm, zonePrice);
+                total += thirdPart.Price ?? 0 + secondPart.Price ?? 0; 
+            }
+            else
+            {
+                var secondPart = await StopPriceCalculator(Dto.FirstStopAdress.ToLower().Trim(), Dto.DropoffAdress.ToLower().Trim(), Dto.LastDurationMinutes, Dto.LastDistanceKm, zonePrice);
+                total += secondPart.Price ?? 0;
+            }
 
-            // räkna andra segment från första stopp till andra stopp och andra stopp till dropoff. 
-
-
-
-            return (true, total, "Pris beräknat med stopp.");
+                return (true, total, "Pris beräknat med stopp.");
         }
 
     }

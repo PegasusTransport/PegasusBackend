@@ -1,4 +1,5 @@
-﻿using PegasusBackend.Models;
+﻿using PegasusBackend.DTOs;
+using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Services.Interfaces;
 
@@ -13,33 +14,43 @@ namespace PegasusBackend.Services.Implementations
             _adminRepo = adminRepo;
         }
 
-        public async Task<(bool Success, TaxiSettings? taxiSettings, string Massage)> GetTaxiPricesAsync()
+        public async Task<(bool Success, TaxiSettings? TaxiSettings, string Massage)> GetTaxiPricesAsync()
         {
-            var prices = await _adminRepo.GetTaxiPricesAsync();
+            var taxiSettings = await _adminRepo.GetTaxiPricesAsync();
 
-            if (prices is null)
+            if (taxiSettings is null)
             {
                 return (false, null, "Inga prislistor hittades i databasen");
             }
 
-            return (true, prices, "Hämtade den senaste prislistan.");
+            return (true, taxiSettings, "Hämtade den senaste prislistan.");
         }
 
-        public async Task<(bool Success, TaxiSettings? taxiSettings, string Massage)> CreatePricesAsync(TaxiSettings newSettings)
+        public async Task<(bool Success, TaxiSettings? TaxiSettings, string Massage)> CreatePricesAsync(NewTaxiSettingsDTO taxiSettingsDTO)
         {
-            if (newSettings == null)
+            if (taxiSettingsDTO == null)
             {
                 return (false, null, "Inga nya priser skickades in.");
             }
 
-            var newPrices = await _adminRepo.CreateTaxiPricesAsync(newSettings);
+            var newPrices = new TaxiSettings
+            {
+                ZonePrice = taxiSettingsDTO.ZonePrice,
+                KmPrice = taxiSettingsDTO.KmPrice,
+                StartPrice = taxiSettingsDTO.StartPrice,
+                MinutePrice = taxiSettingsDTO.MinutePrice,
+                UpdatedAt = DateTime.UtcNow
+            };
 
-            if (newPrices == null)
+
+            var newTaxiSettings = await _adminRepo.CreateTaxiPricesAsync(newPrices);
+
+            if (newTaxiSettings == null)
             {
                 return (false, null, "Kunde inte uppdatera prislistan.");
             }
 
-            return (true, newPrices, "Prislistan har uppdaterats.");
+            return (true, newTaxiSettings, "Prislistan har uppdaterats.");
         }
 
     }

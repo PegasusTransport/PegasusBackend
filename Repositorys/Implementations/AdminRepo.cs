@@ -25,7 +25,6 @@ namespace PegasusBackend.Repositorys.Implementations
 
         public async Task<TaxiSettings?> CreateTaxiPricesAsync(TaxiSettings newSettings)
         {
-            newSettings.UpdatedAt = DateTime.UtcNow;
             _dbContext.TaxiSettings.Add(newSettings);
             await _dbContext.SaveChangesAsync();
             return newSettings;

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PegasusBackend.Data;
 
@@ -11,9 +12,11 @@ using PegasusBackend.Data;
 namespace PegasusBackend.Migrations
 {
     [DbContext(typeof(AppDBContext))]
-    partial class AppDBContextModelSnapshot : ModelSnapshot
+    [Migration("20251001121426_test2")]
+    partial class test2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -158,36 +161,6 @@ namespace PegasusBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("Drivers");
-                });
-
-            modelBuilder.Entity("PegasusBackend.Models.TaxiSettings", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("KmPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("MinutePrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("StartPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<decimal>("ZonePrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("TaxiSettings");
                 });
 
             modelBuilder.Entity("PegasusBackend.Models.Users", b =>

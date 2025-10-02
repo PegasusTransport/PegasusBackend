@@ -14,6 +14,7 @@ namespace PegasusBackend.Data
         public DbSet<Customers> Customers { get; set; }
         public DbSet<Cars> Cars { get; set; }
         public DbSet<Bookings> Bookings { get; set; }
+        public DbSet<TaxiSettings> TaxiSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -22,6 +23,8 @@ namespace PegasusBackend.Data
             var user = modelBuilder.Entity<Users>();
             var driver = modelBuilder.Entity<Drivers>();
             var customer = modelBuilder.Entity<Customers>();
+            var taxiSettings = modelBuilder.Entity<TaxiSettings>();
+
 
             user
                 .HasOne(u => u.Driver)
@@ -48,6 +51,25 @@ namespace PegasusBackend.Data
                 .WithOne(b => b.Driver)
                 .HasForeignKey(b => b.DriverIdFK);
 
+            taxiSettings
+                .Property(p => p.KmPrice)
+                .HasColumnType("decimal(18,2)");
+
+            taxiSettings
+                .Property(p => p.MinutePrice)
+                .HasColumnType("decimal(18,2)");
+
+            taxiSettings
+                .Property(p => p.StartPrice)
+                .HasColumnType("decimal(18,2)");
+
+            taxiSettings
+                .Property(p => p.ZonePrice)
+                .HasColumnType("decimal(18,2)");
+
+            taxiSettings
+                .Property(p => p.UpdatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
         }
     }
 }

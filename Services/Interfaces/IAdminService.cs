@@ -1,7 +1,11 @@
-﻿namespace PegasusBackend.Services.Interfaces
+﻿using PegasusBackend.Models;
+
+namespace PegasusBackend.Services.Interfaces
 {
     public interface IAdminService
     {
-        Task<(bool Success, Object? objekt, string Massage)> adminServicesesAsync(); // Services ska returnera en tuple!
+        Task<(bool Success, TaxiSettings? taxiSettings, string Massage)> GetTaxiPricesAsync();
+        Task<(bool Success, TaxiSettings? taxiSettings, string Massage)> CreatePricesAsync(TaxiSettings newSettings);
+
     }
 }

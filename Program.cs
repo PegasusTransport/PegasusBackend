@@ -1,12 +1,13 @@
+using Microsoft.OpenApi.Models;
+using PegasusBackend.Configurations;
 using RestrurantPG.Configurations;
 using Scalar.AspNetCore;
-using Microsoft.OpenApi.Models;
 
 namespace PegasusBackend
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -23,8 +24,22 @@ namespace PegasusBackend
                     Version = "v1"
                 });
             });
-
             var app = builder.Build();
+
+            // Create Roles for identity
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                try
+                {
+                    await RoleSeeder.CreateRolesAsync(services);
+                }
+                catch (Exception ex)
+                {
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "Ett fel uppstod när roller skulle skapas");
+                }
+            }
 
             if (app.Environment.IsDevelopment())
             {
@@ -44,6 +59,7 @@ namespace PegasusBackend
             }
 
             app.UseHttpsRedirection();
+            app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
 

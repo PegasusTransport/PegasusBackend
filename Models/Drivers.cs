@@ -9,10 +9,10 @@ namespace PegasusBackend.Models
         public Guid DriverId { get; set; }
 
         [Required]
-        public Guid UserId { get; set; }
+        public string UserId { get; set; } = string.Empty;
 
         [ForeignKey(nameof(UserId))]
-        public Users User { get; set; } = null!;
+        public User User { get; set; } = null!;
 
         [Required]
         public int CarId { get; set; } 

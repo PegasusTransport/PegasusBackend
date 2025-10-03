@@ -37,7 +37,8 @@ namespace PegasusBackend.Services.Implementations
 
             if (!result.Succeeded)
             {
-                return ServiceResponse<RegistrationResponseDTO>.FailResponse("Failed to create user");
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                return ServiceResponse<RegistrationResponseDTO>.FailResponse($"Failed to create user: {errors}");
             }
 
             

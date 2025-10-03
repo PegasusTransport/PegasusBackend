@@ -12,7 +12,7 @@ namespace RestrurantPG.Configurations
             // Alla DIs ska in hit!
             services.AddScoped<IAdminRepo, AdminRepo>();
             services.AddScoped<IAdminService, AdminService>();
-
+            services.AddScoped<IUserService,  UserService>();
             services.AddScoped<IPriceService, PriceService>();
 
             return services;

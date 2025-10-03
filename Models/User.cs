@@ -18,4 +18,5 @@ namespace PegasusBackend.Models
 
         public virtual Drivers? Driver { get; set; }
     }
+
 }

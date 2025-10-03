@@ -160,6 +160,36 @@ namespace PegasusBackend.Migrations
                     b.ToTable("Drivers");
                 });
 
+            modelBuilder.Entity("PegasusBackend.Models.TaxiSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("KmPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MinutePrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("StartPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<decimal>("ZonePrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TaxiSettings");
+                });
+
             modelBuilder.Entity("PegasusBackend.Models.Users", b =>
                 {
                     b.Property<Guid>("UserId")

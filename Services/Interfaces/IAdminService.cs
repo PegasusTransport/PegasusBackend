@@ -1,7 +1,13 @@
-﻿namespace PegasusBackend.Services.Interfaces
+﻿using PegasusBackend.DTOs;
+using PegasusBackend.Models;
+using PegasusBackend.Responses;
+
+namespace PegasusBackend.Services.Interfaces
 {
     public interface IAdminService
     {
-        Task<(bool Success, Object? objekt, string Massage)> adminServicesesAsync(); // Services ska returnera en tuple!
+        Task<ServiceResponse<TaxiSettings>> GetTaxiPricesAsync();
+        Task<ServiceResponse<TaxiSettings>> CreatePricesAsync(NewTaxiSettingsDTO taxiSettingsDTO);
+
     }
 }

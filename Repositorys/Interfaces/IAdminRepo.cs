@@ -1,6 +1,10 @@
-﻿namespace PegasusBackend.Repositorys.Interfaces
+﻿using PegasusBackend.Models;
+
+namespace PegasusBackend.Repositorys.Interfaces
 {
-    public class IAdminRepo
+    public interface IAdminRepo
     {
+        Task<TaxiSettings?> GetTaxiPricesAsync();
+        Task<TaxiSettings?> CreateTaxiPricesAsync(TaxiSettings updatedSettings);
     }
 }

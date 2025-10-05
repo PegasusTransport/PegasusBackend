@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +19,7 @@ namespace PegasusBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController(IAuthService authService, IUserService userService, ILogger<AuthController> logger) : ControllerBase
+    public class AuthController(IAuthService authService, UserManager<User> _userManager, IUserService userService) : ControllerBase
     {
         [HttpPost("Login")]
         public async Task<ActionResult> Login(LoginReguest request)
@@ -27,12 +28,12 @@ namespace PegasusBackend.Controllers
 
             if (!result.Success)
             {
-                return Unauthorized(result.Message);
+                return Unauthorized(ApiResponse.Error(result.Message));
                
             }
             if (result.Data is null)
             {
-                return Unauthorized("Token saknas i svaret.");
+                return Unauthorized(ApiResponse.Error(result.Message));
             }
 
             HandleAuthenticationCookies.SetAuthenticationCookie(HttpContext, result.Data.AccessToken, result.Data.RefreshToken);
@@ -46,9 +47,30 @@ namespace PegasusBackend.Controllers
             var result = await authService.RefreshTokensFromCookiesAsync(HttpContext);
 
             if (!result.Success)
-                return Unauthorized(result.Message);
+                return Unauthorized(ApiResponse.Error(result.Message));
 
-            return Ok(new { message = result.Message });
+            return Ok(ApiResponse.Ok("Token refreshed successfully"));
+        }
+        [HttpPost("Logout")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse>> Logout() 
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(ClaimTypes.NameIdentifier);
+
+                if (user == null)
+                {
+                    return Unauthorized();
+                }
+                await userService.InvalidateRefreshTokenAsync(user);
+
+                return Ok(ApiResponse.Ok("Logout successful"));
+            }
+            catch (Exception)
+            {
+                return BadRequest(ApiResponse.Error("Logout failed"));
+            }
         }
 
     }

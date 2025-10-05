@@ -10,17 +10,17 @@ namespace PegasusBackend.Services.Implementations
 {
     public class UserService(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, IUserRepo userRepo) : IUserService
     {
-        public async Task<User?> GetEmployeeByValidRefreshTokenAsync(string refreshToken)
+        public async Task<User?> GetUserByValidRefreshTokenAsync(string refreshToken)
         {
             if (string.IsNullOrEmpty(refreshToken))
                 return null;
 
-            var employee = await userRepo.GetUserByRefreshToken(refreshToken);
+            var user = await userRepo.GetUserByRefreshToken(refreshToken);
 
-            if (employee?.RefreshTokenExpireTime <= DateTime.UtcNow)
+            if (user?.RefreshTokenExpireTime <= DateTime.UtcNow)
                 return null;
 
-            return employee;
+            return user;
         }
 
         public async Task<ServiceResponse<RegistrationResponseDTO>> RegisterUser(RegistrationRequestDTO request)
@@ -38,7 +38,7 @@ namespace PegasusBackend.Services.Implementations
                 LastName = request.LastName,
                 Email = request.Email,
                 PhoneNumber = request.PhoneNumber,
-                //TwoFactorEnabled = true, // IF WE WANT 2FA 
+                //TwoFactorEnabled = true, // WHEN  we WANT 2FA 
                 
                 SecurityStamp = Guid.NewGuid().ToString(),
             };
@@ -69,6 +69,12 @@ namespace PegasusBackend.Services.Implementations
 
             return ServiceResponse<RegistrationResponseDTO>.SuccessResponse(response, "Created User");
         }
-        
+        public async Task<bool> InvalidateRefreshTokenAsync(User user)
+        {
+            user.RefreshToken = null;
+            user.RefreshTokenExpireTime = null;
+
+            return await userRepo.HandleRefreshToken(user, null);
+        }
     }
 }

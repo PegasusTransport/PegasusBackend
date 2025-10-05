@@ -17,9 +17,9 @@ namespace PegasusBackend.Controllers
             var result = await userService.RegisterUser(request);
             if (result.Success)
             {
-                return Ok(result);
+                return Ok(ApiResponse.Ok());
             }
-            return BadRequest(result);
+            return BadRequest(ApiResponse.Error(result.Message));
         }
     }
 }

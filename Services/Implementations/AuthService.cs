@@ -14,6 +14,7 @@ using System.Text;
 
 namespace PegasusBackend.Services.Implementations
 {
+    // REFACTOR LATER
     public class AuthService(UserManager<User> _userManager, IConfiguration _configuration, IUserRepo repo, IUserService userService): IAuthService
     {
         public async Task<ServiceResponse<TokenResponse?>> LoginAsync(LoginReguest request)
@@ -70,7 +71,7 @@ namespace PegasusBackend.Services.Implementations
         private async Task<string> CreateAndStoreRefreshToken(User user)
         {
             var refreshToken = GenerateRefreshToken();
-            await repo.SaveRefreshToken(user, refreshToken);
+            await repo.HandleRefreshToken(user, refreshToken);
             return refreshToken;
         }
         private static string GenerateRefreshToken()
@@ -94,11 +95,12 @@ namespace PegasusBackend.Services.Implementations
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetValue<string>("JwtSetting:Key")!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
+            var expire = _configuration.GetValue<int>("JwtSetting:Expire");
 
             var tokenDescriptor = new JwtSecurityToken(
                 issuer: _configuration.GetValue<string>("JwtSetting:Issuer"),
                 audience: _configuration.GetValue<string>("JwtSetting:Audience"),
-                expires: DateTime.UtcNow.AddHours(1),
+                expires: DateTime.UtcNow.AddMinutes(expire),
                 claims: claims,
                 signingCredentials: creds
                 );
@@ -110,7 +112,7 @@ namespace PegasusBackend.Services.Implementations
             if (!context.Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
                 return ServiceResponse<string>.FailResponse("No refresh token found");
 
-            var user = await userService.GetEmployeeByValidRefreshTokenAsync(refreshToken);
+            var user = await userService.GetUserByValidRefreshTokenAsync(refreshToken);
             if (user == null)
                 return ServiceResponse<string>.FailResponse("Invalid or expired refresh token");
 

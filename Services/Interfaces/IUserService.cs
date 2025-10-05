@@ -7,7 +7,8 @@ namespace PegasusBackend.Services.Interfaces
 {
     public interface IUserService
     {
-        Task<User?> GetEmployeeByValidRefreshTokenAsync(string refreshToken);
+        Task<User?> GetUserByValidRefreshTokenAsync(string refreshToken);
         public Task<ServiceResponse<RegistrationResponseDTO>> RegisterUser(RegistrationRequestDTO request);
+        Task<bool> InvalidateRefreshTokenAsync(User user);
     }
 }

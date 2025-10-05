@@ -1,6 +1,8 @@
-﻿namespace PegasusBackend.Helpers.JwtCookieOptions
+﻿using Microsoft.Extensions.Configuration;
+
+namespace PegasusBackend.Helpers.JwtCookieOptions
 {
-    public class CookieOptionsConfig
+    public class CookieOptionsConfig()
     {
         public static CookieOptions AccessTokenCookie()
         {
@@ -9,7 +11,7 @@
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Expires = DateTimeOffset.UtcNow.AddHours(1)
+                Expires = DateTimeOffset.UtcNow.AddMinutes(1),
             };
         }
         public static CookieOptions RefreshTokenCookie()

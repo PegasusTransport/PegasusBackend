@@ -3,7 +3,7 @@ using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Services.Implementations;
 using PegasusBackend.Services.Interfaces;
 
-namespace RestrurantPG.Configurations
+namespace PegasusBackend.Configurations
 {
     public static class DependencyInjections
     {
@@ -14,6 +14,8 @@ namespace RestrurantPG.Configurations
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<IUserService,  UserService>();
             services.AddScoped<IPriceService, PriceService>();
+            services.AddScoped<IAuthService, AuthService>();
+
 
             return services;
         }

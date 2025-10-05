@@ -24,6 +24,8 @@ namespace PegasusBackend.Services.Implementations
                 LastName = request.LastName,
                 Email = request.Email,
                 PhoneNumber = request.PhoneNumber,
+                //TwoFactorEnabled = true, // IF WE WANT 2FA 
+                
                 SecurityStamp = Guid.NewGuid().ToString(),
             };
 
@@ -53,7 +55,6 @@ namespace PegasusBackend.Services.Implementations
 
             return ServiceResponse<RegistrationResponseDTO>.SuccessResponse(response, "Created User");
         }
-
-
+        
     }
 }

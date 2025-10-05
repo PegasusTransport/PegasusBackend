@@ -6,7 +6,7 @@ using PegasusBackend.Data;
 using PegasusBackend.Models;
 
 
-namespace RestrurantPG.Configurations
+namespace PegasusBackend.Configurations
 {
     public static class ServiceExtensions
     {

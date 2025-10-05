@@ -1,19 +1,18 @@
 using Microsoft.OpenApi.Models;
 using PegasusBackend.Configurations;
-using RestrurantPG.Configurations;
 using Scalar.AspNetCore;
 
 namespace PegasusBackend
 {
     public class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddConnectionString(builder.Configuration);
             builder.Services.AddApplicationServices(); // Alla DIs ska in hit!
-
+            builder.Services.AddJwtAuthentication(builder.Configuration);
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
@@ -25,7 +24,7 @@ namespace PegasusBackend
                 });
             });
             var app = builder.Build();
-            
+
 
             if (app.Environment.IsDevelopment())
             {

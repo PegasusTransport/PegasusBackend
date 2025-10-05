@@ -5,7 +5,7 @@ namespace PegasusBackend.Services.Interfaces
 {
     public interface IAuthService
     {
-        Task<TokenResponse?> LoginAsync(LoginReguest request);
-        Task<TokenResponse?> RefreshTokensAsync(RefreshTokenRequest request);
+        Task<ServiceResponse<TokenResponse?>> LoginAsync(LoginReguest request);
+        Task<ServiceResponse<TokenResponse?>> RefreshTokensAsync(RefreshTokenRequest request);
     }
 }

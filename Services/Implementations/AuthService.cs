@@ -109,7 +109,7 @@ namespace PegasusBackend.Services.Implementations
         }
         public async Task<ServiceResponse<string>> RefreshTokensFromCookiesAsync(HttpContext context)
         {
-            if (!context.Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
+            if (!context.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
                 return ServiceResponse<string>.FailResponse("No refresh token found");
 
             var user = await userService.GetUserByValidRefreshTokenAsync(refreshToken);

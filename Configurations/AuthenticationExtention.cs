@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using PegasusBackend.Helpers.JwtCookieOptions;
 using System.Text;
 
 namespace PegasusBackend.Configurations
@@ -42,9 +43,9 @@ namespace PegasusBackend.Configurations
                         {
                             context.Token = authHeader["Bearer ".Length..].Trim();
                         }
-                        else if (context.Request.Cookies.ContainsKey("accessToken"))
+                        else if (context.Request.Cookies.ContainsKey(CookieNames.AccessToken))
                         {
-                            context.Token = context.Request.Cookies["accessToken"];
+                            context.Token = context.Request.Cookies[CookieNames.AccessToken];
                         }
 
                         return Task.CompletedTask;

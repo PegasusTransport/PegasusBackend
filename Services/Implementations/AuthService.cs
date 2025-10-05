@@ -21,25 +21,24 @@ namespace PegasusBackend.Services.Implementations
         {
             var user = await _userManager.FindByEmailAsync(request.Email);
 
-            if (user == null)
+            if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
             {
-                return ServiceResponse<TokenResponse?>.FailResponse("Wrong password or email");
+                return ServiceResponse<TokenResponse?>.FailResponse("Invalid credentials");
             }
-            if (user.Email != request.Email)
+
+            // Kontrollera om användaren är låst
+            if (await _userManager.IsLockedOutAsync(user))
             {
-                return ServiceResponse<TokenResponse?>.FailResponse("Wrong password or email");
+                return ServiceResponse<TokenResponse?>.FailResponse("Account is locked");
             }
-            if (!await _userManager.CheckPasswordAsync(user, request.Password))
-            {
-                return ServiceResponse<TokenResponse?>.FailResponse("wrong password or email");
-            }
+
             var tokens = new TokenResponse
             {
                 AccessToken = await GenerateAccessToken(user),
                 RefreshToken = await CreateAndStoreRefreshToken(user)
             };
 
-            return ServiceResponse<TokenResponse?>.SuccessResponse(tokens, "Created Tokens");
+            return ServiceResponse<TokenResponse?>.SuccessResponse(tokens, "Login successful");
         }
         public async Task<ServiceResponse<TokenResponse?>> RefreshTokensAsync(RefreshTokenRequest request)
         {

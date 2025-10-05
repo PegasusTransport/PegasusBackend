@@ -65,6 +65,7 @@ namespace PegasusBackend.Controllers
                 }
 
                 await userService.InvalidateRefreshTokenAsync(user);
+                HandleAuthenticationCookies.ClearAuthenticationCookies(HttpContext);
                 return Ok(ApiResponse.Ok("Logout successful"));
             }
             catch (Exception ex)

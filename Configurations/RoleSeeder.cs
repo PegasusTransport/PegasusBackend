@@ -29,18 +29,4 @@ namespace PegasusBackend.Configurations
     }
 }
 
-// Create Roles for identity - call this in Program.cs after building the app to get roles created
-//using (var scope = app.Services.CreateScope())
-//{
-//    var services = scope.ServiceProvider;
-//    try
-//    {
-//        await RoleSeeder.CreateRolesAsync(services);
-//    }
-//    catch (Exception ex)
-//    {
-//        var logger = services.GetRequiredService<ILogger<Program>>();
-//        logger.LogError(ex, "Ett fel uppstod när roller skulle skapas");
-//    }
-//}
 

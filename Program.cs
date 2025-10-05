@@ -6,12 +6,12 @@ namespace PegasusBackend
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddConnectionString(builder.Configuration);
-            builder.Services.AddApplicationServices(); // Alla DIs ska in hit!
+            builder.Services.AddApplicationServices(builder.Configuration); // Alla DIs ska in hit!
             builder.Services.AddJwtAuthentication(builder.Configuration);
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
@@ -24,7 +24,20 @@ namespace PegasusBackend
                 });
             });
             var app = builder.Build();
-       
+            // Seed roles
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                try
+                {
+                    await RoleSeeder.CreateRolesAsync(services);
+                }
+                catch (Exception ex)
+                {
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "Error while roles seeds");
+                }
+            }
 
             if (app.Environment.IsDevelopment())
             {

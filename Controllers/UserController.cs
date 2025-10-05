@@ -12,7 +12,7 @@ namespace PegasusBackend.Controllers
     public class UserController(IUserService userService) : ControllerBase
     {
         [HttpPost("Registration")]
-        public async Task<IActionResult> RegisterUser(RegistrationRequestDTO request)
+        public async Task<ActionResult> RegisterUser(RegistrationRequestDTO request)
         {
             var result = await userService.RegisterUser(request);
             if (result.Success)

@@ -11,25 +11,25 @@ namespace PegasusBackend.Controllers
     public class ValuesController(UserManager<User> _userManager) : ControllerBase
     {
         [HttpGet("test")]
-        public IActionResult Test()
+        public ActionResult Test()
         {
             return Ok("Hello from Pegasus 🚖");
         }
         [HttpGet("testauth")]
         [Authorize]
-        public IActionResult AuthTest()
+        public ActionResult AuthTest()
         {
             return Ok("Authorizad");
         }
         [HttpGet("testDriver")]
         [Authorize(Roles ="Driver")]
-        public IActionResult DriverTest()
+        public ActionResult DriverTest()
         {
             return Ok("Driver");
         }
         [HttpGet("check-roles")]
         [Authorize]
-        public async Task<IActionResult> CheckMyRoles()
+        public async Task<ActionResult> CheckMyRoles()
         {
             var user = await _userManager.GetUserAsync(User);
             var roles = await _userManager.GetRolesAsync(user!);

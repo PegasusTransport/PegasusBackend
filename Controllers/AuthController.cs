@@ -53,23 +53,23 @@ namespace PegasusBackend.Controllers
         }
         [HttpPost("Logout")]
         [Authorize]
-        public async Task<ActionResult<ApiResponse>> Logout() 
+        public async Task<ActionResult<ApiResponse>> Logout()
         {
             try
             {
-                var user = await _userManager.FindByIdAsync(ClaimTypes.NameIdentifier);
+                var user = await _userManager.GetUserAsync(User);
 
                 if (user == null)
                 {
-                    return Unauthorized();
+                    return Unauthorized(ApiResponse.Error("User not authenticated"));
                 }
-                await userService.InvalidateRefreshTokenAsync(user);
 
+                await userService.InvalidateRefreshTokenAsync(user);
                 return Ok(ApiResponse.Ok("Logout successful"));
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return BadRequest(ApiResponse.Error("Logout failed"));
+                return BadRequest(ApiResponse.Error($"Logout failed, {ex.Message}"));
             }
         }
 

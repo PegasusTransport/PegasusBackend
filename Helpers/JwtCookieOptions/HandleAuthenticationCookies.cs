@@ -4,7 +4,7 @@ namespace PegasusBackend.Helpers.JwtCookieOptions
 {
     public class HandleAuthenticationCookies
     {
-        public static void SetAuthenticationCookie(HttpContext httpContext, string accessToken, string refreshToken, AppDBContext context)
+        public static void SetAuthenticationCookie(HttpContext httpContext, string accessToken, string refreshToken)
         {
             if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
             {

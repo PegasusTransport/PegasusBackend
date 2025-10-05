@@ -7,5 +7,6 @@ namespace PegasusBackend.Services.Interfaces
     {
         Task<ServiceResponse<TokenResponse?>> LoginAsync(LoginReguest request);
         Task<ServiceResponse<TokenResponse?>> RefreshTokensAsync(RefreshTokenRequest request);
+        Task<ServiceResponse<string>> RefreshTokensFromCookiesAsync(HttpContext context);
     }
 }

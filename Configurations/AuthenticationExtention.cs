@@ -10,49 +10,50 @@ namespace PegasusBackend.Configurations
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme; 
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    options.TokenValidationParameters = new TokenValidationParameters
+                    ValidateIssuer = true,
+                    ValidIssuer = configuration["JwtSetting:Issuer"],
+
+                    ValidateAudience = true,
+                    ValidAudience = configuration["JwtSetting:Audience"],
+
+                    ValidateLifetime = true,
+
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(configuration["JwtSetting:Key"]!)
+                    ),
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
                     {
-                        ValidateIssuer = true,
-                        ValidIssuer = configuration["JwtSetting:Issuer"],  // ← Settings, inte Setting
-
-                        ValidateAudience = true,
-                        ValidAudience = configuration["JwtSetting:Audience"],
-
-                        ValidateLifetime = true,
-
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(
-                            Encoding.UTF8.GetBytes(configuration["JwtSetting:Key"]!)  
-                        ),
-
-                    };
-
-                    options.Events = new JwtBearerEvents
-                    {
-                        OnMessageReceived = context =>
+                        var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
+                        if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
                         {
-                            // Check first in header after Bearer: Token
-                            var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
-                            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
-                            {
-                                context.Token = authHeader["Bearer ".Length..].Trim();
-                            }
-                            // If not, find access token in Cookies
-                            else if (context.Request.Cookies.ContainsKey("accessToken"))
-                            {
-                                context.Token = context.Request.Cookies["accessToken"];
-                            }
-
-                            return Task.CompletedTask;
+                            context.Token = authHeader["Bearer ".Length..].Trim();
                         }
-                    };
-                });
+                        else if (context.Request.Cookies.ContainsKey("accessToken"))
+                        {
+                            context.Token = context.Request.Cookies["accessToken"];
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+            });
 
             services.AddAuthorization();
-            return services; 
+            return services;
         }
     }
 }

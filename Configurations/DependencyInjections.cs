@@ -13,6 +13,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IAdminRepo, AdminRepo>();
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<IUserService,  UserService>();
+            services.AddScoped<IUserRepo,  UserRepo>();
             services.AddScoped<IPriceService, PriceService>();
             services.AddScoped<IAuthService, AuthService>();
 

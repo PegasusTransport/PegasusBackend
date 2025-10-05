@@ -2,13 +2,27 @@
 using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
+using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 
 namespace PegasusBackend.Services.Implementations
 {
-    public class UserService(UserManager<User> userManager, RoleManager<IdentityRole> roleManager) : IUserService
+    public class UserService(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, IUserRepo userRepo) : IUserService
     {
+        public async Task<User?> GetEmployeeByValidRefreshTokenAsync(string refreshToken)
+        {
+            if (string.IsNullOrEmpty(refreshToken))
+                return null;
+
+            var employee = await userRepo.GetUserByRefreshToken(refreshToken);
+
+            if (employee?.RefreshTokenExpireTime <= DateTime.UtcNow)
+                return null;
+
+            return employee;
+        }
+
         public async Task<ServiceResponse<RegistrationResponseDTO>> RegisterUser(RegistrationRequestDTO request)
         {
             var existingUser = await userManager.FindByEmailAsync(request.Email);

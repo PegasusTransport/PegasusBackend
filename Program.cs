@@ -24,7 +24,7 @@ namespace PegasusBackend
                 });
             });
             var app = builder.Build();
-
+       
 
             if (app.Environment.IsDevelopment())
             {
@@ -43,9 +43,10 @@ namespace PegasusBackend
                 });
             }
 
+
             app.UseHttpsRedirection();
             app.UseAuthentication();
-            app.UseAuthorization();
+            app.UseAuthorization(); 
             app.MapControllers();
 
             app.Run();

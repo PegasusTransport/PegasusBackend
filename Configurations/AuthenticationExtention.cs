@@ -16,16 +16,16 @@ namespace PegasusBackend.Configurations
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
-                        ValidIssuer = configuration["JwtSettings:Issuer"],  // ← Settings, inte Setting
+                        ValidIssuer = configuration["JwtSetting:Issuer"],  // ← Settings, inte Setting
 
                         ValidateAudience = true,
-                        ValidAudience = configuration["JwtSettings:Audience"],
+                        ValidAudience = configuration["JwtSetting:Audience"],
 
                         ValidateLifetime = true,
 
                         ValidateIssuerSigningKey = true,
                         IssuerSigningKey = new SymmetricSecurityKey(
-                            Encoding.UTF8.GetBytes(configuration["JwtSettings:Key"]!)  
+                            Encoding.UTF8.GetBytes(configuration["JwtSetting:Key"]!)  
                         ),
 
                     };
@@ -51,6 +51,7 @@ namespace PegasusBackend.Configurations
                     };
                 });
 
+            services.AddAuthorization();
             return services; 
         }
     }

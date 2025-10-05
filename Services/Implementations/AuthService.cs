@@ -58,7 +58,7 @@ namespace PegasusBackend.Services.Implementations
             var tokenDescriptor = new JwtSecurityToken(
                 issuer: _configuration.GetValue<string>("JwtSetting:Issuer"),
                 audience: _configuration.GetValue<string>("JwtSetting:Audience"),
-                expires: DateTime.UtcNow.AddMinutes(_configuration.GetValue<int>("JwtSettings:Expire")),
+                expires: DateTime.UtcNow.AddHours(1),
                 claims: claims,
                 signingCredentials: creds
                 );

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace PegasusBackend.Controllers
@@ -12,5 +13,12 @@ namespace PegasusBackend.Controllers
         {
             return Ok("Hello from Pegasus 🚖");
         }
+        [HttpGet("testauth")]
+        [Authorize]
+        public IActionResult AuthTest()
+        {
+            return Ok("Authorizad");
+        }
+
     }
 }

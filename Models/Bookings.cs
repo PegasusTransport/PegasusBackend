@@ -10,7 +10,7 @@ namespace PegasusBackend.Models
         public int BookingId { get; set; }
 
         [Required]
-        public Guid CustomerIdFK { get; set; }
+        public string UserIdFk { get; set; } = null!;
 
         public Guid? DriverIdFK { get; set; }
 
@@ -48,9 +48,9 @@ namespace PegasusBackend.Models
         public bool IsConfirmed { get; set; } = false;
         public bool IsAvailable { get; set; } = true;
 
-        [ForeignKey(nameof(CustomerIdFK))]
+        [ForeignKey(nameof(UserIdFk))]
         [Required]
-        public virtual Customers Customer { get; set; } = null!;
+        public virtual User User { get; set; } = null!;
 
         [ForeignKey(nameof(DriverIdFK))]
         public virtual Drivers? Driver { get; set; }

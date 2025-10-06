@@ -14,7 +14,6 @@ namespace PegasusBackend
             builder.Services.AddApplicationServices(builder.Configuration); // Alla DIs ska in hit!
             builder.Services.AddJwtAuthentication(builder.Configuration);
             builder.Services.AddControllers();
-            builder.Services.AddHttpContextAccessor();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {

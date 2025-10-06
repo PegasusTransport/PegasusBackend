@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.Data;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.DTOs.AuthDTOs;
 using PegasusBackend.Helpers.JwtCookieOptions;
@@ -16,23 +14,22 @@ using System.Text;
 
 namespace PegasusBackend.Services.Implementations
 {
-    // REFACTOR LATER
-    public class AuthService(UserManager<User> _userManager, 
-        IConfiguration _configuration, 
-        IUserRepo repo, 
-        IUserService userService, 
-        ILogger<AuthService> logger,
-        IHttpContextAccessor httpContextAccessor) : IAuthService
-
+    public class AuthService(
+        UserManager<User> userManager,
+        IConfiguration configuration,
+        IUserRepo repo,
+        IUserService userService,
+        ILogger<AuthService> logger) : IAuthService
     {
-        private HttpContext HttpContext => httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext is not available"); // Ensure HttpContext is not null
-        public async Task<ServiceResponse<TokenResponse?>> LoginAsync(LoginRequestDTO request)
+        public async Task<ServiceResponse<TokenResponse?>> LoginAsync(
+            LoginRequestDTO request,
+            HttpContext httpContext)
         {
             try
             {
-                var user = await _userManager.FindByEmailAsync(request.Email);
+                var user = await userManager.FindByEmailAsync(request.Email);
 
-                if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
+                if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
                 {
                     return ServiceResponse<TokenResponse?>.FailResponse(
                         HttpStatusCode.NotFound,
@@ -40,8 +37,7 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                // Check if user is locked
-                if (await _userManager.IsLockedOutAsync(user))
+                if (await userManager.IsLockedOutAsync(user))
                 {
                     return ServiceResponse<TokenResponse?>.FailResponse(
                         HttpStatusCode.BadRequest,
@@ -54,16 +50,26 @@ namespace PegasusBackend.Services.Implementations
                     AccessToken = await GenerateAccessToken(user),
                     RefreshToken = await CreateAndStoreRefreshToken(user)
                 };
-                HandleAuthenticationCookies.SetAuthenticationCookie(HttpContext, tokens.AccessToken, tokens.RefreshToken);
-                return ServiceResponse<TokenResponse?>.SuccessResponse(HttpStatusCode.OK, tokens, "Login successful");
+
+                HandleAuthenticationCookies.SetAuthenticationCookie(
+                    httpContext,
+                    tokens.AccessToken,
+                    tokens.RefreshToken);
+
+                return ServiceResponse<TokenResponse?>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    tokens,
+                    "Login successful");
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex.Message, ex);
-                return ServiceResponse<TokenResponse?>.FailResponse(HttpStatusCode.InternalServerError, "Something went wrong");
+                logger.LogError(ex, "Error during login for email: {Email}", request.Email);
+                return ServiceResponse<TokenResponse?>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Something went wrong");
             }
-            
         }
+
         public async Task<ServiceResponse<TokenResponse?>> RefreshTokensAsync(RefreshTokenRequest request)
         {
             try
@@ -71,98 +77,67 @@ namespace PegasusBackend.Services.Implementations
                 var user = await ValidateRefreshTokenAsync(request.UserId, request.RefreshToken);
                 if (user is null)
                 {
-                    return ServiceResponse<TokenResponse?>.FailResponse(HttpStatusCode.BadRequest, "Invalid refresh token");
+                    return ServiceResponse<TokenResponse?>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Invalid refresh token");
                 }
 
                 var tokens = await CreateTokenResponse(user);
-                return ServiceResponse<TokenResponse?>.SuccessResponse(HttpStatusCode.OK, tokens, "Tokens refreshed");
+                return ServiceResponse<TokenResponse?>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    tokens,
+                    "Tokens refreshed");
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex.Message, ex);
-                return ServiceResponse<TokenResponse?>.FailResponse(HttpStatusCode.InternalServerError, "Something went wrong");
+                logger.LogError(ex, "Error refreshing tokens for user: {UserId}", request.UserId);
+                return ServiceResponse<TokenResponse?>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Something went wrong");
             }
         }
-        private async Task<User?> ValidateRefreshTokenAsync(string userId, string refreshToken)
-        {
-            var user = await _userManager.FindByIdAsync(userId);  
 
-            if (user is null || user.RefreshToken != refreshToken || user.RefreshTokenExpireTime <= DateTime.UtcNow)
-                return null;
-
-            return user;
-
-        }
-        private async Task<TokenResponse> CreateTokenResponse(User user)
-        {
-            return new TokenResponse { AccessToken = await GenerateAccessToken(user), RefreshToken = await CreateAndStoreRefreshToken(user) };
-        }
-        private async Task<string> CreateAndStoreRefreshToken(User user)
-        {
-            var refreshToken = GenerateRefreshToken();
-            await repo.HandleRefreshToken(user, refreshToken);
-            return refreshToken;
-        }
-        private static string GenerateRefreshToken()
-        {
-            var randomNumber = new byte[32];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(randomNumber);
-            return Convert.ToBase64String(randomNumber);
-
-        }
-        private async Task<string> GenerateAccessToken(User user)
-        {
-            var claims = new List<Claim>
-            {
-                new(ClaimTypes.Email, user.Email!),
-                new(ClaimTypes.NameIdentifier, user.Id),
-                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) // For revoking Accesstoken later
-            };
-            var roles = await _userManager.GetRolesAsync(user);
-            claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration.GetValue<string>("JwtSetting:Key")!));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
-            var expire = _configuration.GetValue<int>("JwtSetting:Expire");
-
-            var tokenDescriptor = new JwtSecurityToken(
-                issuer: _configuration.GetValue<string>("JwtSetting:Issuer"),
-                audience: _configuration.GetValue<string>("JwtSetting:Audience"),
-                expires: DateTime.UtcNow.AddMinutes(expire),
-                claims: claims,
-                signingCredentials: creds
-                );
-
-            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
-        }
-        public async Task<ServiceResponse<string>> RefreshTokensFromCookiesAsync()
+        public async Task<ServiceResponse<string>> RefreshTokensFromCookiesAsync(HttpContext httpContext)
         {
             try
             {
-                if (!HttpContext.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
+                if (!httpContext.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
+                {
                     return ServiceResponse<string>.FailResponse(
                         HttpStatusCode.NotFound,
                         "No refresh token found"
                     );
+                }
 
                 var user = await userService.GetUserByValidRefreshTokenAsync(refreshToken);
                 if (user == null)
+                {
                     return ServiceResponse<string>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "Invalid or expired refresh token"
                     );
+                }
 
-                var refreshRequest = new RefreshTokenRequest { UserId = user.Id, RefreshToken = refreshToken };
+                var refreshRequest = new RefreshTokenRequest
+                {
+                    UserId = user.Id,
+                    RefreshToken = refreshToken
+                };
+
                 var tokenResponse = await RefreshTokensAsync(refreshRequest);
 
-                if (tokenResponse == null || tokenResponse.Data == null)
+                if (tokenResponse?.Data == null)
+                {
                     return ServiceResponse<string>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "Token refresh failed"
                     );
+                }
 
-                HandleAuthenticationCookies.SetAuthenticationCookie(HttpContext, tokenResponse.Data.AccessToken, tokenResponse.Data.RefreshToken);
+                HandleAuthenticationCookies.SetAuthenticationCookie(
+                    httpContext,
+                    tokenResponse.Data.AccessToken,
+                    tokenResponse.Data.RefreshToken);
 
                 return ServiceResponse<string>.SuccessResponse(
                     HttpStatusCode.OK,
@@ -171,19 +146,19 @@ namespace PegasusBackend.Services.Implementations
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex.Message, ex);
+                logger.LogError(ex, "Error refreshing tokens from cookies");
                 return ServiceResponse<string>.FailResponse(
-                    HttpStatusCode.InternalServerError, 
+                    HttpStatusCode.InternalServerError,
                     "Something went wrong"
                 );
             }
         }
-        public async Task<ServiceResponse<bool>> LogoutAsync()
-        {
 
+        public async Task<ServiceResponse<bool>> LogoutAsync(HttpContext httpContext)
+        {
             try
             {
-                var user = await _userManager.GetUserAsync(HttpContext.User);
+                var user = await userManager.GetUserAsync(httpContext.User);
 
                 if (user == null)
                 {
@@ -194,7 +169,7 @@ namespace PegasusBackend.Services.Implementations
                 }
 
                 await userService.InvalidateRefreshTokenAsync(user);
-                HandleAuthenticationCookies.ClearAuthenticationCookies(HttpContext);
+                HandleAuthenticationCookies.ClearAuthenticationCookies(httpContext);
 
                 return ServiceResponse<bool>.SuccessResponse(
                     HttpStatusCode.OK,
@@ -204,14 +179,79 @@ namespace PegasusBackend.Services.Implementations
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex.Message, ex);
+                logger.LogError(ex, "Error during logout");
                 return ServiceResponse<bool>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Something went wrong"
                 );
             }
-
         }
-       
+
+        // Private helper methods
+        private async Task<User?> ValidateRefreshTokenAsync(string userId, string refreshToken)
+        {
+            var user = await userManager.FindByIdAsync(userId);
+
+            if (user is null ||
+                user.RefreshToken != refreshToken ||
+                user.RefreshTokenExpireTime <= DateTime.UtcNow)
+            {
+                return null;
+            }
+
+            return user;
+        }
+
+        private async Task<TokenResponse> CreateTokenResponse(User user)
+        {
+            return new TokenResponse
+            {
+                AccessToken = await GenerateAccessToken(user),
+                RefreshToken = await CreateAndStoreRefreshToken(user)
+            };
+        }
+
+        private async Task<string> CreateAndStoreRefreshToken(User user)
+        {
+            var refreshToken = GenerateRefreshToken();
+            await repo.HandleRefreshToken(user, refreshToken);
+            return refreshToken;
+        }
+
+        private static string GenerateRefreshToken()
+        {
+            var randomNumber = new byte[32];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
+        }
+
+        private async Task<string> GenerateAccessToken(User user)
+        {
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.Email, user.Email!),
+                new(ClaimTypes.NameIdentifier, user.Id),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            var roles = await userManager.GetRolesAsync(user);
+            claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(configuration["JwtSetting:Key"]!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
+            var expire = configuration.GetValue<int>("JwtSetting:Expire");
+
+            var tokenDescriptor = new JwtSecurityToken(
+                issuer: configuration["JwtSetting:Issuer"],
+                audience: configuration["JwtSetting:Audience"],
+                expires: DateTime.UtcNow.AddMinutes(expire),
+                claims: claims,
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
+        }
     }
 }

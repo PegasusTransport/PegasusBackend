@@ -4,6 +4,7 @@ using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
+using System.Net;
 
 namespace PegasusBackend.Controllers
 {
@@ -14,12 +15,14 @@ namespace PegasusBackend.Controllers
         [HttpPost("Registration")]
         public async Task<ActionResult> RegisterUser(RegistrationRequestDTO request)
         {
-            var result = await userService.RegisterUser(request);
-            if (result.Success)
+            var response = await userService.RegisterUser(request);
+
+            return response.StatusCode switch
             {
-                return Ok(ApiResponse.Ok());
-            }
-            return BadRequest(ApiResponse.Error(result.Message));
+                HttpStatusCode.OK => Ok(response),
+                HttpStatusCode.BadRequest => BadRequest(new { message = response.Message }),
+                _ => StatusCode((int)response.StatusCode, new { message = response.Message })
+            };
         }
     }
 }

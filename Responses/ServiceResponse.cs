@@ -1,20 +1,23 @@
-﻿namespace PegasusBackend.Responses;
+﻿using System.Net;
 
-public record ServiceResponse<T>(
-    bool Success,
-    T? Data,
-    string Message
-)
+namespace PegasusBackend.Responses;
 
+public class ServiceResponse<T>
 {
-    public static ServiceResponse<T> SuccessResponse(T data, string message = "OK")
+    public HttpStatusCode StatusCode { get; }
+    public T? Data { get; }
+    public string Message { get; }
+
+    private ServiceResponse(HttpStatusCode statusCode, T? data, string message)
     {
-        return new ServiceResponse<T>(true, data, message);
+        StatusCode = statusCode;
+        Data = data;
+        Message = message;
     }
 
-    public static ServiceResponse<T> FailResponse(string message)
-    {
-        return new ServiceResponse<T>(false, default, message);
-    }
+    public static ServiceResponse<T> SuccessResponse(HttpStatusCode statusCode,T data, string message = "OK") =>
+        new ServiceResponse<T>(statusCode, data, message);
 
+    public static ServiceResponse<T> FailResponse(HttpStatusCode statusCode, string message) =>
+        new ServiceResponse<T>(statusCode, default, message);
 }

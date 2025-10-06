@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PegasusBackend.DTOs;
+using PegasusBackend.Extentions;
 using PegasusBackend.Models;
 using PegasusBackend.Services.Interfaces;
 
@@ -20,14 +21,20 @@ namespace PegasusBackend.Controllers
         [HttpGet("GetAllTaxiPrices")]
         public async Task<ActionResult<TaxiSettings>> GetTaxiPrices()
         {
-            var prices = await _adminService.GetTaxiPricesAsync();
+            var response =  await _adminService.GetTaxiPricesAsync();
 
-            if (!prices.Success)
-            {
-                return NotFound("Inga priser hittades i databasen!");
-            }
+            return response.StatusCode.IsSuccessStatusCode() 
+                ? Ok(response) 
+                : BadRequest(response);
 
-            return Ok(prices.Data);
+            //var response = await _adminService.GetTaxiPricesAsync();
+
+            //if (!response.StatusCode.IsSuccessStatusCode())
+            //{
+            //    return NotFound("Inga priser hittades i databasen!");
+            //}
+
+            //return Ok(response.Data);
         }
 
         [HttpPost("CreateNewTaxiPrices")]
@@ -35,7 +42,7 @@ namespace PegasusBackend.Controllers
         {
             var newSettings = await _adminService.CreatePricesAsync(taxiSettingsDTO);
             
-            if (!newSettings.Success)
+            if (!newSettings.StatusCode.IsSuccessStatusCode())
             {
                 return BadRequest("Kunde inte uppdatera Taxameter priset.");
             }

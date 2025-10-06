@@ -2,7 +2,7 @@
 
 namespace PegasusBackend.DTOs.AuthDTOs
 {
-    public class LoginReguest
+    public class LoginRequestDTO
     {
         [Required]
         public string Email { get; set; } = string.Empty;

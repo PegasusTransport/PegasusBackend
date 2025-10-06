@@ -17,9 +17,16 @@ using System.Text;
 namespace PegasusBackend.Services.Implementations
 {
     // REFACTOR LATER
-    public class AuthService(UserManager<User> _userManager, IConfiguration _configuration, IUserRepo repo, IUserService userService, ILogger<AuthService> logger): IAuthService
+    public class AuthService(UserManager<User> _userManager, 
+        IConfiguration _configuration, 
+        IUserRepo repo, 
+        IUserService userService, 
+        ILogger<AuthService> logger,
+        IHttpContextAccessor httpContextAccessor) : IAuthService
+
     {
-        public async Task<ServiceResponse<TokenResponse?>> LoginAsync(LoginReguest request)
+        private HttpContext HttpContext => httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext is not available"); // Ensure HttpContext is not null
+        public async Task<ServiceResponse<TokenResponse?>> LoginAsync(LoginRequestDTO request)
         {
             try
             {
@@ -47,7 +54,7 @@ namespace PegasusBackend.Services.Implementations
                     AccessToken = await GenerateAccessToken(user),
                     RefreshToken = await CreateAndStoreRefreshToken(user)
                 };
-
+                HandleAuthenticationCookies.SetAuthenticationCookie(HttpContext, tokens.AccessToken, tokens.RefreshToken);
                 return ServiceResponse<TokenResponse?>.SuccessResponse(HttpStatusCode.OK, tokens, "Login successful");
             }
             catch (Exception ex)
@@ -129,11 +136,11 @@ namespace PegasusBackend.Services.Implementations
 
             return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
         }
-        public async Task<ServiceResponse<string>> RefreshTokensFromCookiesAsync(HttpContext context)
+        public async Task<ServiceResponse<string>> RefreshTokensFromCookiesAsync()
         {
             try
             {
-                if (!context.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
+                if (!HttpContext.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
                     return ServiceResponse<string>.FailResponse(
                         HttpStatusCode.NotFound,
                         "No refresh token found"
@@ -155,7 +162,7 @@ namespace PegasusBackend.Services.Implementations
                         "Token refresh failed"
                     );
 
-                HandleAuthenticationCookies.SetAuthenticationCookie(context, tokenResponse.Data.AccessToken, tokenResponse.Data.RefreshToken);
+                HandleAuthenticationCookies.SetAuthenticationCookie(HttpContext, tokenResponse.Data.AccessToken, tokenResponse.Data.RefreshToken);
 
                 return ServiceResponse<string>.SuccessResponse(
                     HttpStatusCode.OK,
@@ -171,6 +178,40 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
+        public async Task<ServiceResponse<bool>> LogoutAsync()
+        {
 
+            try
+            {
+                var user = await _userManager.GetUserAsync(HttpContext.User);
+
+                if (user == null)
+                {
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.Unauthorized,
+                        "User not found"
+                    );
+                }
+
+                await userService.InvalidateRefreshTokenAsync(user);
+                HandleAuthenticationCookies.ClearAuthenticationCookies(HttpContext);
+
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true,
+                    "Logout successful"
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex.Message, ex);
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Something went wrong"
+                );
+            }
+
+        }
+       
     }
 }

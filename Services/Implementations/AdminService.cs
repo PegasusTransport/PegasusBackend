@@ -10,10 +10,11 @@ namespace PegasusBackend.Services.Implementations
     public class AdminService : IAdminService
     {
         private readonly IAdminRepo _adminRepo;
-
-        public AdminService(IAdminRepo adminRepo)
+        private readonly ILogger<AdminService> _logger;
+        public AdminService(IAdminRepo adminRepo, ILogger<AdminService> logger)
         {
             _adminRepo = adminRepo;
+            _logger = logger;
         }
 
         public async Task<ServiceResponse<TaxiSettings>> GetTaxiPricesAsync()
@@ -56,6 +57,7 @@ namespace PegasusBackend.Services.Implementations
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating new taxi prices");
                 return ServiceResponse<TaxiSettings>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Something went wrong");

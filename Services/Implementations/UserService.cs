@@ -69,6 +69,7 @@ namespace PegasusBackend.Services.Implementations
 
             return ServiceResponse<RegistrationResponseDTO>.SuccessResponse(response, "Created User");
         }
+        // Refactor
         public async Task<bool> InvalidateRefreshTokenAsync(User user)
         {
             user.RefreshToken = null;

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.DTOs.AuthDTOs;
@@ -8,6 +9,7 @@ using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -15,50 +17,71 @@ using System.Text;
 namespace PegasusBackend.Services.Implementations
 {
     // REFACTOR LATER
-    public class AuthService(UserManager<User> _userManager, IConfiguration _configuration, IUserRepo repo, IUserService userService): IAuthService
+    public class AuthService(UserManager<User> _userManager, IConfiguration _configuration, IUserRepo repo, IUserService userService, ILogger<AuthService> logger): IAuthService
     {
         public async Task<ServiceResponse<TokenResponse?>> LoginAsync(LoginReguest request)
         {
-            var user = await _userManager.FindByEmailAsync(request.Email);
-
-            if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
+            try
             {
-                return ServiceResponse<TokenResponse?>.FailResponse("Invalid credentials");
+                var user = await _userManager.FindByEmailAsync(request.Email);
+
+                if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
+                {
+                    return ServiceResponse<TokenResponse?>.FailResponse(
+                        HttpStatusCode.NotFound,
+                        "Invalid credentials"
+                    );
+                }
+
+                // Check if user is locked
+                if (await _userManager.IsLockedOutAsync(user))
+                {
+                    return ServiceResponse<TokenResponse?>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Account is locked"
+                    );
+                }
+
+                var tokens = new TokenResponse
+                {
+                    AccessToken = await GenerateAccessToken(user),
+                    RefreshToken = await CreateAndStoreRefreshToken(user)
+                };
+
+                return ServiceResponse<TokenResponse?>.SuccessResponse(HttpStatusCode.OK, tokens, "Login successful");
             }
-
-            // Kontrollera om användaren är låst
-            if (await _userManager.IsLockedOutAsync(user))
+            catch (Exception ex)
             {
-                return ServiceResponse<TokenResponse?>.FailResponse("Account is locked");
+                logger.LogWarning(ex.Message, ex);
+                return ServiceResponse<TokenResponse?>.FailResponse(HttpStatusCode.InternalServerError, "Something went wrong");
             }
-
-            var tokens = new TokenResponse
-            {
-                AccessToken = await GenerateAccessToken(user),
-                RefreshToken = await CreateAndStoreRefreshToken(user)
-            };
-
-            return ServiceResponse<TokenResponse?>.SuccessResponse(tokens, "Login successful");
+            
         }
         public async Task<ServiceResponse<TokenResponse?>> RefreshTokensAsync(RefreshTokenRequest request)
         {
-            var user = await ValidateRefreshTokenAsync(request.UserId, request.RefreshToken);
-            if (user is null)
+            try
             {
-                return ServiceResponse<TokenResponse?>.FailResponse("Invalid refresh token");
-            }
+                var user = await ValidateRefreshTokenAsync(request.UserId, request.RefreshToken);
+                if (user is null)
+                {
+                    return ServiceResponse<TokenResponse?>.FailResponse(HttpStatusCode.BadRequest, "Invalid refresh token");
+                }
 
-            var tokens = await CreateTokenResponse(user);
-            return ServiceResponse<TokenResponse?>.SuccessResponse(tokens, "Tokens refreshed");
+                var tokens = await CreateTokenResponse(user);
+                return ServiceResponse<TokenResponse?>.SuccessResponse(HttpStatusCode.OK, tokens, "Tokens refreshed");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex.Message, ex);
+                return ServiceResponse<TokenResponse?>.FailResponse(HttpStatusCode.InternalServerError, "Something went wrong");
+            }
         }
         private async Task<User?> ValidateRefreshTokenAsync(string userId, string refreshToken)
         {
             var user = await _userManager.FindByIdAsync(userId);  
 
             if (user is null || user.RefreshToken != refreshToken || user.RefreshTokenExpireTime <= DateTime.UtcNow)
-            {
                 return null;
-            }
 
             return user;
 
@@ -108,22 +131,45 @@ namespace PegasusBackend.Services.Implementations
         }
         public async Task<ServiceResponse<string>> RefreshTokensFromCookiesAsync(HttpContext context)
         {
-            if (!context.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
-                return ServiceResponse<string>.FailResponse("No refresh token found");
+            try
+            {
+                if (!context.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
+                    return ServiceResponse<string>.FailResponse(
+                        HttpStatusCode.NotFound,
+                        "No refresh token found"
+                    );
 
-            var user = await userService.GetUserByValidRefreshTokenAsync(refreshToken);
-            if (user == null)
-                return ServiceResponse<string>.FailResponse("Invalid or expired refresh token");
+                var user = await userService.GetUserByValidRefreshTokenAsync(refreshToken);
+                if (user == null)
+                    return ServiceResponse<string>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Invalid or expired refresh token"
+                    );
 
-            var refreshRequest = new RefreshTokenRequest { UserId = user.Id, RefreshToken = refreshToken };
-            var tokenResponse = await RefreshTokensAsync(refreshRequest);
+                var refreshRequest = new RefreshTokenRequest { UserId = user.Id, RefreshToken = refreshToken };
+                var tokenResponse = await RefreshTokensAsync(refreshRequest);
 
-            if (tokenResponse == null || tokenResponse.Data == null)
-                return ServiceResponse<string>.FailResponse("Token refresh failed");
+                if (tokenResponse == null || tokenResponse.Data == null)
+                    return ServiceResponse<string>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Token refresh failed"
+                    );
 
-            HandleAuthenticationCookies.SetAuthenticationCookie(context, tokenResponse.Data.AccessToken, tokenResponse.Data.RefreshToken);
+                HandleAuthenticationCookies.SetAuthenticationCookie(context, tokenResponse.Data.AccessToken, tokenResponse.Data.RefreshToken);
 
-            return ServiceResponse<string>.SuccessResponse("Token refreshed successfully");
+                return ServiceResponse<string>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    "Token refreshed successfully"
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex.Message, ex);
+                return ServiceResponse<string>.FailResponse(
+                    HttpStatusCode.InternalServerError, 
+                    "Something went wrong"
+                );
+            }
         }
 
     }

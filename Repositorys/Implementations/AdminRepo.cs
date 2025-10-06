@@ -23,11 +23,11 @@ namespace PegasusBackend.Repositorys.Implementations
             return taxiSettings;
         }
 
-        public async Task<TaxiSettings?> CreateTaxiPricesAsync(TaxiSettings newSettings)
+        public async Task CreateTaxiPricesAsync(TaxiSettings newSettings)
         {
             _dbContext.TaxiSettings.Add(newSettings);
             await _dbContext.SaveChangesAsync();
-            return newSettings;
+
         }
 
     }

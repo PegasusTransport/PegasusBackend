@@ -7,60 +7,62 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.Data;
 using PegasusBackend.DTOs.AuthDTOs;
+using PegasusBackend.Services.Interfaces;
 using System.Net;
 
 namespace PegasusBackend.Controllers
 {
-[Route("api/[controller]")]
-[ApiController]
-public class AuthController : ControllerBase
-{
-    private readonly IAuthService _authService;
-
-    public AuthController(IAuthService authService)
+    [Route("api/[controller]")]
+    [ApiController]
+    public class AuthController : ControllerBase
     {
-        _authService = authService;
-    }
+        private readonly IAuthService _authService;
 
-    [HttpPost("Login")]
-    public async Task<ActionResult> Login(LoginRequestDTO request)
-    {
-        var response = await _authService.LoginAsync(request, HttpContext);
-
-        return response.StatusCode switch
+        public AuthController(IAuthService authService)
         {
-            HttpStatusCode.OK => Ok(response.Message),
-            HttpStatusCode.Unauthorized => Unauthorized(response.Message),
-            HttpStatusCode.BadRequest => BadRequest(response.Message),
-            _ => StatusCode((int)response.StatusCode, response.Message)
-        };
-    }
+            _authService = authService;
+        }
 
-    [HttpPost("RefreshToken")]
-    public async Task<ActionResult> RefreshToken()
-    {
-        var response = await _authService.RefreshTokensFromCookiesAsync(HttpContext);
-
-        return response.StatusCode switch
+        [HttpPost("Login")]
+        public async Task<ActionResult> Login(LoginRequestDTO request)
         {
-            HttpStatusCode.OK => Ok(response.Data),
-            HttpStatusCode.Unauthorized => Unauthorized(response.Message),
-            HttpStatusCode.BadRequest => BadRequest(response.Message),
-            _ => StatusCode((int)response.StatusCode, response.Message)
-        };
-    }
+            var response = await _authService.LoginAsync(request, HttpContext);
 
-    [HttpPost("Logout")]
-    [Authorize]
-    public async Task<ActionResult> Logout()
-    {
-        var response = await _authService.LogoutAsync(HttpContext);
+            return response.StatusCode switch
+            {
+                HttpStatusCode.OK => Ok(response.Message),
+                HttpStatusCode.Unauthorized => Unauthorized(response.Message),
+                HttpStatusCode.BadRequest => BadRequest(response.Message),
+                _ => StatusCode((int)response.StatusCode, response.Message)
+            };
+        }
 
-        return response.StatusCode switch
+        [HttpPost("RefreshToken")]
+        public async Task<ActionResult> RefreshToken()
         {
-            HttpStatusCode.OK => Ok(response.Message),
-            HttpStatusCode.Unauthorized => Unauthorized(response.Message),
-            _ => StatusCode((int)response.StatusCode, response.Message)
-        };
+            var response = await _authService.RefreshTokensFromCookiesAsync(HttpContext);
+
+            return response.StatusCode switch
+            {
+                HttpStatusCode.OK => Ok(response.Data),
+                HttpStatusCode.Unauthorized => Unauthorized(response.Message),
+                HttpStatusCode.BadRequest => BadRequest(response.Message),
+                _ => StatusCode((int)response.StatusCode, response.Message)
+            };
+        }
+
+        [HttpPost("Logout")]
+        [Authorize]
+        public async Task<ActionResult> Logout()
+        {
+            var response = await _authService.LogoutAsync(HttpContext);
+
+            return response.StatusCode switch
+            {
+                HttpStatusCode.OK => Ok(response.Message),
+                HttpStatusCode.Unauthorized => Unauthorized(response.Message),
+                _ => StatusCode((int)response.StatusCode, response.Message)
+            };
+        }
     }
 }

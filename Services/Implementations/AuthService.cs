@@ -60,14 +60,16 @@ namespace PegasusBackend.Services.Implementations
                 return ServiceResponse<TokenResponse?>.SuccessResponse(
                     HttpStatusCode.OK,
                     tokens,
-                    "Login successful");
+                    "Login successful"
+                );
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error during login for email: {Email}", request.Email);
                 return ServiceResponse<TokenResponse?>.FailResponse(
                     HttpStatusCode.InternalServerError,
-                    "Something went wrong");
+                    "Something went wrong"
+                );
             }
         }
 
@@ -80,21 +82,24 @@ namespace PegasusBackend.Services.Implementations
                 {
                     return ServiceResponse<TokenResponse?>.FailResponse(
                         HttpStatusCode.BadRequest,
-                        "Invalid refresh token");
+                        "Invalid refresh token"
+                    );
                 }
 
                 var tokens = await CreateTokenResponse(user);
                 return ServiceResponse<TokenResponse?>.SuccessResponse(
                     HttpStatusCode.OK,
                     tokens,
-                    "Tokens refreshed");
+                    "Tokens refreshed"
+                );
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error refreshing tokens for user: {UserId}", request.UserId);
                 return ServiceResponse<TokenResponse?>.FailResponse(
                     HttpStatusCode.InternalServerError,
-                    "Something went wrong");
+                    "Something went wrong"
+                );
             }
         }
 
@@ -138,10 +143,12 @@ namespace PegasusBackend.Services.Implementations
                 HandleAuthenticationCookies.SetAuthenticationCookie(
                     httpContext,
                     tokenResponse.Data.AccessToken,
-                    tokenResponse.Data.RefreshToken);
+                    tokenResponse.Data.RefreshToken
+                );
 
                 return ServiceResponse<string>.SuccessResponse(
                     HttpStatusCode.OK,
+                    "OK",
                     "Token refreshed successfully"
                 );
             }
@@ -201,7 +208,6 @@ namespace PegasusBackend.Services.Implementations
             }
 
             return user;
-
         }
 
         private async Task<TokenResponse> CreateTokenResponse(User user)
@@ -226,7 +232,6 @@ namespace PegasusBackend.Services.Implementations
             using var rng = RandomNumberGenerator.Create();
             rng.GetBytes(randomNumber);
             return Convert.ToBase64String(randomNumber);
-
         }
 
         private async Task<string> GenerateAccessToken(User user)
@@ -242,7 +247,9 @@ namespace PegasusBackend.Services.Implementations
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
             var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(configuration["JwtSetting:Key"]!));
+                Encoding.UTF8.GetBytes(configuration["JwtSetting:Key"]!)
+            );
+
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
             var expire = configuration.GetValue<int>("JwtSetting:Expire");
 
@@ -256,25 +263,5 @@ namespace PegasusBackend.Services.Implementations
 
             return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
         }
-        public async Task<ServiceResponse<string>> RefreshTokensFromCookiesAsync(HttpContext context)
-        {
-            if (!context.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
-                return ServiceResponse<string>.FailResponse("No refresh token found");
-
-            var user = await userService.GetUserByValidRefreshTokenAsync(refreshToken);
-            if (user == null)
-                return ServiceResponse<string>.FailResponse("Invalid or expired refresh token");
-
-            var refreshRequest = new RefreshTokenRequest { UserId = user.Id, RefreshToken = refreshToken };
-            var tokenResponse = await RefreshTokensAsync(refreshRequest);
-
-            if (tokenResponse == null || tokenResponse.Data == null)
-                return ServiceResponse<string>.FailResponse("Token refresh failed");
-
-            HandleAuthenticationCookies.SetAuthenticationCookie(context, tokenResponse.Data.AccessToken, tokenResponse.Data.RefreshToken);
-
-            return ServiceResponse<string>.SuccessResponse("Token refreshed successfully");
-        }
-
     }
 }

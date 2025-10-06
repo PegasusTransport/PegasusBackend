@@ -21,10 +21,10 @@ public class AuthController : ControllerBase
 
         return response.StatusCode switch
         {
-            HttpStatusCode.OK => Ok(response.Data),
-            HttpStatusCode.Unauthorized => Unauthorized(response),
-            HttpStatusCode.BadRequest => BadRequest(response),
-            _ => StatusCode((int)response.StatusCode, response)
+            HttpStatusCode.OK => Ok(response.Message),
+            HttpStatusCode.Unauthorized => Unauthorized(response.Message),
+            HttpStatusCode.BadRequest => BadRequest(response.Message),
+            _ => StatusCode((int)response.StatusCode, response.Message)
         };
     }
 
@@ -36,9 +36,9 @@ public class AuthController : ControllerBase
         return response.StatusCode switch
         {
             HttpStatusCode.OK => Ok(response.Data),
-            HttpStatusCode.Unauthorized => Unauthorized(response),
-            HttpStatusCode.BadRequest => BadRequest(response),
-            _ => StatusCode((int)response.StatusCode, response)
+            HttpStatusCode.Unauthorized => Unauthorized(response.Message),
+            HttpStatusCode.BadRequest => BadRequest(response.Message),
+            _ => StatusCode((int)response.StatusCode, response.Message)
         };
     }
 
@@ -50,9 +50,9 @@ public class AuthController : ControllerBase
 
         return response.StatusCode switch
         {
-            HttpStatusCode.OK => Ok(response),
-            HttpStatusCode.Unauthorized => Unauthorized(response),
-            _ => StatusCode((int)response.StatusCode, response)
+            HttpStatusCode.OK => Ok(response.Message),
+            HttpStatusCode.Unauthorized => Unauthorized(response.Message),
+            _ => StatusCode((int)response.StatusCode, response.Message)
         };
     }
 }

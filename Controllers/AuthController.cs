@@ -7,72 +7,62 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.Data;
 using PegasusBackend.DTOs.AuthDTOs;
-using PegasusBackend.Helpers.JwtCookieOptions;
-using PegasusBackend.Models;
-using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+using System.Net;
 
 namespace PegasusBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController(IAuthService authService, UserManager<User> _userManager, IUserService userService) : ControllerBase
+    public class AuthController : ControllerBase
     {
-        [HttpPost("Login")]
-        public async Task<ActionResult> Login(LoginReguest request)
+        private readonly IAuthService _authService;
+
+        public AuthController(IAuthService authService)
         {
-            var result = await authService.LoginAsync(request);
+            _authService = authService;
+        }
 
-            if (!result.Success)
+        [HttpPost("Login")]
+        public async Task<ActionResult> Login(LoginRequestDTO request)
+        {
+            var response = await _authService.LoginAsync(request, HttpContext);
+
+            return response.StatusCode switch
             {
-                return Unauthorized(ApiResponse.Error(result.Message));
-               
-            }
-            if (result.Data is null)
-            {
-                return Unauthorized(ApiResponse.Error(result.Message));
-            }
-
-            HandleAuthenticationCookies.SetAuthenticationCookie(HttpContext, result.Data.AccessToken, result.Data.RefreshToken);
-            return Ok(new { message = "Logged in successfully" }); // Change to token if needed, but they will be stored in cookies
-
+                HttpStatusCode.OK => Ok(response.Message),
+                HttpStatusCode.Unauthorized => Unauthorized(response.Message),
+                HttpStatusCode.BadRequest => BadRequest(response.Message),
+                _ => StatusCode((int)response.StatusCode, response.Message)
+            };
         }
 
         [HttpPost("RefreshToken")]
-        public async Task<ActionResult<ApiResponse>> RefreshToken()
+        public async Task<ActionResult> RefreshToken()
         {
-            var result = await authService.RefreshTokensFromCookiesAsync(HttpContext);
+            var response = await _authService.RefreshTokensFromCookiesAsync(HttpContext);
 
-            if (!result.Success)
-                return Unauthorized(ApiResponse.Error(result.Message));
-
-            return Ok(ApiResponse.Ok("Token refreshed successfully"));
+            return response.StatusCode switch
+            {
+                HttpStatusCode.OK => Ok(response.Data),
+                HttpStatusCode.Unauthorized => Unauthorized(response.Message),
+                HttpStatusCode.BadRequest => BadRequest(response.Message),
+                _ => StatusCode((int)response.StatusCode, response.Message)
+            };
         }
+
         [HttpPost("Logout")]
         [Authorize]
-        public async Task<ActionResult<ApiResponse>> Logout()
+        public async Task<ActionResult> Logout()
         {
-            try
-            {
-                var user = await _userManager.GetUserAsync(User);
+            var response = await _authService.LogoutAsync(HttpContext);
 
-                if (user == null)
-                {
-                    return Unauthorized(ApiResponse.Error("User not authenticated"));
-                }
-
-                await userService.InvalidateRefreshTokenAsync(user);
-                HandleAuthenticationCookies.ClearAuthenticationCookies(HttpContext);
-                return Ok(ApiResponse.Ok("Logout successful"));
-            }
-            catch (Exception ex)
+            return response.StatusCode switch
             {
-                return BadRequest(ApiResponse.Error($"Logout failed, {ex.Message}"));
-            }
+                HttpStatusCode.OK => Ok(response.Message),
+                HttpStatusCode.Unauthorized => Unauthorized(response.Message),
+                _ => StatusCode((int)response.StatusCode, response.Message)
+            };
         }
-
     }
 }

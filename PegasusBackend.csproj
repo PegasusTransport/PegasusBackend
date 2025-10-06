@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>989698f0-0df4-4445-b245-ba3efc51196e</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +12,10 @@
     <Content Remove="DTOs\Records\**" />
     <EmbeddedResource Remove="DTOs\Records\**" />
     <None Remove="DTOs\Records\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="DTOs\AuthDTOs\LoginRequestDTO.cs" />
   </ItemGroup>
 
   <ItemGroup>

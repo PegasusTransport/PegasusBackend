@@ -24,7 +24,9 @@ namespace PegasusBackend.Models
         [Required]
         public DateTime PickUpDateTime { get; set; }
 
-        //public string PickUpAdress { get; set; } Google maps api skickar med adress också. 
+        [Required]
+        [MaxLength(300)]
+        public string PickUpAdress { get; set; } = null!;
 
         [Required]
         public double PickUpLatitude { get; set; }
@@ -32,13 +34,21 @@ namespace PegasusBackend.Models
         [Required]
         public double PickUpLongitude { get; set; }
 
-        //public string DropOffAdress { get; set; } Google maps api skickar med adress också. 
+        [Required]
+        [MaxLength(300)]
+        public string DropOffAdress { get; set; } = null!;
 
         [Required]
         public double DropOffLatitude { get; set; }
 
         [Required]
         public double DropOffLongitude { get; set; }
+
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal DistanceKm { get; set; } // Hanterar inga stopp just nu!
+
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal DurationMinutes { get; set; } // Hanterar inga stopp just nu!
 
         [MaxLength(20)]
         public string? Flightnumber { get; set; }

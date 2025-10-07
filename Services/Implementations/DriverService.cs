@@ -2,7 +2,7 @@
 using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
-using PegasusBackend.Repositorys.Implementations;
+using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
@@ -51,24 +51,49 @@ namespace PegasusBackend.Services.Implementations
                 return ServiceResponse<CreatedDriverDTO>.FailResponse(HttpStatusCode.InternalServerError, "Failed");
             }
         }
-        public Task<ServiceResponse<bool>> DeleteDriverAsync(int driverId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<ServiceResponse<List<Drivers>>> GetAllDriversAsync()
-        {
-            throw new NotImplementedException();
-        }
-
         public Task<ServiceResponse<Drivers>> GetDriverByIdAsync(int driverId)
         {
             throw new NotImplementedException();
         }
 
+        public Task<ServiceResponse<bool>> DeleteDriverAsync(int driverId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<ServiceResponse<List<AllDriversDTO>>> GetAllDriversAsync()
+        {
+            try
+            {
+                var drivers = await driverRepo.GetAllDrivers();
+
+                string message = drivers.Count > 0
+                    ? $"Found {drivers.Count} driver(s)"
+                    : "No drivers found";
+
+                return ServiceResponse<List<AllDriversDTO>>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    drivers,
+                    message
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Service error in GetAllDriversAsync");
+                return ServiceResponse<List<AllDriversDTO>>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Failed to retrieve drivers"
+                );
+            }
+
+        }
+
+ 
         public Task<ServiceResponse<Drivers>> UpdateDriverAsync(int driverId, Drivers updatedDriver)
         {
             throw new NotImplementedException();
         }
+
+
     }
 }

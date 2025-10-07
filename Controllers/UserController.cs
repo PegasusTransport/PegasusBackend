@@ -20,8 +20,8 @@ namespace PegasusBackend.Controllers
             return response.StatusCode switch
             {
                 HttpStatusCode.OK => Ok(response),
-                HttpStatusCode.BadRequest => BadRequest(new { message = response.Message }),
-                _ => StatusCode((int)response.StatusCode, new { message = response.Message })
+                HttpStatusCode.BadRequest => BadRequest(response),
+                _ => StatusCode((int)response.StatusCode, response)
             };
         }
     }

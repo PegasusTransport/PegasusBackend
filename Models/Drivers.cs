@@ -14,8 +14,7 @@ namespace PegasusBackend.Models
         [ForeignKey(nameof(UserId))]
         public User User { get; set; } = null!;
 
-        [Required]
-        public int CarId { get; set; } 
+        public int? CarId { get; set; } 
         [ForeignKey(nameof(CarId))]
         public Cars Car { get; set; } = null!;
 

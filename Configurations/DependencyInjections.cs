@@ -17,12 +17,14 @@ namespace PegasusBackend.Configurations
             // Repositories
             services.AddScoped<IAdminRepo, AdminRepo>();
             services.AddScoped<IUserRepo, UserRepo>();
+            services.AddScoped<IDriverRepo, DriverRepo>();
 
             // Services
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IPriceService, PriceService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IDriverService, DriverService>();
 
             // Email Configuration & Service
             var emailConfig = configuration.GetSection("EmailConfig").Get<EmailConfig>();

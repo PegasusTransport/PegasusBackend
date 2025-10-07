@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace PegasusBackend.DTOs
+namespace PegasusBackend.DTOs.TaxiDTOs
 {
     public class NewTaxiSettingsDTO
     {

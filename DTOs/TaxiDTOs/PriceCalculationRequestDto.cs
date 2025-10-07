@@ -1,4 +1,4 @@
-﻿namespace PegasusBackend.DTOs
+﻿namespace PegasusBackend.DTOs.TaxiDTOs
 {
     public class PriceCalculationRequestDto
     {

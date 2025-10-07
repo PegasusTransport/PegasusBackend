@@ -1,4 +1,4 @@
-﻿using PegasusBackend.DTOs;
+﻿using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Models;
 using PegasusBackend.Responses;
 

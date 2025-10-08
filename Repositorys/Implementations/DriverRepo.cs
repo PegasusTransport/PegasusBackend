@@ -62,5 +62,23 @@ namespace PegasusBackend.Repositorys.Implementations
                 return [];
             }
         }
+        public async Task<bool> UpdateDriver(UpdateDriverDTO request, string userId)
+        {
+            var driver = await context.Drivers.FirstOrDefaultAsync(d => d.UserId == userId);
+
+            if (driver == null)
+            {
+                logger.LogError("Cant find driver");
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.ProfilePicture)) 
+                driver.ProfilePicture = request.ProfilePicture;
+
+            if (request.CarId.HasValue)
+                driver.CarId = request.CarId.Value;
+
+            return true;
+        }
     }
 }

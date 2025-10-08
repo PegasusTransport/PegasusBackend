@@ -8,5 +8,6 @@ namespace PegasusBackend.DTOs.DriverDTO
     {
         [Required]
         public string ProfilePicture { get; set; } = string.Empty;
+        public int CarId { get; set; }
     }
 }

@@ -17,15 +17,6 @@ namespace PegasusBackend.Controllers
         [HttpPost("CalculateFullPrice")]
         public async Task<ActionResult<decimal>> CalculateFullPrice([FromBody] PriceCalculationRequestDto priceCalculationRequestDTO) =>
             Generate.ActionResult<decimal>(await _priceService.CalculateTotalPriceAsync(priceCalculationRequestDTO));
-        //{
-        //    var result = await _priceService.CalculateTotalPriceAsync(priceCalculationRequestDTO);
 
-        //    if (!result.Success)
-        //    {
-        //        return BadRequest("Kunde inte kalkylera priset.");
-        //    }
-
-        //    return Ok(result);
-        //}
     }
 }

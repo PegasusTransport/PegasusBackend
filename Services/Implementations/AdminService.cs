@@ -1,4 +1,4 @@
-﻿using PegasusBackend.DTOs;
+﻿using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
@@ -11,6 +11,7 @@ namespace PegasusBackend.Services.Implementations
     {
         private readonly IAdminRepo _adminRepo;
         private readonly ILogger<AdminService> _logger;
+
         public AdminService(IAdminRepo adminRepo, ILogger<AdminService> logger)
         {
             _adminRepo = adminRepo;

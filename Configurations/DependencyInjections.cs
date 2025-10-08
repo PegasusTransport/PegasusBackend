@@ -25,6 +25,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IPriceService, PriceService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IDriverService, DriverService>();
+            services.AddScoped<IMapService, MapService>();
 
             // Email Configuration & Service
             var emailConfig = configuration.GetSection("EmailConfig").Get<EmailConfig>();

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using PegasusBackend.DTOs;
+using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Extentions;
 using PegasusBackend.Models;
 using PegasusBackend.Services.Interfaces;

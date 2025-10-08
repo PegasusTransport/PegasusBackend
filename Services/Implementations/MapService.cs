@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using PegasusBackend.DTOs.MapDTOs;
+using PegasusBackend.Helpers;
 using PegasusBackend.Models;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
@@ -30,19 +31,7 @@ namespace PegasusBackend.Services.Implementations
                         "At least 2 coordinates are requared."
                     );
 
-                string ToCoord(decimal value) => value.ToString(CultureInfo.InvariantCulture);
-                var pickupAdress = $"{ToCoord(coordinates.First().Latitude)},{ToCoord(coordinates.First().Longitude)}";
-                var destination = $"{ToCoord(coordinates.Last().Latitude)},{ToCoord(coordinates.Last().Longitude)}";
-
-                // Tar bort pickupAdress och destinationen. bhåller b-c 
-                var stopps = string.Join("|", coordinates
-                    .Skip(1)
-                    .Take(coordinates.Count - 2)
-                    .Select(c => $"{ToCoord(c.Latitude)},{ToCoord(c.Longitude)}"));
-
-                var url = $"https://maps.googleapis.com/maps/api/directions/json?origin={pickupAdress}&destination={destination}&key={_key}";
-                if (!string.IsNullOrEmpty(stopps))
-                    url += $"&waypoints={stopps}";
+                var url = MapHelper.BuildDirectionsUrl(coordinates, _key);
 
                 HttpResponseMessage result;
                 try
@@ -65,7 +54,6 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                // Tolka datan som text först
                 string json;
                 try
                 {
@@ -79,7 +67,6 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                // och sen tolkar som JsonDocument. kan plocka ut datan med GetProperty. Tuple liknande med "status"
                 JsonDocument document;
                 try
                 {
@@ -115,46 +102,19 @@ namespace PegasusBackend.Services.Implementations
                         );
                     }
 
-                    var sections = routes[0].GetProperty("legs");
-
-                    var sectionList = new List<RouteSectionDto>();
-                    double totalDistance = 0, totalDuration = 0;
-
-                    foreach (var section in sections.EnumerateArray())
+                    
+                    RouteInfoDto routeInfo;
+                    try
                     {
-                        try
-                        {
-                            var distanceValue = section.GetProperty("distance").GetProperty("value").GetDouble(); // får ut i meter
-                            var durationValue = section.GetProperty("duration").GetProperty("value").GetDouble(); // får ut isekunder
-
-                            totalDistance += distanceValue;
-                            totalDuration += durationValue;
-
-                            var sectionDto = new RouteSectionDto
-                            {
-                                StartAddress = section.GetProperty("start_address").GetString(),
-                                EndAddress = section.GetProperty("end_address").GetString(),
-                                DistanceKm = (decimal)(distanceValue / 1000.0),
-                                DurationMinutes = (decimal)(durationValue / 60.0)
-                            };
-
-                            sectionList.Add(sectionDto);
-                        }
-                        catch (Exception ex)
-                        {
-                            return ServiceResponse<RouteInfoDto>.FailResponse(
-                                HttpStatusCode.InternalServerError,
-                                $"Failed to parse route section: {ex.Message}"
-                            );
-                        }
+                        routeInfo = MapHelper.ParseRouteInfo(json);
                     }
-
-                    var routeInfo = new RouteInfoDto
+                    catch (Exception ex)
                     {
-                        DistanceKm = (decimal)(totalDistance / 1000.0),
-                        DurationMinutes = (decimal)(totalDuration / 60.0),
-                        Sections = sectionList
-                    };
+                        return ServiceResponse<RouteInfoDto>.FailResponse(
+                            HttpStatusCode.InternalServerError,
+                            $"Failed to parse route info: {ex.Message}"
+                        );
+                    }
 
                     return ServiceResponse<RouteInfoDto>.SuccessResponse(
                         HttpStatusCode.OK,
@@ -172,7 +132,7 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        // problem med att få Kommun för varje adress... Den är null även fast Kommun finns med i formaterad adress!
+        // municipality is null. in the respons. maybe use postalcode i zoneHelper?
         public async Task<ServiceResponse<LocationInfoDto>> GetLocationDetailsAsync(CoordinateDto coordinateDto)
         {
             try
@@ -183,9 +143,7 @@ namespace PegasusBackend.Services.Implementations
                         "Coordinate data is missing."
                     );
 
-                string ToCoord(decimal value) => value.ToString(CultureInfo.InvariantCulture);
-
-                var url = $"https://maps.googleapis.com/maps/api/geocode/json?latlng={ToCoord(coordinateDto.Latitude)},{ToCoord(coordinateDto.Longitude)}&key={_key}";
+                var url = MapHelper.BuildGeocodeUrl(coordinateDto, _key);
 
                 HttpResponseMessage result;
                 try
@@ -260,11 +218,12 @@ namespace PegasusBackend.Services.Implementations
                     var firstResult = results[0];
 
                     string? formattedAddress = null;
+
                     try
                     {
                         formattedAddress = firstResult.GetProperty("formatted_address").GetString();
                     }
-                    catch { /* ignore */ }
+                    catch { }
 
                     string? city = null;
                     string? municipality = null;
@@ -280,13 +239,13 @@ namespace PegasusBackend.Services.Implementations
 
                                 var typeList = types.EnumerateArray().Select(t => t.GetString()).ToList();
 
-                                if (typeList.Contains("locality")) // Stad
+                                if (typeList.Contains("locality")) // stad || City
                                     city = component.GetProperty("long_name").GetString();
 
-                                if (typeList.Contains("administrative_area_level_2")) // Kommun
+                                if (typeList.Contains("administrative_area_level_2")) // kommun || Municipality
                                     municipality = component.GetProperty("long_name").GetString();
 
-                                if (typeList.Contains("postal_code")) // Postnummer
+                                if (typeList.Contains("postal_code")) // postnummer
                                     postalCode = component.GetProperty("long_name").GetString();
                             }
                             catch
@@ -296,7 +255,6 @@ namespace PegasusBackend.Services.Implementations
                         }
                     }
 
-                    // Skapar DTO
                     var locationInfo = new LocationInfoDto
                     {
                         FormattedAddress = formattedAddress,

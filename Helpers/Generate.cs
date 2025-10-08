@@ -30,7 +30,13 @@ namespace PegasusBackend.Helpers
                 HttpStatusCode.PermanentRedirect => new ObjectResult(response.Data) { StatusCode = 308 },
 
                 // 4xx Client Errors
-                HttpStatusCode.BadRequest => new BadRequestObjectResult(response.Data),
+                //HttpStatusCode.BadRequest => Results.BadRequest(response.Data, response.Message),
+                //HttpStatusCode.BadRequest => new BadRequestObjectResult(response.Data),
+                HttpStatusCode.BadRequest => new BadRequestObjectResult(new
+                {
+                    data = response.Data,
+                    message = response.Message
+                }),
                 HttpStatusCode.Unauthorized => new UnauthorizedObjectResult(response.Data),
                 HttpStatusCode.PaymentRequired => new ObjectResult(response.Data) { StatusCode = 402 },
                 HttpStatusCode.Forbidden => new ObjectResult(response.Data) { StatusCode = 403 },

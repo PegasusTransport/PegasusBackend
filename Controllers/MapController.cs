@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PegasusBackend.DTOs.MapDTOs;
+using PegasusBackend.Helpers;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
 
@@ -17,17 +18,11 @@ namespace PegasusBackend.Controllers
         }
 
         [HttpPost("route-info")]
-        public async Task<ActionResult> GetRouteInfo([FromBody] List<CoordinateDto> coordinates)
-        {
-            var result = await _mapService.GetRouteInfoAsync(coordinates);
-            return StatusCode((int)result.StatusCode, result);
-        }
+        public async Task<ActionResult<RouteInfoDto>> GetRouteInfo([FromBody] List<CoordinateDto> coordinates) =>
+            Generate.ActionResult(await _mapService.GetRouteInfoAsync(coordinates));
 
         [HttpPost("location-info")]
-        public async Task<ActionResult> GetLocationInfo([FromBody] CoordinateDto coordinate)
-        {
-            var result = await _mapService.GetLocationDetailsAsync(coordinate);
-            return StatusCode((int)result.StatusCode, result);
-        }
+        public async Task<ActionResult<LocationInfoDto>> GetLocationInfo([FromBody] CoordinateDto coordinate) =>
+             Generate.ActionResult(await _mapService.GetLocationDetailsAsync(coordinate));
     }
 }

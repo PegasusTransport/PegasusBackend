@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Org.BouncyCastle.Asn1.X509.Qualified;
 using PegasusBackend.DTOs.UserDTOs;
+using PegasusBackend.Helpers;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
@@ -13,16 +15,7 @@ namespace PegasusBackend.Controllers
     public class UserController(IUserService userService) : ControllerBase
     {
         [HttpPost("Registration")]
-        public async Task<ActionResult> RegisterUser(RegistrationRequestDTO request)
-        {
-            var response = await userService.RegisterUser(request);
-
-            return response.StatusCode switch
-            {
-                HttpStatusCode.OK => Ok(response),
-                HttpStatusCode.BadRequest => BadRequest(new { message = response.Message }),
-                _ => StatusCode((int)response.StatusCode, new { message = response.Message })
-            };
-        }
+        public async Task<ActionResult<RegistrationResponseDTO>> RegisterUser(RegistrationRequestDTO request) => 
+            Generate.ActionResult(await userService.RegisterUser(request)); 
     }
 }

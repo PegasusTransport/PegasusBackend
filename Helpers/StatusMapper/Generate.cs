@@ -11,7 +11,11 @@ namespace PegasusBackend.Helpers.StatusMapper
             return response.StatusCode switch
             {
                 // 2xx Success
-                HttpStatusCode.OK => new OkObjectResult(response.Data),
+                HttpStatusCode.OK => new OkObjectResult(new
+                {
+                    data = response.Data,
+                    message = response.Message
+                }),
                 HttpStatusCode.Created => new CreatedResult(response.Message, response.Data),
                 HttpStatusCode.Accepted => new AcceptedResult(response.Message, response.Data),
                 HttpStatusCode.NonAuthoritativeInformation => new ObjectResult(response.Data) { StatusCode = 203 },

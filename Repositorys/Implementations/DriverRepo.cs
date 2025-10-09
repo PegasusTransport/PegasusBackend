@@ -45,7 +45,6 @@ namespace PegasusBackend.Repositorys.Implementations
             try
             {
                 var drivers = await context.Drivers
-                    .Include(u => u.User)
                     .Select(d => new AllDriversDTO  
                     {
                         FirstName = d.User.FirstName,

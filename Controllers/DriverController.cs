@@ -2,11 +2,14 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PegasusBackend.DTOs.DriverDTO;
+using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Extentions;
+using PegasusBackend.Helpers.StatusMapper;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Implementations;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
+using System.Reflection.Metadata.Ecma335;
 
 namespace PegasusBackend.Controllers
 {
@@ -16,26 +19,15 @@ namespace PegasusBackend.Controllers
     {
         [HttpPost("CreateDriver")]
         [Authorize]
-        public async Task<ActionResult> CreateDriver(CreateDriverDTO request)
-        {
-            var response = await driverService.CreateDriverAsync(request, HttpContext);
+        public async Task<ActionResult<CreatedDriverDTO>> CreateDriver(CreateDriverDTO request) =>
+            Generate.ActionResult(await driverService.CreateDriverAsync(request, HttpContext));
 
-            return response.StatusCode switch
-            {
-                HttpStatusCode.OK => Ok(response),
-                HttpStatusCode.NotFound => NotFound(response),
-                HttpStatusCode.BadRequest => BadRequest(response),
-                _ => StatusCode((int)response.StatusCode, response)
-            };
-        }
         [HttpGet("GetAllDrivers")]
         [Authorize]
-        public async Task<ActionResult> GetAllDriver()
-        {
-            var response = await driverService.GetAllDriversAsync();
+        public async Task<ActionResult<List<AllDriversDTO>>> GetAllDriver() =>
+            Generate.ActionResult(await driverService.GetAllDriversAsync());
 
-            return response.StatusCode.IsSuccessStatusCode() ? Ok(response)
-                : BadRequest(response);
-        }
+
+        
     }
 }

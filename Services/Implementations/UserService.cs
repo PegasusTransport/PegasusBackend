@@ -1,30 +1,57 @@
 ﻿using Azure;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.UserDTOs;
+using PegasusBackend.Helpers.JwtCookieOptions;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
+using System.Runtime.CompilerServices;
 
 namespace PegasusBackend.Services.Implementations
 {
     public class UserService(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, IUserRepo userRepo, ILogger<UserService> logger) : IUserService
     {
-        public async Task<User?> GetUserByValidRefreshTokenAsync(string refreshToken)
+        public async Task<ServiceResponse<List<AllUserDTO>>> GetAllUsers()
         {
-            if (string.IsNullOrEmpty(refreshToken))
-                return null;
+            try
+            {
+                var allUsers = await userManager.Users.
+                    Select(u => new AllUserDTO
+                    {
+                        UserName = u.UserName!,
+                        FirstName = u.FirstName,
+                        LastName = u.LastName,
+                        Email = u.Email!
 
-            var user = await userRepo.GetUserByRefreshToken(refreshToken);
+                    }).ToListAsync();
 
-            if (user?.RefreshTokenExpireTime <= DateTime.UtcNow)
-                return null;
 
-            return user;
+                string message = allUsers.Count > 0 
+                    ? $"Found {allUsers.Count} User(s)"
+                    : "No Users found";
+
+                return ServiceResponse<List<AllUserDTO>>.SuccessResponse(
+                   HttpStatusCode.OK,
+                   allUsers,
+                   message
+               );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error refreshing tokens from cookies");
+                return ServiceResponse<List<AllUserDTO>>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Something went wrong"
+                );
+            }
+
         }
-
         public async Task<ServiceResponse<RegistrationResponseDTO>> RegisterUserAsync(RegistrationRequestDTO request)
         {
             try
@@ -92,7 +119,6 @@ namespace PegasusBackend.Services.Implementations
                     "Something went wrong");
             }
         }
-        // Refactor
         public async Task<ServiceResponse<bool>> InvalidateRefreshTokenAsync(User user)
         {
             user.RefreshToken = null;
@@ -106,17 +132,26 @@ namespace PegasusBackend.Services.Implementations
 
         }
 
-        public async Task<ServiceResponse<UpdateUserResponseDTO>> UpdateUserAsync(UpdateUserRequestDTO request, string userId)
+        public async Task<ServiceResponse<UpdateUserResponseDTO>> UpdateUserAsync(UpdateUserRequestDTO request, HttpContext context)
         {
             try
             {
-                var user = await userManager.FindByIdAsync(userId);
-                if (user == null)
+                if (!context.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
                 {
                     return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
                         HttpStatusCode.NotFound,
-                        "User not found"
+                        "No refresh token found"
                     );
+                }
+
+                var user = await GetUserByValidRefreshTokenAsync(refreshToken);
+
+                if (user == null)
+                {
+                    return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                            HttpStatusCode.NotFound,
+                            "User not found"
+                        );
                 }
 
                 if (!string.IsNullOrWhiteSpace(request.UserName) && request.UserName != user.UserName)
@@ -125,7 +160,7 @@ namespace PegasusBackend.Services.Implementations
                     if (existingUser != null)
                     {
                         return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
-                            HttpStatusCode.Conflict,
+                            HttpStatusCode.BadRequest,
                             "Username already exists"
                         );
                     }
@@ -138,7 +173,7 @@ namespace PegasusBackend.Services.Implementations
                     if (existingUser != null)
                     {
                         return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
-                            HttpStatusCode.Conflict,
+                            HttpStatusCode.BadRequest,
                             "Email already exists"
                         );
                     }
@@ -146,12 +181,13 @@ namespace PegasusBackend.Services.Implementations
                 }
                 if (!string.IsNullOrWhiteSpace(request.PhoneNumber) && request.PhoneNumber != user.PhoneNumber)
                 {
-                    var existingUser = await userManager.FindByEmailAsync(request.PhoneNumber);
+                    var existingUser = await userManager.Users
+                        .FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
                     if (existingUser != null)
                     {
                         return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
-                            HttpStatusCode.Conflict,
-                            "Email already exists"
+                            HttpStatusCode.BadRequest,
+                            "PhoneNumber already exists"
                         );
                     }
                     user.PhoneNumber = request.PhoneNumber;
@@ -177,7 +213,7 @@ namespace PegasusBackend.Services.Implementations
                 return ServiceResponse<UpdateUserResponseDTO>.SuccessResponse(
                     HttpStatusCode.OK,
                     response,
-                    $"Created user {user.UserName}");
+                   $"Updated user {user.UserName}");
             }
             catch (Exception ex)
             {
@@ -187,6 +223,18 @@ namespace PegasusBackend.Services.Implementations
                             "Server error"
                         );
             }
+        }
+        public async Task<User?> GetUserByValidRefreshTokenAsync(string refreshToken)
+        {
+            if (string.IsNullOrEmpty(refreshToken))
+                return null;
+
+            var user = await userRepo.GetUserByRefreshToken(refreshToken);
+
+            if (user?.RefreshTokenExpireTime <= DateTime.UtcNow)
+                return null;
+
+            return user;
         }
     }
 }

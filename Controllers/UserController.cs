@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Org.BouncyCastle.Asn1.X509.Qualified;
 using PegasusBackend.DTOs.UserDTOs;
@@ -16,6 +17,14 @@ namespace PegasusBackend.Controllers
     {
         [HttpPost("Registration")]
         public async Task<ActionResult<RegistrationResponseDTO>> RegisterUser(RegistrationRequestDTO request) => 
-            Generate.ActionResult(await userService.RegisterUser(request)); 
+            Generate.ActionResult(await userService.RegisterUserAsync(request));
+
+        [HttpPut("UpdateUser")]
+        [Authorize]
+        public async Task<ActionResult<UpdateUserResponseDTO>> UpdateUser(UpdateUserRequestDTO request) =>
+            Generate.ActionResult(await userService.UpdateUserAsync(request, HttpContext));
+        [HttpGet("GetAllUser")]
+        public async Task<ActionResult<List<AllUserDTO>>> GetUser() =>
+            Generate.ActionResult(await userService.GetAllUsers());
     }
 }

@@ -21,41 +21,13 @@ namespace PegasusBackend.Controllers
         public async Task<ActionResult<TokenResponse?>> Login(LoginRequestDTO request) =>
             Generate.ActionResult<TokenResponse?>(await authService.LoginAsync(request, HttpContext));
 
-            return response.StatusCode switch
-            {
-                HttpStatusCode.OK => Ok(response.Message),
-                HttpStatusCode.Unauthorized => Unauthorized(response.Message),
-                HttpStatusCode.BadRequest => BadRequest(response.Message),
-                _ => StatusCode((int)response.StatusCode, response.Message)
-            };
-        }
-
         [HttpPost("RefreshToken")]
-        public async Task<ActionResult> RefreshToken()
-        {
-            var response = await _authService.RefreshTokensFromCookiesAsync(HttpContext);
-
-            return response.StatusCode switch
-            {
-                HttpStatusCode.OK => Ok(response.Data),
-                HttpStatusCode.Unauthorized => Unauthorized(response.Message),
-                HttpStatusCode.BadRequest => BadRequest(response.Message),
-                _ => StatusCode((int)response.StatusCode, response.Message)
-            };
-        }
+        public async Task<ActionResult<string>> RefreshToken() =>
+            Generate.ActionResult(await authService.RefreshTokensFromCookiesAsync(HttpContext));
 
         [HttpPost("Logout")]
         [Authorize]
-        public async Task<ActionResult> Logout()
-        {
-            var response = await _authService.LogoutAsync(HttpContext);
-
-            return response.StatusCode switch
-            {
-                HttpStatusCode.OK => Ok(response.Message),
-                HttpStatusCode.Unauthorized => Unauthorized(response.Message),
-                _ => StatusCode((int)response.StatusCode, response.Message)
-            };
-        }
+        public async Task<ActionResult<bool>> Logout() =>
+            Generate.ActionResult(await authService.LogoutAsync(HttpContext));
     }
 }

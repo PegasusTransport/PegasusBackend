@@ -25,7 +25,7 @@ namespace PegasusBackend.Services.Implementations
             return user;
         }
 
-        public async Task<ServiceResponse<RegistrationResponseDTO>> RegisterUser(RegistrationRequestDTO request)
+        public async Task<ServiceResponse<RegistrationResponseDTO>> RegisterUserAsync(RegistrationRequestDTO request)
         {
             try
             {
@@ -104,6 +104,34 @@ namespace PegasusBackend.Services.Implementations
                 "Ok"
             );
 
+        }
+
+        public async Task<ServiceResponse<UpdateUserResponseDTO>> UpdateUserAsync(UpdateUserRequestDTO request, string userId)
+        {
+            try
+            {
+                var user = await userManager.FindByIdAsync(userId);
+
+                if (user == null)
+                {
+                    return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                        HttpStatusCode.NotFound,
+                        "User not found"
+                    );
+                }
+                if (!string.IsNullOrWhiteSpace(request.UserName)) user.UserName = request.UserName;
+                if (!string.IsNullOrWhiteSpace(request.FirstName)) user.FirstName = request.FirstName;
+                if (!string.IsNullOrWhiteSpace(request.LastName)) user.LastName = request.LastName;
+                if (!string.IsNullOrWhiteSpace(request.Email)) user.Email = request.Email;
+                if (!string.IsNullOrWhiteSpace(request.PhoneNumber)) user.PhoneNumber = request.PhoneNumber;
+
+                await userManager.UpdateAsync(user);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
     }
 }

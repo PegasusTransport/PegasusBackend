@@ -87,8 +87,6 @@ namespace PegasusBackend.Services.Implementations
             }
 
         }
-
- 
         public Task<ServiceResponse<Drivers>> UpdateDriverAsync(int driverId, Drivers updatedDriver)
         {
             throw new NotImplementedException();

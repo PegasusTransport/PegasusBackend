@@ -15,7 +15,7 @@ namespace PegasusBackend.Controllers
         [HttpPost("Registration")]
         public async Task<ActionResult> RegisterUser(RegistrationRequestDTO request)
         {
-            var response = await userService.RegisterUser(request);
+            var response = await userService.RegisterUserAsync(request);
 
             return response.StatusCode switch
             {

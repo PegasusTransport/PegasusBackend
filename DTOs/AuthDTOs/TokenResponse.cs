@@ -1,4 +1,4 @@
-﻿namespace PegasusBackend.Responses
+﻿namespace PegasusBackend.DTOs.AuthDTOs
 {
     public class TokenResponse
     {

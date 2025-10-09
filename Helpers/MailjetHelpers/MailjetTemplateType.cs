@@ -8,5 +8,6 @@
         PendingConfirmation, //When booking wihtout acc
         BookingConfirmation,//when booking is confirmed
         Receipt //reciept
+        // need to implement customerWelcome, and Driver Welcome for registrering!
     }
 }

@@ -1,6 +1,8 @@
 ﻿using Azure;
 using Microsoft.AspNetCore.Identity;
+using PegasusBackend.DTOs.MailjetDTOs;
 using PegasusBackend.DTOs.UserDTOs;
+using PegasusBackend.Helpers.MailjetHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
@@ -10,7 +12,7 @@ using System.Net;
 
 namespace PegasusBackend.Services.Implementations
 {
-    public class UserService(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, IUserRepo userRepo, ILogger<UserService> logger) : IUserService
+    public class UserService(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, IUserRepo userRepo, ILogger<UserService> logger, IMailjetEmailService mailjetEmailService) : IUserService
     {
         public async Task<User?> GetUserByValidRefreshTokenAsync(string refreshToken)
         {
@@ -73,6 +75,15 @@ namespace PegasusBackend.Services.Implementations
             
 
                 await userManager.AddToRoleAsync(newUser, request.Role.ToString());
+
+                // If the user is a customer, we send them a customer welcome template, if the are a driver, they get another template!
+                // Send a email about confirming their account. 
+
+                await mailjetEmailService.SendEmailAsync(
+                    newUser.Email,
+                    MailjetTemplateType.Welcome,
+                    new WelcomeDto { firstname = newUser.FirstName }
+                );
 
                 var response = new RegistrationResponseDTO
                 {

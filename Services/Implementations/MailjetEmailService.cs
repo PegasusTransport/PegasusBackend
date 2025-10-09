@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using PegasusBackend.Configurations;
 using PegasusBackend.Helpers.MailjetHelpers;
+using PegasusBackend.Models;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
@@ -23,33 +24,38 @@ namespace PegasusBackend.Services.Implementations
 
         private MailjetRequest BuildMailjetRequest(string toEmail, long templateId, object variables)
         {
+            Console.WriteLine($"FromEmail: {_settings.SenderEmail}, Name: {_settings.SenderName}");
+
             return new MailjetRequest
             {
                 Resource = Send.Resource
             }
-            .Property(Send.Messages, new JArray 
+            .Property(Send.Messages, new JArray
             {
-                new JObject 
+                new JObject
                 {
-                    {"From", new JObject {
-                        {"Email", _settings.SenderEmail},
-                        {"Name", _settings.SenderName}
+
+                    {"FromEmail", _settings.SenderEmail},
+                    {"FromName", _settings.SenderName},
+
+                    {"Recipients", new JArray {
+                        new JObject {
+                            {"Email", toEmail}
+                        }
                     }},
 
-                    {"To", new JArray 
-                        {
-                            new JObject 
-                            {
-                                {"Email", toEmail}
-                            }
-                        }
-                    },
-                    {"TemplateID", templateId},
-                    {"TemplateLanguage", true},
-                    {"Variables", JObject.FromObject(variables)}
-                }   
+                    {"Mj-TemplateID", templateId},
+                    {"Mj-TemplateLanguage", "true"},
+
+                    {"Vars", JObject.FromObject(variables)},
+
+                    {"Subject", "Välkommen till Pegasus Transport 🚖"}
+                }
             });
         }
+
+        
+
 
         private long GetTemplateId(MailjetTemplateType type) => type switch
         {
@@ -62,18 +68,15 @@ namespace PegasusBackend.Services.Implementations
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown template type")
         };
 
-
-
         public async Task<ServiceResponse<bool>> SendEmailAsync(
-        string toEmail,
-        MailjetTemplateType templateType,
-        object variables) // DTO specific for every template
+            string toEmail,
+            MailjetTemplateType templateType,
+            object variables)
         {
             try
             {
                 var templateId = GetTemplateId(templateType);
                 var request = BuildMailjetRequest(toEmail, templateId, variables);
-
                 var response = await _client.PostAsync(request);
 
                 if (!response.IsSuccessStatusCode)
@@ -91,28 +94,19 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-
                 return ServiceResponse<bool>.SuccessResponse(
                     HttpStatusCode.OK,
                     true,
-                    $"Sended the Email: {templateType}"
-                    );
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                return ServiceResponse<bool>.FailResponse(
-                HttpStatusCode.BadRequest,
-                $"Unknown template type: {templateType}"
+                    $"Email sent successfully using template: {templateType}"
                 );
             }
             catch (Exception ex)
             {
                 return ServiceResponse<bool>.FailResponse(
-                HttpStatusCode.BadRequest,
-                $"Unexpextead error sending {templateType}, email {ex.Message}"
+                    HttpStatusCode.BadRequest,
+                    $"Unexpected error sending {templateType}, email {ex.Message}"
                 );
             }
         }
-
     }
 }

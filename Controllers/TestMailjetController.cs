@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.MailjetDTOs;
 using PegasusBackend.Helpers.MailjetHelpers;
+using PegasusBackend.Helpers.StatusMapper;
 using PegasusBackend.Services.Interfaces;
 
 namespace PegasusBackend.Controllers
@@ -10,19 +12,20 @@ namespace PegasusBackend.Controllers
     [ApiController]
     public class TestMailjetController : ControllerBase
     {
-        [HttpGet("test")]
-        public async Task<ActionResult> TestMailjetRespons([FromServices] IMailjetEmailService mailjet)
+        private readonly IMailjetEmailService _mailjet;
+
+        public TestMailjetController(IMailjetEmailService mailjet)
         {
-            var result = await mailjet.SendEmailAsync(
-                "Parman7000@yahoo.com",
-                MailjetTemplateType.Welcome,
-                new WelcomeDto
-                {
-                    firstname = "Parman"
-                }
-            );
-            return Ok(result);
+            _mailjet = mailjet;
         }
+
+        [HttpGet("testWelcomeMail")]
+        public async Task<ActionResult<bool>> TestMailjetRespons(string yourEmail, string yourName) =>
+            Generate.ActionResult(await _mailjet.SendEmailAsync(
+                yourEmail,
+                MailjetTemplateType.Welcome,
+                new WelcomeDto { firstname = yourName }));
+
 
     }
 }

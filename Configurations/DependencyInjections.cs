@@ -14,6 +14,11 @@ namespace PegasusBackend.Configurations
             this IServiceCollection services,
             IConfiguration configuration)
         {
+            // Mailjet settings korrekt
+            services.Configure<MailJetSettings>(
+                configuration.GetSection("Mailjet")
+            );
+
             // Repositories
             services.AddScoped<IAdminRepo, AdminRepo>();
             services.AddScoped<IUserRepo, UserRepo>();

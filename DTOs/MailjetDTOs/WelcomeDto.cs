@@ -5,6 +5,6 @@ namespace PegasusBackend.DTOs.MailjetDTOs
     public class WelcomeDto
     {
         [Required]
-        public string Name { get; set; }
+        public string firstname { get; set; } = string.Empty;
     }
 }

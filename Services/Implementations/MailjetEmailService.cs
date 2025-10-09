@@ -18,7 +18,7 @@ namespace PegasusBackend.Services.Implementations
         public MailjetEmailService(IOptions<MailJetSettings> options)
         {
             _settings = options.Value;
-            _client = new MailjetClient(_settings.ApiKey, _settings.ApiSecret);
+            _client = new MailjetClient(_settings.ApiKey, _settings.SecretKey);
         }
 
         private MailjetRequest BuildMailjetRequest(string toEmail, long templateId, object variables)
@@ -32,8 +32,8 @@ namespace PegasusBackend.Services.Implementations
                 new JObject 
                 {
                     {"From", new JObject {
-                        {"Email", _settings.FromEmail},
-                        {"Name", _settings.FromName}
+                        {"Email", _settings.SenderEmail},
+                        {"Name", _settings.SenderName}
                     }},
 
                     {"To", new JArray 
@@ -53,12 +53,12 @@ namespace PegasusBackend.Services.Implementations
 
         private long GetTemplateId(MailjetTemplateType type) => type switch
         {
-            MailjetTemplateType.Welcome => _settings.mailjetTemplates.Welcome,
-            MailjetTemplateType.ForgotPassword => _settings.mailjetTemplates.ForgotPassword,
-            MailjetTemplateType.TwoFA => _settings.mailjetTemplates.TwoFA,
-            MailjetTemplateType.PendingConfirmation => _settings.mailjetTemplates.PendingConfirmation,
-            MailjetTemplateType.BookingConfirmation => _settings.mailjetTemplates.BookingConfirmation,
-            MailjetTemplateType.Receipt => _settings.mailjetTemplates.Receipt,
+            MailjetTemplateType.Welcome => _settings.Templates.Welcome,
+            MailjetTemplateType.ForgotPassword => _settings.Templates.ForgotPassword,
+            MailjetTemplateType.TwoFA => _settings.Templates.TwoFA,
+            MailjetTemplateType.PendingConfirmation => _settings.Templates.PendingConfirmation,
+            MailjetTemplateType.BookingConfirmation => _settings.Templates.BookingConfirmation,
+            MailjetTemplateType.Receipt => _settings.Templates.Receipt,
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown template type")
         };
 
@@ -76,18 +76,26 @@ namespace PegasusBackend.Services.Implementations
 
                 var response = await _client.PostAsync(request);
 
-                if (response.IsSuccessStatusCode)
+                if (!response.IsSuccessStatusCode)
                 {
-                    return ServiceResponse<bool>.SuccessResponse(
-                        HttpStatusCode.OK,
-                        true,
-                        $"Email ({templateType}) sent successfully to {toEmail}."
+                    var errorDetails = response.GetErrorMessage();
+                    var responseData = response.GetData();
+
+                    Console.WriteLine($"[MAILJET ERROR] Status: {response.StatusCode}");
+                    Console.WriteLine($"[MAILJET ERROR] Details: {errorDetails}");
+                    Console.WriteLine($"[MAILJET ERROR] Data: {responseData}");
+
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        $"Mailjet returned error. Details: {errorDetails ?? "No details"} | Data: {responseData}"
                     );
                 }
 
-                return ServiceResponse<bool>.FailResponse(
-                    HttpStatusCode.BadRequest,
-                    $"Mailjet returned an error: {templateType}"
+
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true,
+                    $"Sended the Email: {templateType}"
                     );
             }
             catch (ArgumentOutOfRangeException)

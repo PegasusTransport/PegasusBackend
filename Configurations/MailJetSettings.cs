@@ -6,8 +6,7 @@
         public string ApiSecret { get; set; } = string.Empty;
         public string FromEmail { get; set; } = "info@pegasustransport.se";
         public string FromName { get; set; } = "Pegasus Transport";
-
-        public MailjetTemplates mailjetTemplates = new();
+        public MailjetTemplates mailjetTemplates { get; set; } = new();
     }
 
     public sealed class MailjetTemplates
@@ -17,5 +16,6 @@
         public long BookingConfirmation { get; set; }
         public long ForgotPassword { get; set; }
         public long TwoFA { get; set; }
+        public long Receipt { get; set; }
     }
 }

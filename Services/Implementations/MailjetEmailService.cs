@@ -54,9 +54,9 @@ namespace PegasusBackend.Services.Implementations
         private long GetTemplateId(MailjetTemplateType type) => type switch
         {
             MailjetTemplateType.Welcome => _settings.mailjetTemplates.Welcome,
-            MailjetTemplateType.ResetPassword => _settings.mailjetTemplates.ForgotPassword,
+            MailjetTemplateType.ForgotPassword => _settings.mailjetTemplates.ForgotPassword,
             MailjetTemplateType.TwoFA => _settings.mailjetTemplates.TwoFA,
-            MailjetTemplateType.PendingBooking => _settings.mailjetTemplates.PendingConfirmation,
+            MailjetTemplateType.PendingConfirmation => _settings.mailjetTemplates.PendingConfirmation,
             MailjetTemplateType.BookingConfirmation => _settings.mailjetTemplates.BookingConfirmation,
             MailjetTemplateType.Receipt => _settings.mailjetTemplates.Receipt,
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown template type")

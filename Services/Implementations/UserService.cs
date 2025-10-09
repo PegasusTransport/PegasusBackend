@@ -40,11 +40,11 @@ namespace PegasusBackend.Services.Implementations
 
                 var newUser = new User
                 {
-                    UserName = request.UserName,
-                    FirstName = request.FirstName,
-                    LastName = request.LastName,
-                    Email = request.Email,
-                    PhoneNumber = request.PhoneNumber,
+                    UserName = request.UserName.Trim(),
+                    FirstName = request.FirstName.Trim(),
+                    LastName = request.LastName.Trim(),
+                    Email = request.Email.Trim(),  
+                    PhoneNumber = request.PhoneNumber.Trim(),
                     //TwoFactorEnabled = true, // WHEN  we WANT 2FA 
 
                     SecurityStamp = Guid.NewGuid().ToString(),
@@ -111,7 +111,6 @@ namespace PegasusBackend.Services.Implementations
             try
             {
                 var user = await userManager.FindByIdAsync(userId);
-
                 if (user == null)
                 {
                     return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
@@ -119,18 +118,74 @@ namespace PegasusBackend.Services.Implementations
                         "User not found"
                     );
                 }
-                if (!string.IsNullOrWhiteSpace(request.UserName)) user.UserName = request.UserName;
+
+                if (!string.IsNullOrWhiteSpace(request.UserName) && request.UserName != user.UserName)
+                {
+                    var existingUser = await userManager.FindByNameAsync(request.UserName);
+                    if (existingUser != null)
+                    {
+                        return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                            HttpStatusCode.Conflict,
+                            "Username already exists"
+                        );
+                    }
+                    user.UserName = request.UserName;
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.Email) && request.Email != user.Email)
+                {
+                    var existingUser = await userManager.FindByEmailAsync(request.Email);
+                    if (existingUser != null)
+                    {
+                        return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                            HttpStatusCode.Conflict,
+                            "Email already exists"
+                        );
+                    }
+                    user.Email = request.Email;
+                }
+                if (!string.IsNullOrWhiteSpace(request.PhoneNumber) && request.PhoneNumber != user.PhoneNumber)
+                {
+                    var existingUser = await userManager.FindByEmailAsync(request.PhoneNumber);
+                    if (existingUser != null)
+                    {
+                        return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                            HttpStatusCode.Conflict,
+                            "Email already exists"
+                        );
+                    }
+                    user.PhoneNumber = request.PhoneNumber;
+                }
                 if (!string.IsNullOrWhiteSpace(request.FirstName)) user.FirstName = request.FirstName;
                 if (!string.IsNullOrWhiteSpace(request.LastName)) user.LastName = request.LastName;
-                if (!string.IsNullOrWhiteSpace(request.Email)) user.Email = request.Email;
-                if (!string.IsNullOrWhiteSpace(request.PhoneNumber)) user.PhoneNumber = request.PhoneNumber;
+               
 
-                await userManager.UpdateAsync(user);
+                var result = await userManager.UpdateAsync(user);
+                if (!result.Succeeded)
+                {
+                    return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        string.Join(", ", result.Errors.Select(e => e.Description))
+                    );
+                }
+
+                var response = new UpdateUserResponseDTO()
+                {
+                    UserName = user.UserName!
+                };
+
+                return ServiceResponse<UpdateUserResponseDTO>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    response,
+                    $"Created user {user.UserName}");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                logger.LogError(ex, "Server error");
+                return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                            HttpStatusCode.InternalServerError,
+                            "Server error"
+                        );
             }
         }
     }

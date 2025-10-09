@@ -2,5 +2,6 @@
 {
     public class UpdateUserResponseDTO
     {
+        public string UserName { get; set; }  = string.Empty;
     }
 }

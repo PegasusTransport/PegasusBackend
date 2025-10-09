@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PegasusBackend.DTOs.MapDTOs;
-using PegasusBackend.Helpers;
+using PegasusBackend.Helpers.StatusMapper;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
 

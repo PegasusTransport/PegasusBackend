@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Org.BouncyCastle.Asn1.X509.Qualified;
 using PegasusBackend.DTOs.UserDTOs;
-using PegasusBackend.Helpers;
+using PegasusBackend.Helpers.StatusMapper;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;

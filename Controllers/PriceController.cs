@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PegasusBackend.DTOs.TaxiDTOs;
-using PegasusBackend.Helpers;
+using PegasusBackend.Helpers.StatusMapper;
 namespace PegasusBackend.Controllers
 {
     [Route("api/[controller]")]

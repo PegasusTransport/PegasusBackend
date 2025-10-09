@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.Data;
 using PegasusBackend.DTOs.AuthDTOs;
-using PegasusBackend.Helpers;
+using PegasusBackend.Helpers.StatusMapper;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
 

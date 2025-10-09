@@ -33,7 +33,7 @@ namespace PegasusBackend.Services.Implementations
                 if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
                 {
                     return ServiceResponse<TokenResponse?>.FailResponse(
-                        HttpStatusCode.NotFound,
+                        HttpStatusCode.BadRequest,
                         "Invalid credentials"
                     );
                 }

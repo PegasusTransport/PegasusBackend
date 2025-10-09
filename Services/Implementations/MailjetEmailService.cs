@@ -53,13 +53,12 @@ namespace PegasusBackend.Services.Implementations
 
         private long GetTemplateId(MailjetTemplateType type) => type switch
         {
-            MailjetTemplateType.Welcome => _settings.TemplateId_Welcome,
-            MailjetTemplateType.ResetPassword => _settings.TemplateId_ResetPassword,
-            MailjetTemplateType.TwoFA => _settings.TemplateId_2FA,
-            MailjetTemplateType.CreatedAccount => _settings.TemplateId_CreatedAccount,
-            MailjetTemplateType.PendingBooking => _settings.TemplateId_PendingBooking,
-            MailjetTemplateType.BookingConfirmation => _settings.TemplateId_BookingConfirmation,
-            MailjetTemplateType.Receipt => _settings.TemplateId_Receipt,
+            MailjetTemplateType.Welcome => _settings.mailjetTemplates.Welcome,
+            MailjetTemplateType.ResetPassword => _settings.mailjetTemplates.ForgotPassword,
+            MailjetTemplateType.TwoFA => _settings.mailjetTemplates.TwoFA,
+            MailjetTemplateType.PendingBooking => _settings.mailjetTemplates.PendingConfirmation,
+            MailjetTemplateType.BookingConfirmation => _settings.mailjetTemplates.BookingConfirmation,
+            MailjetTemplateType.Receipt => _settings.mailjetTemplates.Receipt,
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown template type")
         };
 
@@ -86,15 +85,24 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-               
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    $"Mailjet returned an error: {templateType}"
+                    );
             }
             catch (ArgumentOutOfRangeException)
             {
-
+                return ServiceResponse<bool>.FailResponse(
+                HttpStatusCode.BadRequest,
+                $"Unknown template type: {templateType}"
+                );
             }
             catch (Exception ex)
             {
-
+                return ServiceResponse<bool>.FailResponse(
+                HttpStatusCode.BadRequest,
+                $"Unexpextead error sending {templateType}, email {ex.Message}"
+                );
             }
         }
 

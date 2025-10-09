@@ -7,13 +7,15 @@
         public string FromEmail { get; set; } = "info@pegasustransport.se";
         public string FromName { get; set; } = "Pegasus Transport";
 
-        // Templates
-        public long TemplateId_Welcome { get; set; }
-        public long TemplateId_ResetPassword { get; set; }
-        public long TemplateId_2FA { get; set; }
-        public long TemplateId_CreatedAccount { get; set; }
-        public long TemplateId_PendingBooking { get; set; }
-        public long TemplateId_BookingConfirmation { get; set; }
-        public long TemplateId_Receipt { get; set; }
+        public MailjetTemplates mailjetTemplates = new();
+    }
+
+    public sealed class MailjetTemplates
+    {
+        public long Welcome { get; set; }
+        public long PendingConfirmation { get; set; }
+        public long BookingConfirmation { get; set; }
+        public long ForgotPassword { get; set; }
+        public long TwoFA { get; set; }
     }
 }

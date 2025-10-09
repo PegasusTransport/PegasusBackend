@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Client;
+using Org.BouncyCastle.Bcpg;
 using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Helpers.JwtCookieOptions;
@@ -11,6 +13,7 @@ using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 
 namespace PegasusBackend.Services.Implementations
@@ -119,32 +122,11 @@ namespace PegasusBackend.Services.Implementations
                     "Something went wrong");
             }
         }
-        public async Task<ServiceResponse<bool>> InvalidateRefreshTokenAsync(User user)
-        {
-            user.RefreshToken = null;
-            user.RefreshTokenExpireTime = null;
-
-            return ServiceResponse<bool>.SuccessResponse(
-                HttpStatusCode.OK, 
-                await userRepo.HandleRefreshToken(user, null), 
-                "Ok"
-            );
-
-        }
-
-        public async Task<ServiceResponse<UpdateUserResponseDTO>> UpdateUserAsync(UpdateUserRequestDTO request, HttpContext context)
+        public async Task<ServiceResponse<UpdateUserResponseDTO>> UpdateUserAsync(UpdateUserRequestDTO request, HttpContext httpContext)
         {
             try
             {
-                if (!context.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
-                {
-                    return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
-                        HttpStatusCode.NotFound,
-                        "No refresh token found"
-                    );
-                }
-
-                var user = await GetUserByValidRefreshTokenAsync(refreshToken);
+                var user = await GetUserFromCookieAsync(httpContext);
 
                 if (user == null)
                 {
@@ -194,7 +176,7 @@ namespace PegasusBackend.Services.Implementations
                 }
                 if (!string.IsNullOrWhiteSpace(request.FirstName)) user.FirstName = request.FirstName;
                 if (!string.IsNullOrWhiteSpace(request.LastName)) user.LastName = request.LastName;
-               
+
 
                 var result = await userManager.UpdateAsync(user);
                 if (!result.Succeeded)
@@ -224,6 +206,51 @@ namespace PegasusBackend.Services.Implementations
                         );
             }
         }
+        public async Task<ServiceResponse<bool>> DeleteUserAsync(HttpContext httpContext)
+        {
+            try
+            {
+                var user = await GetUserFromCookieAsync(httpContext);
+
+                if (user == null)
+                {
+                    return ServiceResponse<bool>.FailResponse(
+                         HttpStatusCode.Unauthorized,
+                         "Not authorizad"
+                     );
+                }
+                user.IsDeleted = true;
+                user.DeletedAt = DateTime.UtcNow;
+
+                await userManager.UpdateAsync(user);
+
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true,
+                    "User Deleted"
+                    );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to delete");
+                return ServiceResponse<bool>.FailResponse(
+                   HttpStatusCode.InternalServerError,
+                   "User failed to delete"
+                   );
+            }
+        }
+        public async Task<ServiceResponse<bool>> InvalidateRefreshTokenAsync(User user)
+        {
+            user.RefreshToken = null;
+            user.RefreshTokenExpireTime = null;
+
+            return ServiceResponse<bool>.SuccessResponse(
+                HttpStatusCode.OK, 
+                await userRepo.HandleRefreshToken(user, null), 
+                "Ok"
+            );
+
+        }
         public async Task<User?> GetUserByValidRefreshTokenAsync(string refreshToken)
         {
             if (string.IsNullOrEmpty(refreshToken))
@@ -233,6 +260,17 @@ namespace PegasusBackend.Services.Implementations
 
             if (user?.RefreshTokenExpireTime <= DateTime.UtcNow)
                 return null;
+
+            return user;
+        }
+        private async Task<User?> GetUserFromCookieAsync(HttpContext httpContext)
+        {
+            if (!httpContext.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
+            {
+                return null;
+            }
+
+            var user = await GetUserByValidRefreshTokenAsync(refreshToken);
 
             return user;
         }

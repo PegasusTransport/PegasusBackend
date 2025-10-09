@@ -26,5 +26,9 @@ namespace PegasusBackend.Controllers
         [HttpGet("GetAllUser")]
         public async Task<ActionResult<List<AllUserDTO>>> GetUser() =>
             Generate.ActionResult(await userService.GetAllUsers());
+        [HttpDelete("DeleteUser")]
+        [Authorize]
+        public async Task<ActionResult<bool>> DeleteUser() =>
+            Generate.ActionResult(await userService.DeleteUserAsync(HttpContext));
     }
 }

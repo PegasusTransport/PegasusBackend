@@ -17,6 +17,7 @@ namespace PegasusBackend.Configurations
             // Repositories
             services.AddScoped<IAdminRepo, AdminRepo>();
             services.AddScoped<IUserRepo, UserRepo>();
+            services.AddScoped<IBookingRepo, BookingRepo>();
 
             // Services
             services.AddScoped<IAdminService, AdminService>();
@@ -24,6 +25,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IPriceService, PriceService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IMapService, MapService>();
+            services.AddScoped<IBookingService, BookingService>();
 
             // Email Configuration & Service
             var emailConfig = configuration.GetSection("EmailConfig").Get<EmailConfig>();

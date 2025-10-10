@@ -78,11 +78,11 @@ namespace PegasusBackend.Services.Implementations
 
                 // If the user is a customer, we send them a customer welcome template, if the are a driver, they get another template!
                 // Send a email about confirming their account. 
-
                 await mailjetEmailService.SendEmailAsync(
                     newUser.Email,
                     MailjetTemplateType.Welcome,
-                    new WelcomeDto { firstname = newUser.FirstName }
+                    new WelcomeDto { firstname = newUser.FirstName },
+                    "🚖 Välkommen till Pegasus Transport 🚖"
                 );
 
                 var response = new RegistrationResponseDTO

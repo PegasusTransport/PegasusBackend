@@ -22,7 +22,7 @@ namespace PegasusBackend.Services.Implementations
             _client = new MailjetClient(_settings.ApiKey, _settings.SecretKey);
         }
 
-        private MailjetRequest BuildMailjetRequest(string toEmail, long templateId, object variables)
+        private MailjetRequest BuildMailjetRequest(string toEmail, long templateId, object variables, string subject)
         {
             Console.WriteLine($"FromEmail: {_settings.SenderEmail}, Name: {_settings.SenderName}");
 
@@ -49,7 +49,7 @@ namespace PegasusBackend.Services.Implementations
 
                     {"Vars", JObject.FromObject(variables)},
 
-                    {"Subject", "Välkommen till Pegasus Transport 🚖"}
+                    {"Subject", "🚖 Pegasus Transport 🚖"}
                 }
             });
         }
@@ -71,12 +71,13 @@ namespace PegasusBackend.Services.Implementations
         public async Task<ServiceResponse<bool>> SendEmailAsync(
             string toEmail,
             MailjetTemplateType templateType,
-            object variables)
+            object variables,
+            string subject)
         {
             try
             {
                 var templateId = GetTemplateId(templateType);
-                var request = BuildMailjetRequest(toEmail, templateId, variables);
+                var request = BuildMailjetRequest(toEmail, templateId, variables, subject);
                 var response = await _client.PostAsync(request);
 
                 if (!response.IsSuccessStatusCode)

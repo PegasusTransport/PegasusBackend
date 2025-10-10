@@ -24,7 +24,8 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await _mailjet.SendEmailAsync(
                 yourEmail,
                 MailjetTemplateType.Welcome,
-                new WelcomeDto { firstname = yourName }));
+                new WelcomeDto { firstname = yourName },
+                "🚖 Välkommen till Pegasus Transport 🚖"));
 
 
     }

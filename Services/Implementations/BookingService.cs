@@ -507,7 +507,7 @@ namespace PegasusBackend.Services.Implementations
         {
             try
             {
-                var confirmationUrl = $"{_configuration["AppSettings:FrontendUrl"]}/confirm-booking?token={token}";
+                var confirmationUrl = $"https://localhost:7161/api/booking/confirm?token={token}";
 
                 var subject = "Bekräfta din bokning hos Pegasus Transport";
                 var emailContent = $@"

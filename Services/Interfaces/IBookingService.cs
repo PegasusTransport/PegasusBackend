@@ -1,6 +1,7 @@
 ﻿
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.Responses;
+using System.Security.Claims;
 
 namespace PegasusBackend.Services.Interfaces
 {
@@ -8,10 +9,10 @@ namespace PegasusBackend.Services.Interfaces
     {
         Task<ServiceResponse<BookingResponseDto>> CreateBookingAsync(CreateBookingDto bookingDto);
         Task<ServiceResponse<BookingResponseDto>> ConfirmBookingAsync(string confirmationToken);
-        Task<ServiceResponse<BookingResponseDto>> GetBookingByIdAsync(int bookingId, string userId);
-        Task<ServiceResponse<List<BookingResponseDto>>> GetUserBookingsAsync(string userId);
+        Task<ServiceResponse<BookingResponseDto>> GetBookingByIdAsync(int bookingId, ClaimsPrincipal claimsPrincipal);
+        Task<ServiceResponse<List<BookingResponseDto>>> GetUserBookingsAsync(ClaimsPrincipal claimsPrincipal);
         Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync();
-        Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId, string userId);
+        Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId, ClaimsPrincipal claimsPrincipal);
         Task<ServiceResponse<BookingResponseDto>> GetBookingByIdForGuestAsync(int bookingId, string email);
     }
 }

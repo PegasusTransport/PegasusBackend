@@ -24,11 +24,9 @@ namespace PegasusBackend.Validators
                 .NotEmpty().WithMessage("Phone number is required.")
                 .Matches(@"^[\d\s\+\-\(\)]+$").WithMessage("Invalid phone number format.");
 
-            // Pickup - 48h rule
+            // Pickup
             RuleFor(x => x.PickUpDateTime)
-                .NotEmpty().WithMessage("PickUpDateTime is required.")
-                .Must(BeAtLeast48HoursInFuture)
-                .WithMessage("PickUpDateTime must be at least 48 hours from now.");
+                .NotEmpty().WithMessage("PickUpDateTime is required.");
 
             RuleFor(x => x.PickUpAddress)
                 .NotEmpty().WithMessage("PickUpAddress is required.")
@@ -40,33 +38,33 @@ namespace PegasusBackend.Validators
             RuleFor(x => x.PickUpLongitude)
                 .InclusiveBetween(-180, 180).WithMessage("PickUpLongitude must be between -180 and 180.");
 
-            // First stop validation (if provided)
+            // First stop (conditional)
             When(x => !string.IsNullOrEmpty(x.FirstStopAddress), () =>
             {
                 RuleFor(x => x.FirstStopAddress)
                     .MaximumLength(300).WithMessage("FirstStopAddress can't exceed 300 characters.");
 
                 RuleFor(x => x.FirstStopLatitude)
-                    .NotNull().WithMessage("FirstStopLatitude is required when FirstStopAddress is provided.")
+                    .NotNull().WithMessage("FirstStopLatitude required when FirstStopAddress provided.")
                     .InclusiveBetween(-90, 90).WithMessage("FirstStopLatitude must be between -90 and 90.");
 
                 RuleFor(x => x.FirstStopLongitude)
-                    .NotNull().WithMessage("FirstStopLongitude is required when FirstStopAddress is provided.")
+                    .NotNull().WithMessage("FirstStopLongitude required when FirstStopAddress provided.")
                     .InclusiveBetween(-180, 180).WithMessage("FirstStopLongitude must be between -180 and 180.");
             });
 
-            // Second stop validation (if provided)
+            // Second stop (conditional)
             When(x => !string.IsNullOrEmpty(x.SecondStopAddress), () =>
             {
                 RuleFor(x => x.SecondStopAddress)
                     .MaximumLength(300).WithMessage("SecondStopAddress can't exceed 300 characters.");
 
                 RuleFor(x => x.SecondStopLatitude)
-                    .NotNull().WithMessage("SecondStopLatitude is required when SecondStopAddress is provided.")
+                    .NotNull().WithMessage("SecondStopLatitude required when SecondStopAddress provided.")
                     .InclusiveBetween(-90, 90).WithMessage("SecondStopLatitude must be between -90 and 90.");
 
                 RuleFor(x => x.SecondStopLongitude)
-                    .NotNull().WithMessage("SecondStopLongitude is required when SecondStopAddress is provided.")
+                    .NotNull().WithMessage("SecondStopLongitude required when SecondStopAddress provided.")
                     .InclusiveBetween(-180, 180).WithMessage("SecondStopLongitude must be between -180 and 180.");
             });
 
@@ -82,23 +80,20 @@ namespace PegasusBackend.Validators
                 .InclusiveBetween(-180, 180).WithMessage("DropOffLongitude must be between -180 and 180.");
 
             // Optional fields
-            RuleFor(x => x.Flightnumber)
-                .MaximumLength(20).WithMessage("Flightnumber can't exceed 20 characters.")
-                .When(x => !string.IsNullOrEmpty(x.Flightnumber));
+            When(x => !string.IsNullOrEmpty(x.Flightnumber), () =>
+            {
+                RuleFor(x => x.Flightnumber)
+                    .MaximumLength(20).WithMessage("Flightnumber can't exceed 20 characters.");
+            });
 
-            RuleFor(x => x.Comment)
-                .MaximumLength(500).WithMessage("Comment can't exceed 500 characters.")
-                .When(x => !string.IsNullOrEmpty(x.Comment));
+            When(x => !string.IsNullOrEmpty(x.Comment), () =>
+            {
+                RuleFor(x => x.Comment)
+                    .MaximumLength(500).WithMessage("Comment can't exceed 500 characters.");
+            });
 
-            // Expected price (0 means skip price verification)
             RuleFor(x => x.ExpectedPrice)
                 .GreaterThanOrEqualTo(0).WithMessage("ExpectedPrice cannot be negative.");
-        }
-
-        private bool BeAtLeast48HoursInFuture(DateTime pickUpDateTime)
-        {
-            var minimumDateTime = DateTime.UtcNow.AddHours(48);
-            return pickUpDateTime >= minimumDateTime;
         }
     }
 }

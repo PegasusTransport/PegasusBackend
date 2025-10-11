@@ -1,6 +1,10 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using PegasusBackend.Validators;
 using Microsoft.OpenApi.Models;
 using PegasusBackend.Configurations;
 using Scalar.AspNetCore;
+
 
 namespace PegasusBackend
 {
@@ -14,6 +18,9 @@ namespace PegasusBackend
             builder.Services.AddApplicationServices(builder.Configuration); // Alla DIs ska in hit!
             builder.Services.AddJwtAuthentication(builder.Configuration);
             builder.Services.AddControllers();
+            builder.Services.AddFluentValidationAutoValidation();
+            builder.Services.AddFluentValidationClientsideAdapters();
+            builder.Services.AddValidatorsFromAssemblyContaining<CreateBookingDTOValidator>();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {

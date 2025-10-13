@@ -33,7 +33,7 @@ namespace PegasusBackend.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             var roles = await _userManager.GetRolesAsync(user!);
-            return Ok(new { user.Email, Roles = roles });
+            return Ok(new { user!.Email, Roles = roles });
         }
     }
 }

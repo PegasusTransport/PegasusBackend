@@ -22,8 +22,8 @@ namespace PegasusBackend.Models
         [MaxLength(300)]
         public string ProfilePicture { get; set; } = string.Empty;
 
-        public bool IsDeleted { get; set; } 
-        public DateTime DeletedAt { get; set; } 
+        public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletedAt { get; set; } 
 
         public virtual ICollection<Bookings> Bookings { get; set; } = [];
 

@@ -49,7 +49,7 @@ namespace PegasusBackend.Repositorys.Implementations
                 return await context.Drivers
                     .AsNoTracking()
                     .Include(d => d.User)
-                    .Where(d => d.UserId == userId && !d.IsDeleted)
+                    .Where(d => !d.IsDeleted&& !d.User.IsDeleted)
                     .Select(d => new DriverDTO
                     {
                         Id = d.DriverId,
@@ -79,7 +79,6 @@ namespace PegasusBackend.Repositorys.Implementations
                         ProfilePicture = d.ProfilePicture
                     })
                     .ToListAsync();
-
                 return drivers; 
             }
             catch (Exception ex)

@@ -11,34 +11,7 @@ namespace PegasusBackend.Repositorys.Implementations
 {
     public class DriverRepo(AppDBContext context, ILogger<DriverRepo> logger) : IDriverRepo
     {
-        public async Task<bool> CreateDriver(CreateDriverDTO request, string userId)
-        {
-         
-			try
-			{
-                var existingDriver = await context.Drivers.FirstOrDefaultAsync(d => d.UserId == userId);
-
-                if (existingDriver != null)
-                {
-                    logger.LogWarning("User {UserId} is already a driver", userId);
-                    return false;
-                }
-                var newDriver = new Drivers
-                {
-                    DriverId = Guid.NewGuid(),
-                    UserId = userId,
-                    ProfilePicture = request.ProfilePicture
-                };
-                context.Drivers.Add(newDriver);
-                await context.SaveChangesAsync();
-                return true;
-            }
-			catch (Exception ex)
-			{
-                logger.LogError(ex, $"Failed to create driver for user {userId}");
-                return false;
-            }
-        }
+     
         public async Task<DriverDTO?> GetDriverByIdAsync(Guid id)
         {
             try
@@ -75,6 +48,7 @@ namespace PegasusBackend.Repositorys.Implementations
             try
             {
                 var drivers = await context.Drivers
+                    .Where(d => !d.IsDeleted && !d.User.IsDeleted)
                     .Select(d => new AllDriversDTO  
                     {
                         FirstName = d.User.FirstName,
@@ -89,6 +63,58 @@ namespace PegasusBackend.Repositorys.Implementations
             {
                 logger.LogError(ex, "Couldn't retrieve all drivers");
                 return [];
+            }
+        }
+        public async Task<DriverDTO?> GetDriverByUserIdAsync(string userId)
+        {
+            try
+            {
+                return await context.Drivers
+                    .AsNoTracking()
+                    .Include(d => d.User)
+                    .Where(d => d.UserId == userId && !d.IsDeleted)
+                    .Select(d => new DriverDTO
+                    {
+                        Id = d.DriverId,
+                        FirstName = d.User.FirstName,
+                        LastName = d.User.LastName,
+                        ProfilePicture = d.ProfilePicture,
+                        CarId = d.CarId
+                    })
+                    .FirstOrDefaultAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving driver for user {UserId}", userId);
+                return null;
+            }
+        }
+        public async Task<bool> CreateDriver(CreateDriverDTO request, string userId)
+        {
+
+            try
+            {
+                var existingDriver = await context.Drivers.FirstOrDefaultAsync(d => d.UserId == userId);
+
+                if (existingDriver != null)
+                {
+                    logger.LogWarning("User {UserId} is already a driver", userId);
+                    return false;
+                }
+                var newDriver = new Drivers
+                {
+                    DriverId = Guid.NewGuid(),
+                    UserId = userId,
+                    ProfilePicture = request.ProfilePicture
+                };
+                context.Drivers.Add(newDriver);
+                await context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, $"Failed to create driver for user {userId}");
+                return false;
             }
         }
         public async Task<bool> UpdateDriver(UpdateDriverDTO request, Guid driverId)

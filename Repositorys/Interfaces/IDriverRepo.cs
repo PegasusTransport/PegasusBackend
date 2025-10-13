@@ -7,6 +7,7 @@ namespace PegasusBackend.Repositorys.Interfaces
     {
         Task<List<AllDriversDTO>> GetAllDrivers();
         Task<DriverDTO?> GetDriverByIdAsync(Guid id);
+        Task<DriverDTO?> GetDriverByUserIdAsync(string userId);
         Task<bool> CreateDriver(CreateDriverDTO request, string userId);
         Task<bool> UpdateDriver(UpdateDriverDTO request, Guid driverId);
         Task<bool> DeleteDriver(Guid driverId);

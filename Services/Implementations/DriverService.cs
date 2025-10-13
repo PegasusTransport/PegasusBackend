@@ -5,6 +5,7 @@ using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
+using System.ComponentModel;
 using System.Net;
 
 namespace PegasusBackend.Services.Implementations
@@ -15,6 +16,12 @@ namespace PegasusBackend.Services.Implementations
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(request.ProfilePicture))
+                    return ServiceResponse<CreatedDriverDTO>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Profile picture is required"
+                    );
+
                 var user = await _userManager.GetUserAsync(httpContext.User);
 
                 if (user == null)
@@ -28,7 +35,11 @@ namespace PegasusBackend.Services.Implementations
                         HttpStatusCode.BadRequest,
                         "Not role as Driver"
                     );
-
+                if (user.IsDeleted)
+                    return ServiceResponse<CreatedDriverDTO>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Cannot create driver for deleted user"
+                    );
                 if (await driverRepo.CreateDriver(request, user.Id))
                 {
                     var newDriver = new CreatedDriverDTO
@@ -184,6 +195,11 @@ namespace PegasusBackend.Services.Implementations
                     "Failed to update driver"
                 );
             }
+        }
+
+        private bool CheckIfDeleted(User user)
+        {
+            return user.IsDeleted;
         }
 
 

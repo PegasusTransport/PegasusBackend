@@ -23,17 +23,24 @@ namespace PegasusBackend.Services.Implementations
         ILogger<AuthService> logger) : IAuthService
     {
         public async Task<ServiceResponse<TokenResponse?>> LoginAsync(
-            LoginRequestDTO request,
-            HttpContext httpContext)
+    LoginRequestDTO request,
+    HttpContext httpContext)
         {
             try
             {
                 var user = await userManager.FindByEmailAsync(request.Email);
 
-                if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
+  
+                bool isPasswordValid = false;
+                if (user != null)
+                {
+                    isPasswordValid = await userManager.CheckPasswordAsync(user, request.Password);
+                }
+
+                if (user == null || !isPasswordValid || user.IsDeleted)
                 {
                     return ServiceResponse<TokenResponse?>.FailResponse(
-                        HttpStatusCode.BadRequest,
+                        HttpStatusCode.Unauthorized,
                         "Invalid credentials"
                     );
                 }
@@ -41,8 +48,8 @@ namespace PegasusBackend.Services.Implementations
                 if (await userManager.IsLockedOutAsync(user))
                 {
                     return ServiceResponse<TokenResponse?>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Account is locked"
+                        HttpStatusCode.Forbidden, 
+                        "Account is locked. Please contact support."
                     );
                 }
 
@@ -68,7 +75,7 @@ namespace PegasusBackend.Services.Implementations
                 logger.LogError(ex, "Error during login for email: {Email}", request.Email);
                 return ServiceResponse<TokenResponse?>.FailResponse(
                     HttpStatusCode.InternalServerError,
-                    "Something went wrong"
+                    "An unexpected error occurred"
                 );
             }
         }

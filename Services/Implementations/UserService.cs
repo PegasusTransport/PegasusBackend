@@ -212,6 +212,7 @@ namespace PegasusBackend.Services.Implementations
             {
                 var user = await GetUserFromCookieAsync(httpContext);
 
+
                 if (user == null)
                 {
                     return ServiceResponse<bool>.FailResponse(
@@ -219,6 +220,15 @@ namespace PegasusBackend.Services.Implementations
                          "Not authorizad"
                      );
                 }
+
+                if (await userRepo.UserHasBookings(user))
+                {
+                    return ServiceResponse<bool>.FailResponse(
+                         HttpStatusCode.BadRequest,
+                         "Cant delete user with bookings"
+                     );
+                }
+
                 user.IsDeleted = true;
                 user.DeletedAt = DateTime.UtcNow;
 

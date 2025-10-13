@@ -11,7 +11,6 @@ namespace PegasusBackend.Repositorys.Implementations
 {
     public class DriverRepo(AppDBContext context, ILogger<DriverRepo> logger) : IDriverRepo
     {
-     
         public async Task<DriverDTO?> GetDriverByIdAsync(Guid id)
         {
             try
@@ -42,28 +41,6 @@ namespace PegasusBackend.Repositorys.Implementations
                 logger.LogError(ex, "Error retrieving driver with ID {DriverId}", id);
                 throw; 
             }
-        } 
-        public async Task<List<AllDriversDTO>> GetAllDrivers()
-        {
-            try
-            {
-                var drivers = await context.Drivers
-                    .Where(d => !d.IsDeleted && !d.User.IsDeleted)
-                    .Select(d => new AllDriversDTO  
-                    {
-                        FirstName = d.User.FirstName,
-                        LastName = d.User.LastName,
-                        ProfilePicture = d.ProfilePicture
-                    })
-                    .ToListAsync();
-
-                return drivers; 
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Couldn't retrieve all drivers");
-                return [];
-            }
         }
         public async Task<DriverDTO?> GetDriverByUserIdAsync(string userId)
         {
@@ -87,6 +64,28 @@ namespace PegasusBackend.Repositorys.Implementations
             {
                 logger.LogError(ex, "Error retrieving driver for user {UserId}", userId);
                 return null;
+            }
+        }
+        public async Task<List<AllDriversDTO>> GetAllDrivers()
+        {
+            try
+            {
+                var drivers = await context.Drivers
+                    .Where(d => !d.IsDeleted && !d.User.IsDeleted)
+                    .Select(d => new AllDriversDTO  
+                    {
+                        FirstName = d.User.FirstName,
+                        LastName = d.User.LastName,
+                        ProfilePicture = d.ProfilePicture
+                    })
+                    .ToListAsync();
+
+                return drivers; 
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Couldn't retrieve all drivers");
+                return [];
             }
         }
         public async Task<bool> CreateDriver(CreateDriverDTO request, string userId)

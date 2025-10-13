@@ -39,7 +39,11 @@ namespace PegasusBackend.Helpers.StatusMapper
                     data = response.Data,
                     message = response.Message
                 }),
-                HttpStatusCode.Unauthorized => new UnauthorizedObjectResult(response.Data),
+                HttpStatusCode.Unauthorized => new UnauthorizedObjectResult(new
+                {
+                    data = response.Data,
+                    message = response.Message
+                }),
                 HttpStatusCode.PaymentRequired => new ObjectResult(response.Data) { StatusCode = 402 },
                 HttpStatusCode.Forbidden => new ObjectResult(response.Data) { StatusCode = 403 },
                 HttpStatusCode.NotFound => new NotFoundObjectResult(response.Data),

@@ -91,23 +91,71 @@ namespace PegasusBackend.Repositorys.Implementations
                 return [];
             }
         }
-        public async Task<bool> UpdateDriver(UpdateDriverDTO request, string userId)
+        public async Task<bool> UpdateDriver(UpdateDriverDTO request, Guid driverId)
         {
-            var driver = await context.Drivers.FirstOrDefaultAsync(d => d.UserId == userId);
-
-            if (driver == null)
+            try
             {
-                logger.LogError("Cant find driver");
+                var driver = await context.Drivers.FirstOrDefaultAsync(d => d.DriverId == driverId);
+
+                if (driver == null)
+                {
+                    logger.LogError("Can't find driver");
+                    return false;
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.ProfilePicture))
+                    driver.ProfilePicture = request.ProfilePicture;
+
+                if (request.CarId.HasValue)
+                    driver.CarId = request.CarId.Value;
+
+                await context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to update driver");
                 return false;
             }
+        }
+        public async Task<bool> DeleteDriver(Guid driverId)
+        {
+            using var transaction = await context.Database.BeginTransactionAsync();
+            try
+            {
+                var driver = await context.Drivers.FirstOrDefaultAsync(d => d.DriverId == driverId);
+                var booking = await context.Bookings
+                    .Where(b => b.DriverIdFK == driverId && !b.IsConfirmed).ToListAsync();
 
-            if (!string.IsNullOrWhiteSpace(request.ProfilePicture)) 
-                driver.ProfilePicture = request.ProfilePicture;
+                SetBookingsToAvailable(booking);
 
-            if (request.CarId.HasValue)
-                driver.CarId = request.CarId.Value;
+                if (driver == null)
+                {
+                    logger.LogWarning("Driver {DriverId} not found", driverId);
+                    return false;
+                }
 
-            return true;
+                driver.IsDeleted = true;
+                driver.DeletedAt = DateTime.UtcNow;
+
+                await context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                logger.LogError(ex, "Failed to delete driver {DriverId}", driverId);
+                return false;
+            }
+        }
+        private static void SetBookingsToAvailable(List<Bookings> bookings)
+        {
+            foreach (var booking in bookings)
+            {
+                booking.DriverIdFK = null;
+                booking.IsAvailable = true;
+            }
         }
     }
 }

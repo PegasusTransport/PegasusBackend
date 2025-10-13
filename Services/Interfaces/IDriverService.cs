@@ -9,7 +9,7 @@ namespace PegasusBackend.Services.Interfaces
         Task<ServiceResponse<List<AllDriversDTO>>> GetAllDriversAsync();
         Task<ServiceResponse<DriverDTO>> GetDriverByIdAsync(Guid driverId);  
         Task<ServiceResponse<CreatedDriverDTO>> CreateDriverAsync(CreateDriverDTO driver ,HttpContext httpContext);
-        Task<ServiceResponse<Drivers>> UpdateDriverAsync(int driverId, Drivers updatedDriver);
+        Task<ServiceResponse<UpdateDriverResponseDTO>> UpdateDriverAsync(Guid driverId, UpdateDriverDTO request);
         Task<ServiceResponse<bool>> DeleteDriverAsync(Guid driverId);
     }
 }

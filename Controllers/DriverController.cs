@@ -5,6 +5,7 @@ using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Extentions;
 using PegasusBackend.Helpers.StatusMapper;
+using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Implementations;
 using PegasusBackend.Services.Interfaces;
@@ -27,7 +28,20 @@ namespace PegasusBackend.Controllers
         public async Task<ActionResult<List<AllDriversDTO>>> GetAllDriver() =>
             Generate.ActionResult(await driverService.GetAllDriversAsync());
 
+        [HttpGet("GetDriverById/{id}")]
+        [Authorize]
+        public async Task<ActionResult<DriverDTO>> GetDriverById(Guid id) =>
+            Generate.ActionResult(await driverService.GetDriverByIdAsync(id));
 
-        
+        [HttpPut("UpdateDriver/{id}")]
+        [Authorize(Roles = "Admin,Driver")]
+        public async Task<ActionResult<UpdateDriverResponseDTO>> UpdateDriver(Guid id, UpdateDriverDTO request) =>
+            Generate.ActionResult(await driverService.UpdateDriverAsync(id, request));
+
+        [HttpDelete("DeleteDriver/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<bool>> DeleteDriver(Guid id) =>
+            Generate.ActionResult(await driverService.DeleteDriverAsync(id));
+
     }
 }

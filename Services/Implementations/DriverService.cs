@@ -83,32 +83,107 @@ namespace PegasusBackend.Services.Implementations
             {
                 var driver = await driverRepo.GetDriverByIdAsync(driverId);
 
-                var driverDTO = new DriverDTO()
+                if (driver == null)
                 {
-                    Id = driver.DriverId,
-                    FirstName = driver.FirstName, 
-                    LastName = driver.LastName,
-                    ProfilePicture = driver.ProfilePicture,
-
+                    return ServiceResponse<DriverDTO>.FailResponse(
+                        HttpStatusCode.NotFound,
+                        "Driver not found"
+                    );
                 }
+
+                return ServiceResponse<DriverDTO>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    driver,
+                    "Driver retrieved"
+                );
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                logger.LogError(ex, "Error retrieving driver {DriverId}", driverId);
+                return ServiceResponse<DriverDTO>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Failed to retrieve driver"
+                );
             }
-
-
         }
 
-        public Task<ServiceResponse<bool>> DeleteDriverAsync(Guid driverId)
+        public async Task<ServiceResponse<bool>> DeleteDriverAsync(Guid driverId)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var driver = await driverRepo.GetDriverByIdAsync(driverId);
+
+                if (driver == null)
+                {
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.NotFound,
+                        "Driver not found"
+                    );
+                }
+
+                var result = await driverRepo.DeleteDriver(driverId);
+
+                if (!result)
+                {
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Failed to delete driver"
+                    );
+                }
+
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true,
+                    "Driver deleted"
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error deleting driver {DriverId}", driverId);
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Failed to delete driver"
+                );
+            }
         }
 
-        public Task<ServiceResponse<Drivers>> UpdateDriverAsync(int driverId, Drivers updatedDriver)
+        public async Task<ServiceResponse<UpdateDriverResponseDTO>> UpdateDriverAsync(Guid driverId, UpdateDriverDTO updatedDriver)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var result = await driverRepo.UpdateDriver(updatedDriver, driverId);
+
+                if (!result)
+                {
+                    return ServiceResponse<UpdateDriverResponseDTO>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Failed to update driver"
+                    );
+                }
+
+                var driver = await driverRepo.GetDriverByIdAsync(driverId);
+
+                var response = new UpdateDriverResponseDTO
+                {
+                    DriverId = driverId,
+                    ProfilePicture = driver?.ProfilePicture ?? string.Empty,
+                    CarId = driver?.CarId
+                };
+
+                return ServiceResponse<UpdateDriverResponseDTO>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    response,
+                    "Driver updated"
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error updating driver {DriverId}", driverId);
+                return ServiceResponse<UpdateDriverResponseDTO>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Failed to update driver"
+                );
+            }
         }
 
 

@@ -39,7 +39,37 @@ namespace PegasusBackend.Repositorys.Implementations
                 return false;
             }
         }
+        public async Task<DriverDTO?> GetDriverByIdAsync(Guid id)
+        {
+            try
+            {
+                var driver = await context.Drivers
+                   .AsNoTracking() 
+                   .Include(d => d.User)
+                   .Where(d => d.DriverId == id)
+                   .Select(d => new DriverDTO 
+                   {
+                       Id = d.DriverId,
+                       FirstName = d.User.FirstName,
+                       LastName = d.User.LastName,
+                       ProfilePicture = d.ProfilePicture
+                   })
+                   .FirstOrDefaultAsync();
 
+                if (driver == null)
+                {
+                    logger.LogWarning("Driver with ID {DriverId} not found", id);
+                }
+
+                return driver;
+
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving driver with ID {DriverId}", id);
+                throw; 
+            }
+        } 
         public async Task<List<AllDriversDTO>> GetAllDrivers()
         {
             try

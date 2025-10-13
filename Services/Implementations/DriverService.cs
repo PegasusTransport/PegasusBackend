@@ -51,16 +51,6 @@ namespace PegasusBackend.Services.Implementations
                 return ServiceResponse<CreatedDriverDTO>.FailResponse(HttpStatusCode.InternalServerError, "Failed");
             }
         }
-        public Task<ServiceResponse<Drivers>> GetDriverByIdAsync(int driverId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<ServiceResponse<bool>> DeleteDriverAsync(int driverId)
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<ServiceResponse<List<AllDriversDTO>>> GetAllDriversAsync()
         {
             try
@@ -87,6 +77,35 @@ namespace PegasusBackend.Services.Implementations
             }
 
         }
+        public async Task<ServiceResponse<DriverDTO>> GetDriverByIdAsync(Guid driverId)
+        {
+            try
+            {
+                var driver = await driverRepo.GetDriverByIdAsync(driverId);
+
+                var driverDTO = new DriverDTO()
+                {
+                    Id = driver.DriverId,
+                    FirstName = driver.FirstName, 
+                    LastName = driver.LastName,
+                    ProfilePicture = driver.ProfilePicture,
+
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+
+
+        }
+
+        public Task<ServiceResponse<bool>> DeleteDriverAsync(Guid driverId)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<ServiceResponse<Drivers>> UpdateDriverAsync(int driverId, Drivers updatedDriver)
         {
             throw new NotImplementedException();

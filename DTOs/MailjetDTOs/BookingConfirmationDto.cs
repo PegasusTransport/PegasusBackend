@@ -13,7 +13,7 @@ namespace PegasusBackend.DTOs.MailjetDTOs
         public string PickupAddress { get; set; } = string.Empty;
 
         [MaxLength(300)]
-        public string Stops { get; set; } = "-";
+        public string? Stops { get; set; } = "Inga stopp angivna!";
 
         [Required]
         [MaxLength(200)]

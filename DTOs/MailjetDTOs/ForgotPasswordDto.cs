@@ -10,6 +10,6 @@ namespace PegasusBackend.DTOs.MailjetDTOs
 
         [Required(ErrorMessage = "Link for reseting the password is requaired.")]
         [Url(ErrorMessage = "Please send in a valid link.")]
-        public string Reset_Link { get; set; } = string.Empty;
+        public string ResetLink { get; set; } = string.Empty;
     }
 }

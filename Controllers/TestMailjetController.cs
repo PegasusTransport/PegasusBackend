@@ -20,13 +20,88 @@ namespace PegasusBackend.Controllers
         }
 
         [HttpGet("testWelcomeMail")]
-        public async Task<ActionResult<bool>> TestMailjetRespons(string yourEmail, string yourName) =>
+        public async Task<ActionResult<bool>> TestWelcomeRespons(string yourEmail, string yourName) =>
             Generate.ActionResult(await _mailjet.SendEmailAsync(
                 yourEmail,
                 MailjetTemplateType.Welcome,
                 new WelcomeDto { firstname = yourName },
-                "🚖 Välkommen till Pegasus Transport 🚖"));
+                MailjetSubjects.Welcome));
 
+        [HttpGet("testBookningConfirmationMail")]
+        public async Task<ActionResult<bool>> TestBookingConfirmationRespons(
+            string yourEmail,
+            string firstName,
+            string pickupAdress,
+            string? stops,
+            string destination,
+            string pickupTime,
+            decimal totalPrice) =>
+            Generate.ActionResult(await _mailjet.SendEmailAsync(
+                yourEmail,
+                MailjetTemplateType.BookingConfirmation,
+                new BookingConfirmationDto
+                {
+                    Firstname = firstName,
+                    PickupAddress = pickupAdress,
+                    Stops = string.IsNullOrWhiteSpace(stops) ? "Inga stopp angivna!" : stops,
+                    Destination = destination,
+                    PickupTime = pickupTime,
+                    TotalPrice = totalPrice
 
+                },
+                MailjetSubjects.BookingConfirmation));
+
+        [HttpGet("testForgotPasswordMail")]
+        public async Task<ActionResult<bool>> TestForgotPasswordMail(
+            string yourEmail,
+            string firstName,
+            string resetLink) =>
+            Generate.ActionResult(await _mailjet.SendEmailAsync(
+                yourEmail,
+                MailjetTemplateType.ForgotPassword,
+                new ForgotPasswordDto
+                {
+                    Firstname = firstName,
+                    ResetLink = resetLink
+                },
+                MailjetSubjects.ForgotPassword));
+
+        [HttpGet("testPendingConfirmationMail")]
+        public async Task<ActionResult<bool>> TestPendingConfirmationMail(
+        string yourEmail,
+        string firstName,
+        string pickupAddress,
+        string? stops,
+        string destination,
+        string pickupTime,
+        decimal totalPrice,
+        string confirmationLink)
+        => Generate.ActionResult(await _mailjet.SendEmailAsync(
+            yourEmail,
+            MailjetTemplateType.PendingConfirmation,
+            new PendingConfirmationDto
+            {
+                Firstname = firstName,
+                PickupAddress = pickupAddress,
+                Stops = string.IsNullOrWhiteSpace(stops) ? "Inga stopp angivna!" : stops,
+                Destination = destination,
+                PickupTime = pickupTime,
+                TotalPrice = totalPrice,
+                ConfirmationLink = confirmationLink
+            },
+            MailjetSubjects.PendingConfirmation));
+
+        [HttpGet("testTwoFAMail")]
+        public async Task<ActionResult<bool>> TestTwoFAMail(string yourEmail, string firstName, string code)
+            => Generate.ActionResult(await _mailjet.SendEmailAsync(
+                yourEmail,
+                MailjetTemplateType.TwoFA,
+                new TwoFADto
+                {
+                    Firstname = firstName,
+                    VerificationCode = code
+                },
+                MailjetSubjects.TwoFA));
     }
 }
+

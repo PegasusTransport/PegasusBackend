@@ -225,13 +225,20 @@ namespace PegasusBackend.Services.Implementations
                 {
                     return ServiceResponse<bool>.FailResponse(
                          HttpStatusCode.BadRequest,
-                         "Cant delete user with bookings"
+                         "Cant delete user with bookings, cancel bookings before deleting account"
                      );
                 }
-
+                user.Email = $"{Guid.NewGuid()}@DELETED.Com";
+                user.NormalizedEmail = user.Email.ToUpper();
+                user.UserName = $"deleted_{Guid.NewGuid():N}";
+                user.NormalizedUserName = user.UserName.ToUpperInvariant();
+                user.PhoneNumber = null;
+                user.FirstName = "Deleted";
+                user.LastName = "User";
                 user.IsDeleted = true;
                 user.DeletedAt = DateTime.UtcNow;
 
+                await InvalidateRefreshTokenAsync(user);
                 await userManager.UpdateAsync(user);
 
                 return ServiceResponse<bool>.SuccessResponse(

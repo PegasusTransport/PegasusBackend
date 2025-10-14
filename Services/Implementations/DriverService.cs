@@ -197,11 +197,6 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        private bool CheckIfDeleted(User user)
-        {
-            return user.IsDeleted;
-        }
-
 
     }
 }

@@ -14,7 +14,7 @@ namespace PegasusBackend.DTOs.MailjetDTOs
 
 
         [MaxLength(300, ErrorMessage = "Stops text cannot exceed 300 characters.")]
-        public string Stops { get; set; } = "No stops specified";
+        public string Stops { get; set; } = "Inga stopp angivna!";
 
 
         [Required(ErrorMessage = "Destination is required.")]

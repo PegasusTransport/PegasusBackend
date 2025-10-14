@@ -49,7 +49,7 @@ namespace PegasusBackend.Services.Implementations
 
                     {"Vars", JObject.FromObject(variables)},
 
-                    {"Subject", "🚖 Pegasus Transport 🚖"}
+                    {"Subject", subject}
                 }
             });
         }

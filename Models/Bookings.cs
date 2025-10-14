@@ -92,7 +92,7 @@ namespace PegasusBackend.Models
         public BookingStatus Status { get; set; } = BookingStatus.PendingEmailConfirmation;
 
         [MaxLength(255)]
-        public string? ConfirmationToken { get; set; }
+        public string? ConfirmationToken { get; set; } = null!;
 
         public DateTime? ConfirmationTokenExpiresAt { get; set; }
 

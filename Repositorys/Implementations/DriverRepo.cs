@@ -21,7 +21,7 @@ namespace PegasusBackend.Repositorys.Implementations
                    .Where(d => d.DriverId == id)
                    .Select(d => new DriverDTO 
                    {
-                       Id = d.DriverId,
+                       DriverId = d.DriverId,
                        FirstName = d.User.FirstName,
                        LastName = d.User.LastName,
                        ProfilePicture = d.ProfilePicture
@@ -52,7 +52,7 @@ namespace PegasusBackend.Repositorys.Implementations
                     .Where(d => !d.IsDeleted&& !d.User.IsDeleted)
                     .Select(d => new DriverDTO
                     {
-                        Id = d.DriverId,
+                        DriverId = d.DriverId,
                         FirstName = d.User.FirstName,
                         LastName = d.User.LastName,
                         ProfilePicture = d.ProfilePicture,

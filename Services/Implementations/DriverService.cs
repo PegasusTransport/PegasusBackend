@@ -219,7 +219,7 @@ namespace PegasusBackend.Services.Implementations
                 }
                 var repsonse = new DriverDTO
                 {
-                    Id = driver.Id,
+                    DriverId = driver.DriverId,
                     FirstName = driver.FirstName,
                     LastName = driver.LastName,
                     ProfilePicture = driver.ProfilePicture,

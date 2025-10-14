@@ -33,6 +33,11 @@ namespace PegasusBackend.Controllers
         public async Task<ActionResult<DriverDTO>> GetDriverById(Guid id) =>
             Generate.ActionResult(await driverService.GetDriverByIdAsync(id));
 
+        [HttpGet("GetDriverByUserId")]
+        [Authorize]
+        public async Task<ActionResult<DriverDTO>> GetDriverByUserId() =>
+            Generate.ActionResult(await driverService.GetDriverByUserIdAsync(HttpContext));
+
         [HttpPut("UpdateDriver/{id}")]
         [Authorize(Roles = "Admin,Driver")]
         public async Task<ActionResult<UpdateDriverResponseDTO>> UpdateDriver(Guid id, UpdateDriverDTO request) =>

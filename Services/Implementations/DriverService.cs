@@ -7,6 +7,7 @@ using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 using System.ComponentModel;
 using System.Net;
+using System.Security.Claims;
 
 namespace PegasusBackend.Services.Implementations
 {
@@ -193,7 +194,53 @@ namespace PegasusBackend.Services.Implementations
                     "Failed to update driver"
                 );
             }
-        }
+        }     
+        public async Task<ServiceResponse<DriverDTO>> GetDriverByUserIdAsync(HttpContext httpContext)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(httpContext.User);
 
+                if (user == null)
+                {
+                    return ServiceResponse<DriverDTO>.FailResponse(
+                       HttpStatusCode.NotFound,
+                       "Failed to find user"
+                   );
+                }
+                var driver = await driverRepo.GetDriverByUserIdAsync(user.Id);
+
+                if (driver == null)
+                {
+                    return ServiceResponse<DriverDTO>.FailResponse(
+                       HttpStatusCode.NotFound,
+                       "Failed to find driver"
+                   );
+                }
+                var repsonse = new DriverDTO
+                {
+                    Id = driver.Id,
+                    FirstName = driver.FirstName,
+                    LastName = driver.LastName,
+                    ProfilePicture = driver.ProfilePicture,
+                    CarId = driver.CarId
+                };
+                return ServiceResponse<DriverDTO>.SuccessResponse(
+                       HttpStatusCode.OK,
+                       repsonse,
+                       "Found driver"
+                   );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error geting driver");
+                return ServiceResponse<DriverDTO>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Error while to get driver"
+                );
+            }
+
+
+        }
     }
 }

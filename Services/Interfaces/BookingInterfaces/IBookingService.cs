@@ -1,9 +1,8 @@
-﻿
-using PegasusBackend.DTOs.BookingDTOs;
+﻿using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.Responses;
 using System.Security.Claims;
 
-namespace PegasusBackend.Services.Interfaces
+namespace PegasusBackend.Services.Interfaces.BookingInterfaces
 {
     public interface IBookingService
     {

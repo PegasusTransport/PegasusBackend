@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.Helpers.StatusMapper;
-using PegasusBackend.Services.Interfaces;
+using PegasusBackend.Services.Interfaces.BookingInterfaces;
 using System.Security.Claims;
 
 namespace PegasusBackend.Controllers

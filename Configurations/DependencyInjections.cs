@@ -4,7 +4,9 @@ using PegasusBackend.DTOs.EmailDTO;
 using PegasusBackend.Repositorys.Implementations;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Services.Implementations;
+using PegasusBackend.Services.Implementations.BookingServices;
 using PegasusBackend.Services.Interfaces;
+using PegasusBackend.Services.Interfaces.BookingInterfaces;
 
 namespace PegasusBackend.Configurations
 {
@@ -22,6 +24,7 @@ namespace PegasusBackend.Configurations
             // Repositories
             services.AddScoped<IAdminRepo, AdminRepo>();
             services.AddScoped<IUserRepo, UserRepo>();
+            services.AddScoped<IBookingRepo, BookingRepo>();
 
             // Services
             services.AddScoped<IAdminService, AdminService>();
@@ -30,12 +33,17 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IMapService, MapService>();
             services.AddScoped<IMailjetEmailService, MailjetEmailService>();
+            services.AddScoped<IBookingService, BookingService>();
+
+            // Booking-related services
+            services.AddScoped<IBookingValidationService, BookingValidationService>();
+            services.AddScoped<IBookingFactoryService, BookingFactoryService>();
+            services.AddScoped<IBookingMapperService, BookingMapperService>();
 
             // Email Configuration & Service
             var emailConfig = configuration.GetSection("EmailConfig").Get<EmailConfig>();
             services.AddSingleton(emailConfig!);
             services.AddScoped<IEmailService, EmailService>();
-
 
             return services;
         }

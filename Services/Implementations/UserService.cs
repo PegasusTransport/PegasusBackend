@@ -82,7 +82,7 @@ namespace PegasusBackend.Services.Implementations
                     newUser.Email,
                     MailjetTemplateType.Welcome,
                     new WelcomeDto { firstname = newUser.FirstName },
-                    "🚖 Välkommen till Pegasus Transport 🚖"
+                    MailjetSubjects.Welcome
                 );
 
                 var response = new RegistrationResponseDTO

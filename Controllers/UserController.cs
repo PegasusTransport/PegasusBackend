@@ -20,7 +20,7 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await userService.RegisterUserAsync(request));
         [HttpGet("GetUser/{email}")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<UserDTO>> GetUserById(string email) =>
+        public async Task<ActionResult<UserDTO>> GetUserByEmail(string email) =>
             Generate.ActionResult(await userService.GetUserByEmail(email));
 
         [HttpPut("UpdateUser")]

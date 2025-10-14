@@ -179,6 +179,7 @@ namespace PegasusBackend.Services.Implementations
 
 
                 var result = await userManager.UpdateAsync(user);
+
                 if (!result.Succeeded)
                 {
                     return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
@@ -187,14 +188,12 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                var response = new UpdateUserResponseDTO()
-                {
-                    UserName = user.UserName!
-                };
-
                 return ServiceResponse<UpdateUserResponseDTO>.SuccessResponse(
                     HttpStatusCode.OK,
-                    response,
+                    new UpdateUserResponseDTO
+                    {
+                        UserName = user.UserName!
+                    },
                    $"Updated user {user.UserName}");
             }
             catch (Exception ex)
@@ -219,6 +218,17 @@ namespace PegasusBackend.Services.Implementations
                          HttpStatusCode.Unauthorized,
                          "Not authorizad"
                      );
+                }
+                if (await userManager.IsInRoleAsync(user, UserRoles.Admin.ToString()))
+                {
+                    var adminCount = await userManager.GetUsersInRoleAsync(UserRoles.Admin.ToString());
+                    if (adminCount.Count == 1)
+                    {
+                        return ServiceResponse<bool>.FailResponse(
+                            HttpStatusCode.BadRequest,
+                            "Cannot delete the last admin account"
+                        );
+                    }
                 }
 
                 if (await userRepo.UserHasBookings(user))
@@ -291,11 +301,11 @@ namespace PegasusBackend.Services.Implementations
 
             return user;
         }
-        public async Task<ServiceResponse<UserDTO>> GetUserById(string userId)
+        public async Task<ServiceResponse<UserDTO>> GetUserByEmail(string email)
         {
             try
             {
-                var user = await userManager.FindByIdAsync(userId);
+                var user = await userManager.FindByEmailAsync(email);
                 if (user == null)
                 {
                     return ServiceResponse<UserDTO>.FailResponse(

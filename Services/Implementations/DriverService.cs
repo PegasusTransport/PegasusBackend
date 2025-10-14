@@ -89,6 +89,53 @@ namespace PegasusBackend.Services.Implementations
             }
 
         }
+        public async Task<ServiceResponse<DriverDTO>> GetDriverByUserIdAsync(HttpContext httpContext)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(httpContext.User);
+
+                if (user == null)
+                {
+                    return ServiceResponse<DriverDTO>.FailResponse(
+                       HttpStatusCode.NotFound,
+                       "Failed to find user"
+                   );
+                }
+                var driver = await driverRepo.GetDriverByUserIdAsync(user.Id);
+
+                if (driver == null)
+                {
+                    return ServiceResponse<DriverDTO>.FailResponse(
+                       HttpStatusCode.NotFound,
+                       "Failed to find driver"
+                   );
+                }
+                var repsonse = new DriverDTO
+                {
+                    DriverId = driver.DriverId,
+                    FirstName = driver.FirstName,
+                    LastName = driver.LastName,
+                    ProfilePicture = driver.ProfilePicture,
+                    CarId = driver.CarId
+                };
+                return ServiceResponse<DriverDTO>.SuccessResponse(
+                       HttpStatusCode.OK,
+                       repsonse,
+                       "Found driver"
+                   );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error geting driver");
+                return ServiceResponse<DriverDTO>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Error while to get driver"
+                );
+            }
+
+
+        }
         public async Task<ServiceResponse<DriverDTO>> GetDriverByIdAsync(Guid driverId)
         {
             try
@@ -157,12 +204,19 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
-        public async Task<ServiceResponse<UpdateDriverResponseDTO>> UpdateDriverAsync(Guid driverId, UpdateDriverDTO updatedDriver)
+        public async Task<ServiceResponse<UpdateDriverResponseDTO>> UpdateDriverAsync(Guid driverId, UpdateDriverDTO updatedDriver, HttpContext httpContext)
         {
             try
             {
-                var result = await driverRepo.UpdateDriver(updatedDriver, driverId);
+                if (!await CanUpdateDriver(httpContext, driverId))
+                {
+                    return ServiceResponse<UpdateDriverResponseDTO>.FailResponse(
+                        HttpStatusCode.Forbidden,
+                        "You don't have permission to update this driver"
+                    );
+                }
 
+                var result = await driverRepo.UpdateDriver(updatedDriver, driverId);
                 if (!result)
                 {
                     return ServiceResponse<UpdateDriverResponseDTO>.FailResponse(
@@ -172,7 +226,6 @@ namespace PegasusBackend.Services.Implementations
                 }
 
                 var driver = await driverRepo.GetDriverByIdAsync(driverId);
-
                 var response = new UpdateDriverResponseDTO
                 {
                     DriverId = driverId,
@@ -194,53 +247,16 @@ namespace PegasusBackend.Services.Implementations
                     "Failed to update driver"
                 );
             }
-        }     
-        public async Task<ServiceResponse<DriverDTO>> GetDriverByUserIdAsync(HttpContext httpContext)
+        }
+        private async Task<bool> CanUpdateDriver(HttpContext httpContext, Guid driverId)
         {
-            try
-            {
-                var user = await _userManager.GetUserAsync(httpContext.User);
+            var currentUser = await _userManager.GetUserAsync(httpContext.User);
+            if (currentUser == null) return false;
 
-                if (user == null)
-                {
-                    return ServiceResponse<DriverDTO>.FailResponse(
-                       HttpStatusCode.NotFound,
-                       "Failed to find user"
-                   );
-                }
-                var driver = await driverRepo.GetDriverByUserIdAsync(user.Id);
-
-                if (driver == null)
-                {
-                    return ServiceResponse<DriverDTO>.FailResponse(
-                       HttpStatusCode.NotFound,
-                       "Failed to find driver"
-                   );
-                }
-                var repsonse = new DriverDTO
-                {
-                    DriverId = driver.DriverId,
-                    FirstName = driver.FirstName,
-                    LastName = driver.LastName,
-                    ProfilePicture = driver.ProfilePicture,
-                    CarId = driver.CarId
-                };
-                return ServiceResponse<DriverDTO>.SuccessResponse(
-                       HttpStatusCode.OK,
-                       repsonse,
-                       "Found driver"
-                   );
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error geting driver");
-                return ServiceResponse<DriverDTO>.FailResponse(
-                    HttpStatusCode.InternalServerError,
-                    "Error while to get driver"
-                );
-            }
-
-
+            if (await _userManager.IsInRoleAsync(currentUser, UserRoles.Admin.ToString()))
+                return true;
+            var currentDriver = await driverRepo.GetDriverByUserIdAsync(currentUser.Id);
+            return currentDriver?.DriverId == driverId;
         }
     }
 }

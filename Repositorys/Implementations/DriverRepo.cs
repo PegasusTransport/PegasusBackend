@@ -49,7 +49,7 @@ namespace PegasusBackend.Repositorys.Implementations
                 return await context.Drivers
                     .AsNoTracking()
                     .Include(d => d.User)
-                    .Where(d => !d.IsDeleted&& !d.User.IsDeleted)
+                    .Where(d => d.UserId == userId && !d.IsDeleted && !d.User.IsDeleted)
                     .Select(d => new DriverDTO
                     {
                         DriverId = d.DriverId,

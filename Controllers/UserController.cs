@@ -18,13 +18,18 @@ namespace PegasusBackend.Controllers
         [HttpPost("Registration")]
         public async Task<ActionResult<RegistrationResponseDTO>> RegisterUser(RegistrationRequestDTO request) => 
             Generate.ActionResult(await userService.RegisterUserAsync(request));
+        [HttpGet("GetUser/{email}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<UserDTO>> GetUserById(string email) =>
+            Generate.ActionResult(await userService.GetUserByEmail(email));
 
         [HttpPut("UpdateUser")]
         [Authorize]
         public async Task<ActionResult<UpdateUserResponseDTO>> UpdateUser(UpdateUserRequestDTO request) =>
             Generate.ActionResult(await userService.UpdateUserAsync(request, HttpContext));
-        [HttpGet("GetAllUser")]
-        public async Task<ActionResult<List<AllUserDTO>>> GetUser() =>
+        [HttpGet("GetAllUsers")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<List<AllUserDTO>>> GetAllUsers() =>
             Generate.ActionResult(await userService.GetAllUsers());
         [HttpDelete("DeleteUser")]
         [Authorize]

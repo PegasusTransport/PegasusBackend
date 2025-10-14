@@ -19,12 +19,12 @@ namespace PegasusBackend.Controllers
     public class DriverController(IDriverService driverService) : ControllerBase
     {
         [HttpPost("CreateDriver")]
-        [Authorize]
+        [Authorize(Roles = "Driver")]
         public async Task<ActionResult<CreatedDriverDTO>> CreateDriver(CreateDriverDTO request) =>
             Generate.ActionResult(await driverService.CreateDriverAsync(request, HttpContext));
 
         [HttpGet("GetAllDrivers")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<List<AllDriversDTO>>> GetAllDriver() =>
             Generate.ActionResult(await driverService.GetAllDriversAsync());
 
@@ -41,7 +41,7 @@ namespace PegasusBackend.Controllers
         [HttpPut("UpdateDriver/{id}")]
         [Authorize(Roles = "Admin,Driver")]
         public async Task<ActionResult<UpdateDriverResponseDTO>> UpdateDriver(Guid id, UpdateDriverDTO request) =>
-            Generate.ActionResult(await driverService.UpdateDriverAsync(id, request));
+            Generate.ActionResult(await driverService.UpdateDriverAsync(id, request, HttpContext));
 
         [HttpDelete("DeleteDriver/{id}")]
         [Authorize(Roles = "Admin")]

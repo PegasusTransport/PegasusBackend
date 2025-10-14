@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using PegasusBackend.DTOs.BookingDTOs;
-using PegasusBackend.DTOs.EmailDTO;
 using PegasusBackend.DTOs.MapDTOs;
 using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Models;
@@ -45,173 +44,25 @@ namespace PegasusBackend.Services.Implementations
         {
             try
             {
-               
-                _logger.LogWarning("Pickup time: {Time}, UtcNow: {Now}, Required: {Req}",
-                    bookingDto.PickUpDateTime, DateTime.UtcNow, DateTime.UtcNow.AddHours(48));
+                var validationResult = await ValidateBookingAsync(bookingDto);
+                if (!validationResult.IsValid)
+                    return validationResult.ErrorResponse!;
 
-                if (bookingDto.PickUpDateTime < DateTime.UtcNow.AddHours(48))
-                {
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "PickUpDateTime must be at least 48 hours from now."
-                    );
-                }
-
-                // 2. Build coordinates list for MapService
-                var coordinates = BuildCoordinatesList(bookingDto);
-
-                // 3. Verify route with MapService
-                var routeResponse = await _mapService.GetRouteInfoAsync(coordinates);
-                if (routeResponse.StatusCode != HttpStatusCode.OK || routeResponse.Data == null)
-                {
-                    _logger.LogWarning("MapService failed: {Status}", routeResponse.StatusCode);
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Could not verify route. Please check addresses and coordinates."
-                    );
-                }
-
-                _logger.LogInformation("MapService OK - Route verified");
-
-                // 3.5. Validate Arlanda requirements
-                var allAddresses = new List<string>
-                {
-                    bookingDto.PickUpAddress
-                };
-
-                if (!string.IsNullOrEmpty(bookingDto.FirstStopAddress))
-                    allAddresses.Add(bookingDto.FirstStopAddress);
-
-                if (!string.IsNullOrEmpty(bookingDto.SecondStopAddress))
-                    allAddresses.Add(bookingDto.SecondStopAddress);
-
-                allAddresses.Add(bookingDto.DropOffAddress);
-
-                var hasArlanda = allAddresses.Any(a =>
-                    a.Contains("arlanda", StringComparison.OrdinalIgnoreCase));
-
-                _logger.LogInformation("Arlanda check - Has Arlanda: {Has}, Pickup: {Pickup}, Flight#: {Flight}",
-                    hasArlanda, bookingDto.PickUpAddress, bookingDto.Flightnumber ?? "EMPTY");
-
-                // If trip includes Arlanda and starts from Arlanda, flight number is required
-                if (hasArlanda &&
-                    bookingDto.PickUpAddress.Contains("arlanda", StringComparison.OrdinalIgnoreCase) &&
-                    string.IsNullOrEmpty(bookingDto.Flightnumber))
-                {
-                    _logger.LogWarning("Arlanda validation failed - no flight number");
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Flight number is required for trips departing from Arlanda."
-                    );
-                }
-
-                _logger.LogInformation("Arlanda validation passed");
-
-                // 4. Calculate price and verify with frontend price
-                var priceRequest = BuildPriceCalculationRequest(bookingDto, routeResponse.Data);
-                var priceResponse = await _priceService.CalculateTotalPriceAsync(priceRequest);
-
-                if (priceResponse.StatusCode != HttpStatusCode.OK || priceResponse.Data == 0)
-                {
-                    _logger.LogWarning("PriceService failed: {Status}", priceResponse.StatusCode);
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Could not calculate price for the booking."
-                    );
-                }
-
-                _logger.LogInformation("PriceService OK - Price: {Price}", priceResponse.Data);
-
-                // 5. Verify price matches frontend (tolerance of 5 SEK)
-                if (bookingDto.ExpectedPrice > 0)
-                {
-                    var priceDifference = Math.Abs(priceResponse.Data - bookingDto.ExpectedPrice);
-                    if (priceDifference > 5)
-                    {
-                        return ServiceResponse<BookingResponseDto>.FailResponse(
-                            HttpStatusCode.BadRequest,
-                            $"Price mismatch. Calculated: {priceResponse.Data:F2} SEK, Expected: {bookingDto.ExpectedPrice:F2} SEK. Please refresh and try again."
-                        );
-                    }
-                }
-
-                // 6. Check if user exists (registered user booking)
                 var user = await _userManager.FindByEmailAsync(bookingDto.Email);
-                bool isGuestBooking = user == null;
+                var isGuestBooking = user == null;
 
-                // 7. Create booking
-                var booking = new Bookings
-                {
-                    // User or Guest
-                    UserIdFk = user?.Id,
-                    GuestEmail = isGuestBooking ? bookingDto.Email : null,
-                    GuestFirstName = isGuestBooking ? bookingDto.FirstName : null,
-                    GuestLastName = isGuestBooking ? bookingDto.LastName : null,
-                    GuestPhoneNumber = isGuestBooking ? bookingDto.PhoneNumber : null,
-
-                    // Booking details
-                    Price = priceResponse.Data,
-                    BookingDateTime = DateTime.UtcNow,
-                    PickUpDateTime = bookingDto.PickUpDateTime,
-                    PickUpAdress = bookingDto.PickUpAddress,
-                    PickUpLatitude = bookingDto.PickUpLatitude,
-                    PickUpLongitude = bookingDto.PickUpLongitude,
-                    FirstStopAddress = bookingDto.FirstStopAddress,
-                    FirstStopLatitude = bookingDto.FirstStopLatitude,
-                    FirstStopLongitude = bookingDto.FirstStopLongitude,
-                    SecondStopAddress = bookingDto.SecondStopAddress,
-                    SecondStopLatitude = bookingDto.SecondStopLatitude,
-                    SecondStopLongitude = bookingDto.SecondStopLongitude,
-                    DropOffAdress = bookingDto.DropOffAddress,
-                    DropOffLatitude = bookingDto.DropOffLatitude,
-                    DropOffLongitude = bookingDto.DropOffLongitude,
-                    DistanceKm = routeResponse.Data.DistanceKm,
-                    DurationMinutes = routeResponse.Data.DurationMinutes,
-                    Flightnumber = bookingDto.Flightnumber,
-                    Comment = bookingDto.Comment,
-
-                    // Registered users get instant confirmation, guests need email confirmation
-                    Status = isGuestBooking ? BookingStatus.PendingEmailConfirmation : BookingStatus.Confirmed,
-                    ConfirmationToken = isGuestBooking ? GenerateConfirmationToken() : null,
-                    ConfirmationTokenExpiresAt = isGuestBooking ? DateTime.UtcNow.AddHours(24) : null,
-                    IsConfirmed = !isGuestBooking,
-                    // IsAvailable should only be true when booking is confirmed
-                    IsAvailable = !isGuestBooking
-                };
+                var booking = CreateBookingEntity(
+                    bookingDto,
+                    validationResult.RouteInfo!,
+                    validationResult.CalculatedPrice,
+                    user,
+                    isGuestBooking);
 
                 var createdBooking = await _bookingRepo.CreateBookingAsync(booking);
 
-                // 8. Send appropriate email
-                if (isGuestBooking)
-                {
-                    await SendGuestConfirmationEmailAsync(
-                        bookingDto.Email,
-                        bookingDto.FirstName,
-                        createdBooking.ConfirmationToken!,
-                        createdBooking
-                    );
-                }
-                else
-                {
-                    await SendRegisteredUserBookingEmailAsync(
-                        bookingDto.Email,
-                        bookingDto.FirstName,
-                        createdBooking
-                    );
-                }
+                await SendBookingEmailAsync(createdBooking, bookingDto, isGuestBooking);
 
-                // 9. Map to response DTO
-                var response = MapToResponseDTO(createdBooking);
-
-                string message = isGuestBooking
-                    ? "Booking created successfully. Please check your email to confirm."
-                    : "Booking confirmed successfully!";
-
-                return ServiceResponse<BookingResponseDto>.SuccessResponse(
-                    HttpStatusCode.OK,
-                    response,
-                    message
-                );
+                return BuildSuccessResponse(createdBooking, isGuestBooking);
             }
             catch (Exception ex)
             {
@@ -245,7 +96,6 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                // Check if token has expired - if so, delete the booking
                 if (booking.ConfirmationTokenExpiresAt < DateTime.UtcNow)
                 {
                     await _bookingRepo.DeleteBookingAsync(booking.BookingId);
@@ -263,10 +113,9 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                // Update booking status
                 booking.Status = BookingStatus.Confirmed;
                 booking.IsConfirmed = true;
-                booking.IsAvailable = true; // Only set to true when confirmed
+                booking.IsAvailable = true;
                 booking.ConfirmationToken = null;
                 booking.ConfirmationTokenExpiresAt = null;
 
@@ -486,41 +335,187 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        // Private helper methods
+        #region Private Helper Methods - Validation
+
+        private async Task<ValidationResult> ValidateBookingAsync(CreateBookingDto bookingDto)
+        {
+            var pickupValidation = ValidatePickupTime(bookingDto.PickUpDateTime);
+            if (pickupValidation != null)
+                return new ValidationResult { IsValid = false, ErrorResponse = pickupValidation };
+
+            var routeResult = await VerifyRouteAsync(bookingDto);
+            if (!routeResult.IsValid)
+                return new ValidationResult { IsValid = false, ErrorResponse = routeResult.ErrorResponse };
+
+            var arlandaValidation = ValidateArlandaRequirements(bookingDto);
+            if (arlandaValidation != null)
+                return new ValidationResult { IsValid = false, ErrorResponse = arlandaValidation };
+
+            var priceResult = await CalculateAndVerifyPriceAsync(bookingDto, routeResult.RouteInfo!);
+            if (!priceResult.IsValid)
+                return new ValidationResult { IsValid = false, ErrorResponse = priceResult.ErrorResponse };
+
+            return new ValidationResult
+            {
+                IsValid = true,
+                RouteInfo = routeResult.RouteInfo,
+                CalculatedPrice = priceResult.Price
+            };
+        }
+
+        private ServiceResponse<BookingResponseDto>? ValidatePickupTime(DateTime pickUpDateTime)
+        {
+            if (pickUpDateTime < DateTime.UtcNow.AddHours(48))
+            {
+                return ServiceResponse<BookingResponseDto>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    "PickUpDateTime must be at least 48 hours from now."
+                );
+            }
+            return null;
+        }
+
+        private async Task<RouteValidationResult> VerifyRouteAsync(CreateBookingDto bookingDto)
+        {
+            var coordinates = BuildCoordinatesList(bookingDto);
+            var routeResponse = await _mapService.GetRouteInfoAsync(coordinates);
+
+            if (routeResponse.StatusCode != HttpStatusCode.OK || routeResponse.Data == null)
+            {
+                _logger.LogWarning("MapService failed: {Status}", routeResponse.StatusCode);
+                return new RouteValidationResult
+                {
+                    IsValid = false,
+                    ErrorResponse = ServiceResponse<BookingResponseDto>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Could not verify route. Please check addresses and coordinates."
+                    )
+                };
+            }
+
+            _logger.LogInformation("MapService OK - Route verified");
+            return new RouteValidationResult { IsValid = true, RouteInfo = routeResponse.Data };
+        }
+
+        private ServiceResponse<BookingResponseDto>? ValidateArlandaRequirements(CreateBookingDto bookingDto)
+        {
+            var allAddresses = GetAllAddresses(bookingDto);
+            var hasArlanda = allAddresses.Any(a => a.Contains("arlanda", StringComparison.OrdinalIgnoreCase));
+
+            if (hasArlanda &&
+                bookingDto.PickUpAddress.Contains("arlanda", StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrEmpty(bookingDto.Flightnumber))
+            {
+                _logger.LogWarning("Arlanda validation failed - no flight number");
+                return ServiceResponse<BookingResponseDto>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    "Flight number is required for trips departing from Arlanda."
+                );
+            }
+
+            return null;
+        }
+
+        private async Task<PriceValidationResult> CalculateAndVerifyPriceAsync(CreateBookingDto bookingDto, RouteInfoDto routeInfo)
+        {
+            var priceRequest = BuildPriceCalculationRequest(bookingDto, routeInfo);
+            var priceResponse = await _priceService.CalculateTotalPriceAsync(priceRequest);
+
+            if (priceResponse.StatusCode != HttpStatusCode.OK || priceResponse.Data == 0)
+            {
+                _logger.LogWarning("PriceService failed: {Status}", priceResponse.StatusCode);
+                return new PriceValidationResult
+                {
+                    IsValid = false,
+                    ErrorResponse = ServiceResponse<BookingResponseDto>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Could not calculate price for the booking."
+                    )
+                };
+            }
+
+            if (bookingDto.ExpectedPrice > 0)
+            {
+                var priceDifference = Math.Abs(priceResponse.Data - bookingDto.ExpectedPrice);
+                if (priceDifference > 5)
+                {
+                    return new PriceValidationResult
+                    {
+                        IsValid = false,
+                        ErrorResponse = ServiceResponse<BookingResponseDto>.FailResponse(
+                            HttpStatusCode.BadRequest,
+                            $"Price mismatch. Calculated: {priceResponse.Data:F2} SEK, Expected: {bookingDto.ExpectedPrice:F2} SEK. Please refresh and try again."
+                        )
+                    };
+                }
+            }
+
+            return new PriceValidationResult { IsValid = true, Price = priceResponse.Data };
+        }
+
+        #endregion
+
+        #region Private Helper Methods - Building & Mapping
+
+        private Bookings CreateBookingEntity(
+            CreateBookingDto bookingDto,
+            RouteInfoDto routeInfo,
+            decimal calculatedPrice,
+            User? user,
+            bool isGuestBooking)
+        {
+            return new Bookings
+            {
+                UserIdFk = user?.Id,
+                GuestEmail = isGuestBooking ? bookingDto.Email : null,
+                GuestFirstName = isGuestBooking ? bookingDto.FirstName : null,
+                GuestLastName = isGuestBooking ? bookingDto.LastName : null,
+                GuestPhoneNumber = isGuestBooking ? bookingDto.PhoneNumber : null,
+                Price = calculatedPrice,
+                BookingDateTime = DateTime.UtcNow,
+                PickUpDateTime = bookingDto.PickUpDateTime,
+                PickUpAdress = bookingDto.PickUpAddress,
+                PickUpLatitude = bookingDto.PickUpLatitude,
+                PickUpLongitude = bookingDto.PickUpLongitude,
+                FirstStopAddress = bookingDto.FirstStopAddress,
+                FirstStopLatitude = bookingDto.FirstStopLatitude,
+                FirstStopLongitude = bookingDto.FirstStopLongitude,
+                SecondStopAddress = bookingDto.SecondStopAddress,
+                SecondStopLatitude = bookingDto.SecondStopLatitude,
+                SecondStopLongitude = bookingDto.SecondStopLongitude,
+                DropOffAdress = bookingDto.DropOffAddress,
+                DropOffLatitude = bookingDto.DropOffLatitude,
+                DropOffLongitude = bookingDto.DropOffLongitude,
+                DistanceKm = routeInfo.DistanceKm,
+                DurationMinutes = routeInfo.DurationMinutes,
+                Flightnumber = bookingDto.Flightnumber,
+                Comment = bookingDto.Comment,
+                Status = isGuestBooking ? BookingStatus.PendingEmailConfirmation : BookingStatus.Confirmed,
+                ConfirmationToken = isGuestBooking ? GenerateConfirmationToken() : null,
+                ConfirmationTokenExpiresAt = isGuestBooking ? DateTime.UtcNow.AddHours(24) : null,
+                IsConfirmed = !isGuestBooking,
+                IsAvailable = !isGuestBooking
+            };
+        }
+
         private List<CoordinateDto> BuildCoordinatesList(CreateBookingDto dto)
         {
             var coordinates = new List<CoordinateDto>
             {
-                new CoordinateDto
-                {
-                    Latitude = (decimal)dto.PickUpLatitude,
-                    Longitude = (decimal)dto.PickUpLongitude
-                }
+                new() { Latitude = (decimal)dto.PickUpLatitude, Longitude = (decimal)dto.PickUpLongitude }
             };
 
             if (!string.IsNullOrEmpty(dto.FirstStopAddress) && dto.FirstStopLatitude.HasValue && dto.FirstStopLongitude.HasValue)
             {
-                coordinates.Add(new CoordinateDto
-                {
-                    Latitude = (decimal)dto.FirstStopLatitude.Value,
-                    Longitude = (decimal)dto.FirstStopLongitude.Value
-                });
+                coordinates.Add(new() { Latitude = (decimal)dto.FirstStopLatitude.Value, Longitude = (decimal)dto.FirstStopLongitude.Value });
             }
 
             if (!string.IsNullOrEmpty(dto.SecondStopAddress) && dto.SecondStopLatitude.HasValue && dto.SecondStopLongitude.HasValue)
             {
-                coordinates.Add(new CoordinateDto
-                {
-                    Latitude = (decimal)dto.SecondStopLatitude.Value,
-                    Longitude = (decimal)dto.SecondStopLongitude.Value
-                });
+                coordinates.Add(new() { Latitude = (decimal)dto.SecondStopLatitude.Value, Longitude = (decimal)dto.SecondStopLongitude.Value });
             }
 
-            coordinates.Add(new CoordinateDto
-            {
-                Latitude = (decimal)dto.DropOffLatitude,
-                Longitude = (decimal)dto.DropOffLongitude
-            });
+            coordinates.Add(new() { Latitude = (decimal)dto.DropOffLatitude, Longitude = (decimal)dto.DropOffLongitude });
 
             return coordinates;
         }
@@ -535,138 +530,35 @@ namespace PegasusBackend.Services.Implementations
                 LastDurationMinutes = 0
             };
 
-            if (routeInfo.Sections != null && routeInfo.Sections.Count > 0)
+            if (routeInfo.Sections == null || routeInfo.Sections.Count == 0)
+                return request;
+
+            if (routeInfo.Sections.Count == 1)
             {
-                if (routeInfo.Sections.Count == 1)
-                {
-                    request.LastDistanceKm = routeInfo.Sections[0].DistanceKm;
-                    request.LastDurationMinutes = routeInfo.Sections[0].DurationMinutes;
-                }
-                else if (routeInfo.Sections.Count == 2)
-                {
-                    request.FirstStopAdress = dto.FirstStopAddress;
-                    request.FirstStopDistanceKm = routeInfo.Sections[0].DistanceKm;
-                    request.FirstStopDurationMinutes = routeInfo.Sections[0].DurationMinutes;
-                    request.LastDistanceKm = routeInfo.Sections[1].DistanceKm;
-                    request.LastDurationMinutes = routeInfo.Sections[1].DurationMinutes;
-                }
-                else if (routeInfo.Sections.Count >= 3)
-                {
-                    request.FirstStopAdress = dto.FirstStopAddress;
-                    request.FirstStopDistanceKm = routeInfo.Sections[0].DistanceKm;
-                    request.FirstStopDurationMinutes = routeInfo.Sections[0].DurationMinutes;
-                    request.SecondStopAdress = dto.SecondStopAddress;
-                    request.SecondStopDistanceKm = routeInfo.Sections[1].DistanceKm;
-                    request.SecondStopDurationMinutes = routeInfo.Sections[1].DurationMinutes;
-                    request.LastDistanceKm = routeInfo.Sections[2].DistanceKm;
-                    request.LastDurationMinutes = routeInfo.Sections[2].DurationMinutes;
-                }
+                request.LastDistanceKm = routeInfo.Sections[0].DistanceKm;
+                request.LastDurationMinutes = routeInfo.Sections[0].DurationMinutes;
+            }
+            else if (routeInfo.Sections.Count == 2)
+            {
+                request.FirstStopAdress = dto.FirstStopAddress;
+                request.FirstStopDistanceKm = routeInfo.Sections[0].DistanceKm;
+                request.FirstStopDurationMinutes = routeInfo.Sections[0].DurationMinutes;
+                request.LastDistanceKm = routeInfo.Sections[1].DistanceKm;
+                request.LastDurationMinutes = routeInfo.Sections[1].DurationMinutes;
+            }
+            else if (routeInfo.Sections.Count >= 3)
+            {
+                request.FirstStopAdress = dto.FirstStopAddress;
+                request.FirstStopDistanceKm = routeInfo.Sections[0].DistanceKm;
+                request.FirstStopDurationMinutes = routeInfo.Sections[0].DurationMinutes;
+                request.SecondStopAdress = dto.SecondStopAddress;
+                request.SecondStopDistanceKm = routeInfo.Sections[1].DistanceKm;
+                request.SecondStopDurationMinutes = routeInfo.Sections[1].DurationMinutes;
+                request.LastDistanceKm = routeInfo.Sections[2].DistanceKm;
+                request.LastDurationMinutes = routeInfo.Sections[2].DurationMinutes;
             }
 
             return request;
-        }
-
-        private async Task SendGuestConfirmationEmailAsync(
-            string email,
-            string firstName,
-            string token,
-            Bookings booking)
-        {
-            try
-            {
-                var baseUrl = _configuration["ApplicationUrl"] ?? "https://localhost:7161";
-                var confirmationUrl = $"{baseUrl}/api/booking/confirm?token={token}";
-
-                var subject = "Bekräfta din bokning hos Pegasus Transport";
-                var emailContent = $@"
-Hej {firstName}!
-
-Tack för din bokning hos Pegasus Transport.
-
-Bokningsdetaljer:
-- Upphämtning: {booking.PickUpAdress}
-- Avlämning: {booking.DropOffAdress}
-- Datum & tid: {booking.PickUpDateTime:yyyy-MM-dd HH:mm}
-- Pris: {booking.Price:F2} SEK
-
-Klicka på länken nedan för att bekräfta din bokning:
-{confirmationUrl}
-
-Länken är giltig i 24 timmar.
-
-Om du vill se dina bokningar i framtiden kan du registrera ett konto på vår hemsida med denna e-postadress.
-
-Med vänliga hälsningar,
-Pegasus Transport
-";
-
-                var message = new Message(
-                    new[] { ("", email) },
-                    emailContent,
-                    subject
-                );
-
-                await _emailService.SendEmailAsync(message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending guest confirmation email to: {Email}", email);
-                throw;
-            }
-        }
-
-        private async Task SendRegisteredUserBookingEmailAsync(
-            string email,
-            string firstName,
-            Bookings booking)
-        {
-            try
-            {
-                var subject = "Din bokning är bekräftad - Pegasus Transport";
-                var emailContent = $@"
-Hej {firstName}!
-
-Din bokning hos Pegasus Transport är nu bekräftad!
-
-Bokningsdetaljer:
-- Bokningsnummer: #{booking.BookingId}
-- Upphämtning: {booking.PickUpAdress}
-- Avlämning: {booking.DropOffAdress}
-- Datum & tid: {booking.PickUpDateTime:yyyy-MM-dd HH:mm}
-- Pris: {booking.Price:F2} SEK
-
-Du kan se alla dina bokningar genom att logga in på din profil på vår hemsida.
-
-Vi ser fram emot att köra dig!
-
-Med vänliga hälsningar,
-Pegasus Transport
-";
-
-                var message = new Message(
-                    new[] { ("", email) },
-                    emailContent,
-                    subject
-                );
-
-                await _emailService.SendEmailAsync(message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error sending booking confirmation email to: {Email}", email);
-                throw;
-            }
-        }
-
-        private string GenerateConfirmationToken()
-        {
-            var randomNumber = new byte[32];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(randomNumber);
-            return Convert.ToBase64String(randomNumber)
-                .Replace("+", "")
-                .Replace("/", "")
-                .Replace("=", "");
         }
 
         private BookingResponseDto MapToResponseDTO(Bookings booking)
@@ -722,5 +614,98 @@ Pegasus Transport
                 DriverId = booking.DriverIdFK
             };
         }
+
+        #endregion
+
+        #region Private Helper Methods - Email & Response
+
+        private async Task SendBookingEmailAsync(Bookings booking, CreateBookingDto bookingDto, bool isGuestBooking)
+        {
+            if (isGuestBooking)
+            {
+                await _emailService.SendGuestConfirmationEmailAsync(
+                    bookingDto.Email,
+                    bookingDto.FirstName,
+                    booking.ConfirmationToken!,
+                    booking
+                );
+            }
+            else
+            {
+                await _emailService.SendRegisteredUserBookingEmailAsync(
+                    bookingDto.Email,
+                    bookingDto.FirstName,
+                    booking
+                );
+            }
+        }
+
+        private ServiceResponse<BookingResponseDto> BuildSuccessResponse(Bookings booking, bool isGuestBooking)
+        {
+            var response = MapToResponseDTO(booking);
+            string message = isGuestBooking
+                ? "Booking created successfully. Please check your email to confirm."
+                : "Booking confirmed successfully!";
+
+            return ServiceResponse<BookingResponseDto>.SuccessResponse(
+                HttpStatusCode.OK,
+                response,
+                message
+            );
+        }
+
+        private List<string> GetAllAddresses(CreateBookingDto bookingDto)
+        {
+            var addresses = new List<string> { bookingDto.PickUpAddress };
+
+            if (!string.IsNullOrEmpty(bookingDto.FirstStopAddress))
+                addresses.Add(bookingDto.FirstStopAddress);
+
+            if (!string.IsNullOrEmpty(bookingDto.SecondStopAddress))
+                addresses.Add(bookingDto.SecondStopAddress);
+
+            addresses.Add(bookingDto.DropOffAddress);
+
+            return addresses;
+        }
+
+        private string GenerateConfirmationToken()
+        {
+            var randomNumber = new byte[32];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber)
+                .Replace("+", "")
+                .Replace("/", "")
+                .Replace("=", "");
+        }
+
+        #endregion
+
+        #region Validation Result Classes
+
+        private class ValidationResult
+        {
+            public bool IsValid { get; set; }
+            public RouteInfoDto? RouteInfo { get; set; }
+            public decimal CalculatedPrice { get; set; }
+            public ServiceResponse<BookingResponseDto>? ErrorResponse { get; set; }
+        }
+
+        private class RouteValidationResult
+        {
+            public bool IsValid { get; set; }
+            public RouteInfoDto? RouteInfo { get; set; }
+            public ServiceResponse<BookingResponseDto>? ErrorResponse { get; set; }
+        }
+
+        private class PriceValidationResult
+        {
+            public bool IsValid { get; set; }
+            public decimal Price { get; set; }
+            public ServiceResponse<BookingResponseDto>? ErrorResponse { get; set; }
+        }
+
+        #endregion
     }
 }

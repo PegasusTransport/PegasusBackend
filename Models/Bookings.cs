@@ -9,8 +9,21 @@ namespace PegasusBackend.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int BookingId { get; set; }
 
-        [Required]
-        public string UserIdFk { get; set; } = null!;
+        // Nullable for guest bookings
+        public string? UserIdFk { get; set; }
+
+        // Guest information (used when UserIdFk is null)
+        [MaxLength(100)]
+        public string? GuestEmail { get; set; }
+
+        [MaxLength(50)]
+        public string? GuestFirstName { get; set; }
+
+        [MaxLength(50)]
+        public string? GuestLastName { get; set; }
+
+        [MaxLength(20)]
+        public string? GuestPhoneNumber { get; set; }
 
         public Guid? DriverIdFK { get; set; }
 
@@ -19,11 +32,12 @@ namespace PegasusBackend.Models
         public decimal Price { get; set; }
 
         [Required]
-        public DateTime BookingDateTime { get; set; }
+        public DateTime BookingDateTime { get; set; } = DateTime.UtcNow;
 
         [Required]
         public DateTime PickUpDateTime { get; set; }
 
+        // Pickup location
         [Required]
         [MaxLength(300)]
         public string PickUpAdress { get; set; } = null!;
@@ -34,6 +48,23 @@ namespace PegasusBackend.Models
         [Required]
         public double PickUpLongitude { get; set; }
 
+        // First stop (optional)
+        [MaxLength(300)]
+        public string? FirstStopAddress { get; set; }
+
+        public double? FirstStopLatitude { get; set; }
+
+        public double? FirstStopLongitude { get; set; }
+
+        // Second stop (optional)
+        [MaxLength(300)]
+        public string? SecondStopAddress { get; set; }
+
+        public double? SecondStopLatitude { get; set; }
+
+        public double? SecondStopLongitude { get; set; }
+
+        // Dropoff location
         [Required]
         [MaxLength(300)]
         public string DropOffAdress { get; set; } = null!;
@@ -45,24 +76,42 @@ namespace PegasusBackend.Models
         public double DropOffLongitude { get; set; }
 
         [Column(TypeName = "decimal(10,2)")]
-        public decimal DistanceKm { get; set; } // Hanterar inga stopp just nu!
+        public decimal DistanceKm { get; set; }
 
         [Column(TypeName = "decimal(10,2)")]
-        public decimal DurationMinutes { get; set; } // Hanterar inga stopp just nu!
+        public decimal DurationMinutes { get; set; }
 
         [MaxLength(20)]
         public string? Flightnumber { get; set; }
 
         [MaxLength(500)]
         public string? Comment { get; set; }
+
+        // Email confirmation
+        [Required]
+        public BookingStatus Status { get; set; } = BookingStatus.PendingEmailConfirmation;
+
+        [MaxLength(255)]
+        public string? ConfirmationToken { get; set; }
+
+        public DateTime? ConfirmationTokenExpiresAt { get; set; }
+
         public bool IsConfirmed { get; set; } = false;
         public bool IsAvailable { get; set; } = true;
 
         [ForeignKey(nameof(UserIdFk))]
-        [Required]
-        public virtual User User { get; set; } = null!;
+        public virtual User? User { get; set; }
 
         [ForeignKey(nameof(DriverIdFK))]
         public virtual Drivers? Driver { get; set; }
     }
+
+    public enum BookingStatus
+    {
+        PendingEmailConfirmation,
+        Confirmed,
+        Cancelled,
+        Completed
+    }
+
 }

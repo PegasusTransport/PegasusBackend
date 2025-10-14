@@ -5,7 +5,7 @@ using PegasusBackend.Repositorys.Interfaces;
 
 namespace PegasusBackend.Repositorys.Implementations
 {
-    public class UserRepo(AppDBContext context) : IUserRepo
+    public class UserRepo(AppDBContext context, ILogger<UserRepo> _logger) : IUserRepo
     {
         public async Task<User?> GetUserByRefreshToken(string refreshtoken)
         {
@@ -20,8 +20,12 @@ namespace PegasusBackend.Repositorys.Implementations
         }
         public async Task<bool> UserHasBookings(User user)
         {
-            return await context.Bookings
-            .AnyAsync(b => b.UserIdFk == user.Id);
+            var bookings = await context.Bookings
+                .Where(b => b.UserIdFk == user.Id && b.Status != BookingStatus.Cancelled).ToListAsync();
+
+            _logger.LogInformation($"Found {bookings.Count} bookings");
+
+            return bookings.Count != 0;
         }
     }
 }

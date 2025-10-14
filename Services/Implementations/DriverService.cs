@@ -117,7 +117,6 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
-
         public async Task<ServiceResponse<bool>> DeleteDriverAsync(Guid driverId)
         {
             try
@@ -157,7 +156,6 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
-
         public async Task<ServiceResponse<UpdateDriverResponseDTO>> UpdateDriverAsync(Guid driverId, UpdateDriverDTO updatedDriver)
         {
             try
@@ -196,7 +194,6 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
-
 
     }
 }

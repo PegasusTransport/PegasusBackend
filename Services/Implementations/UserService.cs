@@ -291,5 +291,39 @@ namespace PegasusBackend.Services.Implementations
 
             return user;
         }
+        public async Task<ServiceResponse<UserDTO>> GetUserById(string userId)
+        {
+            try
+            {
+                var user = await userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return ServiceResponse<UserDTO>.FailResponse(
+                    HttpStatusCode.NotFound,
+                    "User not found"
+                    );
+                }
+
+                var userResponse = new UserDTO()
+                {
+                    FirstName = user.FirstName,
+                    LastName = user.LastName!,
+                    UserName = user.UserName!,
+                    Email = user.Email!
+                };
+                return ServiceResponse<UserDTO>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    userResponse,
+                    "User not found"
+                    );
+            }
+            catch(Exception ex)
+            {
+                logger.LogWarning(ex.Message, ex);
+                return ServiceResponse<UserDTO>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Something went wrong");
+            }
+        }
     }
 }

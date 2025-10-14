@@ -27,31 +27,43 @@ namespace PegasusBackend.Services.Implementations
                 return ServiceResponse<decimal>.FailResponse(
                     HttpStatusCode.NotFound,
                     "Didnt found the price in the database!"
-                    );
+                );
             }
 
             var price = (prices.KmPrice * (distanceKm ?? 0)) +
                 (prices.MinutePrice * (durationMinutes ?? 0)) +
                 prices.StartPrice;
 
-            return ServiceResponse<decimal>.SuccessResponse(HttpStatusCode.OK,
+            return ServiceResponse<decimal>.SuccessResponse(
+                HttpStatusCode.OK,
                 price,
-                "Priset hämtas");
+                "Priset hämtas"
+            );
         }
 
         public async Task<ServiceResponse<decimal>> StopPriceCalculator(
-        string pickUpAdress,
-        string dropoffAdress,
-        decimal? durationMinutes,
-        decimal? distanceKm,
-        decimal zonePrice)
+            string pickUpAdress,
+            string dropoffAdress,
+            decimal? durationMinutes,
+            decimal? distanceKm,
+            decimal zonePrice)
         {
             var priceResponse = await TaxiMeterPrice(durationMinutes ?? 0, distanceKm ?? 0);
             var totalPrice = priceResponse.Data;
 
-            // När vi implementerar GoogleMaps API, får vi göra en riktig Arlanda-check genom address_components.
-            if ((ZoneHelper.ArlandaZone(pickUpAdress) && dropoffAdress.Contains("arlanda", StringComparison.OrdinalIgnoreCase)) ||
-                (pickUpAdress.Contains("arlanda", StringComparison.OrdinalIgnoreCase) && ZoneHelper.ArlandaZone(dropoffAdress)))
+            // Check if trip starts OR ends at Arlanda and the other location is in the zone
+            bool pickupIsArlanda = pickUpAdress.Contains("arlanda", StringComparison.OrdinalIgnoreCase);
+            bool dropoffIsArlanda = dropoffAdress.Contains("arlanda", StringComparison.OrdinalIgnoreCase);
+            bool pickupInZone = ZoneHelper.ArlandaZone(pickUpAdress);
+            bool dropoffInZone = ZoneHelper.ArlandaZone(dropoffAdress);
+
+            // Apply zone price if:
+            // 1. Pickup is Arlanda AND dropoff is in zone, OR
+            // 2. Dropoff is Arlanda AND pickup is in zone
+            bool shouldApplyZonePrice = (pickupIsArlanda && dropoffInZone) ||
+                                       (dropoffIsArlanda && pickupInZone);
+
+            if (shouldApplyZonePrice)
             {
                 if (totalPrice > zonePrice)
                 {
@@ -78,7 +90,6 @@ namespace PegasusBackend.Services.Implementations
             );
         }
 
-        // Ta emot lista av adresser istället för att få 3 adresser. Då kan man ha valfri antal stopp!!
         public async Task<ServiceResponse<decimal>> CalculateTotalPriceAsync(PriceCalculationRequestDto Dto)
         {
             var prices = await _adminRepo.GetTaxiPricesAsync();
@@ -93,6 +104,33 @@ namespace PegasusBackend.Services.Implementations
 
             var zonePrice = prices.ZonePrice;
 
+            // Collect all addresses in the trip
+            var allAddresses = new List<string>
+            {
+                Dto.PickupAdress
+            };
+
+            if (!string.IsNullOrEmpty(Dto.FirstStopAdress))
+                allAddresses.Add(Dto.FirstStopAdress);
+
+            if (!string.IsNullOrEmpty(Dto.SecondStopAdress))
+                allAddresses.Add(Dto.SecondStopAdress);
+
+            allAddresses.Add(Dto.DropoffAdress);
+
+            // Check if ANY address in the trip is Arlanda
+            bool hasArlandaStop = allAddresses.Any(addr =>
+                addr.Contains("arlanda", StringComparison.OrdinalIgnoreCase));
+
+            // Check if all OTHER addresses (excluding Arlanda) are in the zone
+            bool allOtherAddressesInZone = allAddresses
+                .Where(addr => !addr.Contains("arlanda", StringComparison.OrdinalIgnoreCase))
+                .All(addr => ZoneHelper.ArlandaZone(addr));
+
+            // If trip has Arlanda AND all other stops are in zone, use zone pricing logic
+            bool useZonePricing = hasArlandaStop && allOtherAddressesInZone;
+
+            // No stops - direct trip
             if (Dto.FirstStopAdress is null)
             {
                 var totalPriceResponse = await StopPriceCalculator(
@@ -112,7 +150,7 @@ namespace PegasusBackend.Services.Implementations
 
             decimal total = 0;
 
-            // Räknar mellan pickup till stopp, och stopp till dropoff.
+            // Calculate first segment
             var firstPart = await StopPriceCalculator(
                 Dto.PickupAdress.ToLower().Trim(),
                 Dto.FirstStopAdress.ToLower().Trim(),
@@ -123,7 +161,7 @@ namespace PegasusBackend.Services.Implementations
 
             total += firstPart.Data;
 
-            // Om andra stopp finns, beräkna tre delar istället för två.
+            // Calculate remaining segments
             if (Dto.SecondStopAdress is not null)
             {
                 var secondPart = await StopPriceCalculator(
@@ -142,7 +180,7 @@ namespace PegasusBackend.Services.Implementations
                     zonePrice
                 );
 
-                total += (secondPart.Data ) + (thirdPart.Data);
+                total += secondPart.Data + thirdPart.Data;
             }
             else
             {
@@ -157,12 +195,21 @@ namespace PegasusBackend.Services.Implementations
                 total += secondPart.Data;
             }
 
+            // If using zone pricing and total exceeds zone price, cap at zone price
+            if (useZonePricing && total > zonePrice)
+            {
+                return ServiceResponse<decimal>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    zonePrice,
+                    "Resan inkluderar Arlanda och är inom zonen. Zonpris tillämpas."
+                );
+            }
+
             return ServiceResponse<decimal>.SuccessResponse(
                 HttpStatusCode.OK,
                 total,
                 "Pris beräknat med stopp."
             );
         }
-
     }
 }

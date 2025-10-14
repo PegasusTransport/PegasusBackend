@@ -434,22 +434,7 @@ namespace PegasusBackend.Services.Implementations
                 };
             }
 
-            if (bookingDto.ExpectedPrice > 0)
-            {
-                var priceDifference = Math.Abs(priceResponse.Data - bookingDto.ExpectedPrice);
-                if (priceDifference > 5)
-                {
-                    return new PriceValidationResult
-                    {
-                        IsValid = false,
-                        ErrorResponse = ServiceResponse<BookingResponseDto>.FailResponse(
-                            HttpStatusCode.BadRequest,
-                            $"Price mismatch. Calculated: {priceResponse.Data:F2} SEK, Expected: {bookingDto.ExpectedPrice:F2} SEK. Please refresh and try again."
-                        )
-                    };
-                }
-            }
-
+            _logger.LogInformation("PriceService OK - Price: {Price}", priceResponse.Data);
             return new PriceValidationResult { IsValid = true, Price = priceResponse.Data };
         }
 

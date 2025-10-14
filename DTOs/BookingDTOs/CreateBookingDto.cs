@@ -34,8 +34,5 @@ namespace PegasusBackend.DTOs.BookingDTOs
         // Optional fields
         public string? Flightnumber { get; set; }
         public string? Comment { get; set; }
-
-        // Price from frontend for verification
-        public decimal ExpectedPrice { get; set; }
     }
 }

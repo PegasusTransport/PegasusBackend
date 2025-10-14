@@ -91,9 +91,6 @@ namespace PegasusBackend.Validators
                 RuleFor(x => x.Comment)
                     .MaximumLength(500).WithMessage("Comment can't exceed 500 characters.");
             });
-
-            RuleFor(x => x.ExpectedPrice)
-                .GreaterThanOrEqualTo(0).WithMessage("ExpectedPrice cannot be negative.");
         }
     }
 }

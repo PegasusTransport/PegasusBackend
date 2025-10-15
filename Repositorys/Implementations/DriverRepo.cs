@@ -74,6 +74,7 @@ namespace PegasusBackend.Repositorys.Implementations
                     .Where(d => !d.IsDeleted && !d.User.IsDeleted)
                     .Select(d => new AllDriversDto  
                     {
+                        Id = d.DriverId,
                         FirstName = d.User.FirstName,
                         LastName = d.User.LastName,
                         ProfilePicture = d.ProfilePicture

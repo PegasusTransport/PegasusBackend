@@ -55,6 +55,42 @@ namespace PegasusBackend.Services.Implementations
             }
 
         }
+        public async Task<ServiceResponse<UserResponseDto>> GetLoggedInUser(HttpContext httpContext)
+        {
+            try
+            {
+                var user = await GetUserFromCookieAsync(httpContext);
+                if (user == null)
+                {
+                    return ServiceResponse<UserResponseDto>.FailResponse(
+                        HttpStatusCode.Unauthorized,
+                        "Not authorized"
+                    );
+                }
+                var userResponse = new UserResponseDto()
+                {
+                    Id = user.Id,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName!,
+                    UserName = user.UserName!,
+                    Email = user.Email!
+                };
+                return ServiceResponse<UserResponseDto>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    userResponse,
+                    "User found"
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error getting logged in user");
+                return ServiceResponse<UserResponseDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Something went wrong"
+                );
+
+            }
+        }
         public async Task<ServiceResponse<RegistrationResponseDto>> RegisterUserAsync(RegistrationRequestDto request)
         {
             try
@@ -316,6 +352,7 @@ namespace PegasusBackend.Services.Implementations
 
                 var userResponse = new UserResponseDto()
                 {
+                    Id = user.Id,
                     FirstName = user.FirstName,
                     LastName = user.LastName!,
                     UserName = user.UserName!,

@@ -8,6 +8,5 @@ namespace PegasusBackend.DTOs.UserDTOs
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public UserRoles Roles { get; set; } 
     }
 }

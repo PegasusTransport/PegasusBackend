@@ -149,10 +149,6 @@ namespace PegasusBackend.Repositorys.Implementations
             try
             {
                 var driver = await context.Drivers.FirstOrDefaultAsync(d => d.DriverId == driverId);
-                var booking = await context.Bookings
-                    .Where(b => b.DriverIdFK == driverId && !b.IsConfirmed).ToListAsync();
-
-                SetBookingsToAvailable(booking);
 
                 if (driver == null)
                 {
@@ -160,11 +156,23 @@ namespace PegasusBackend.Repositorys.Implementations
                     return false;
                 }
 
+                var bookings = await DriversBookings(driverId);
+
+                foreach (var booking in bookings)
+                {
+                    booking.DriverIdFK = null;
+                    booking.IsAvailable = true;
+                }
+
                 driver.IsDeleted = true;
                 driver.DeletedAt = DateTime.UtcNow;
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                logger.LogInformation("Driver {DriverId} deleted successfully with {Count} bookings released",
+                    driverId, bookings.Count);
+
                 return true;
             }
             catch (Exception ex)
@@ -174,12 +182,22 @@ namespace PegasusBackend.Repositorys.Implementations
                 return false;
             }
         }
-        private static void SetBookingsToAvailable(List<Bookings> bookings)
+        public async Task<List<Bookings>> DriversBookings(Guid driverId)
         {
-            foreach (var booking in bookings)
+            try
             {
-                booking.DriverIdFK = null;
-                booking.IsAvailable = true;
+                var bookings = await context.Bookings
+                    .Where(b => b.DriverIdFK == driverId &&
+                        b.Status != BookingStatus.Cancelled &&
+                        b.Status != BookingStatus.Completed)
+                    .ToListAsync();
+
+                return bookings;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to retrieve drivers' bookings");
+                return [];
             }
         }
     }

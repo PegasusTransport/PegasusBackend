@@ -204,7 +204,7 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
-        public async Task<ServiceResponse<UpdateDriverResponseDto>> UpdateDriverAsync(Guid driverId, UpdateDriverDto updatedDriver, HttpContext httpContext)
+        public async Task<ServiceResponse<UpdateDriverResponseDto>> UpdateDriverAsync(Guid driverId, UpdateRequestDriverDto updatedDriver, HttpContext httpContext)
         {
             try
             {

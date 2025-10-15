@@ -40,7 +40,7 @@ namespace PegasusBackend.Controllers
 
         [HttpPut("UpdateDriver/{id}")]
         [Authorize(Roles = "Admin,Driver")]
-        public async Task<ActionResult<UpdateDriverResponseDto>> UpdateDriver(Guid id, UpdateDriverDto request) =>
+        public async Task<ActionResult<UpdateDriverResponseDto>> UpdateDriver(Guid id, UpdateRequestDriverDto request) =>
             Generate.ActionResult(await driverService.UpdateDriverAsync(id, request, HttpContext));
 
         [HttpDelete("DeleteDriver/{id}")]

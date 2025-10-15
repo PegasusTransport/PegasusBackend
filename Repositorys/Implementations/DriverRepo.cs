@@ -116,7 +116,7 @@ namespace PegasusBackend.Repositorys.Implementations
                 return false;
             }
         }
-        public async Task<bool> UpdateDriver(UpdateDriverDto request, Guid driverId)
+        public async Task<bool> UpdateDriver(UpdateRequestDriverDto request, Guid driverId)
         {
             try
             {

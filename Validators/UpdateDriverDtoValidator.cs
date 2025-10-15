@@ -3,7 +3,7 @@ using PegasusBackend.DTOs.DriverDTO;
 
 namespace PegasusBackend.Validators
 {
-    public class UpdateDriverDtoValidator : AbstractValidator<UpdateDriverDto>
+    public class UpdateDriverDtoValidator : AbstractValidator<UpdateRequestDriverDto>
     {
         public UpdateDriverDtoValidator()
         {

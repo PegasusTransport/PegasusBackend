@@ -16,20 +16,20 @@ namespace PegasusBackend.Controllers
     public class UserController(IUserService userService) : ControllerBase
     {
         [HttpPost("Registration")]
-        public async Task<ActionResult<RegistrationResponseDTO>> RegisterUser(RegistrationRequestDTO request) => 
+        public async Task<ActionResult<RegistrationResponseDto>> RegisterUser(RegistrationRequestDto request) => 
             Generate.ActionResult(await userService.RegisterUserAsync(request));
         [HttpGet("GetUser/{email}")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<UserDTO>> GetUserByEmail(string email) =>
+        public async Task<ActionResult<UserResponseDto>> GetUserByEmail(string email) =>
             Generate.ActionResult(await userService.GetUserByEmail(email));
 
         [HttpPut("UpdateUser")]
         [Authorize]
-        public async Task<ActionResult<UpdateUserResponseDTO>> UpdateUser(UpdateUserRequestDTO request) =>
+        public async Task<ActionResult<UpdateUserResponseDto>> UpdateUser(UpdateUserRequestDto request) =>
             Generate.ActionResult(await userService.UpdateUserAsync(request, HttpContext));
         [HttpGet("GetAllUsers")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<List<AllUserDTO>>> GetAllUsers() =>
+        public async Task<ActionResult<List<AllUserResponseDto>>> GetAllUsers() =>
             Generate.ActionResult(await userService.GetAllUsers());
         [HttpDelete("DeleteUser")]
         [Authorize]

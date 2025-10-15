@@ -11,7 +11,7 @@ namespace PegasusBackend.Repositorys.Implementations
 {
     public class DriverRepo(AppDBContext context, ILogger<DriverRepo> logger) : IDriverRepo
     {
-        public async Task<DriverDTO?> GetDriverByIdAsync(Guid id)
+        public async Task<DriverResponseDto?> GetDriverByIdAsync(Guid id)
         {
             try
             {
@@ -19,7 +19,7 @@ namespace PegasusBackend.Repositorys.Implementations
                    .AsNoTracking() 
                    .Include(d => d.User)
                    .Where(d => d.DriverId == id)
-                   .Select(d => new DriverDTO 
+                   .Select(d => new DriverResponseDto 
                    {
                        DriverId = d.DriverId,
                        FirstName = d.User.FirstName,
@@ -42,7 +42,7 @@ namespace PegasusBackend.Repositorys.Implementations
                 throw; 
             }
         }
-        public async Task<DriverDTO?> GetDriverByUserIdAsync(string userId)
+        public async Task<DriverResponseDto?> GetDriverByUserIdAsync(string userId)
         {
             try
             {
@@ -50,7 +50,7 @@ namespace PegasusBackend.Repositorys.Implementations
                     .AsNoTracking()
                     .Include(d => d.User)
                     .Where(d => d.UserId == userId && !d.IsDeleted && !d.User.IsDeleted)
-                    .Select(d => new DriverDTO
+                    .Select(d => new DriverResponseDto
                     {
                         DriverId = d.DriverId,
                         FirstName = d.User.FirstName,
@@ -66,13 +66,13 @@ namespace PegasusBackend.Repositorys.Implementations
                 return null;
             }
         }
-        public async Task<List<AllDriversDTO>> GetAllDrivers()
+        public async Task<List<AllDriversDto>> GetAllDrivers()
         {
             try
             {
                 var drivers = await context.Drivers
                     .Where(d => !d.IsDeleted && !d.User.IsDeleted)
-                    .Select(d => new AllDriversDTO  
+                    .Select(d => new AllDriversDto  
                     {
                         FirstName = d.User.FirstName,
                         LastName = d.User.LastName,
@@ -87,7 +87,7 @@ namespace PegasusBackend.Repositorys.Implementations
                 return [];
             }
         }
-        public async Task<bool> CreateDriver(CreateDriverDTO request, string userId)
+        public async Task<bool> CreateDriver(CreateRequestDriverDto request, string userId)
         {
 
             try
@@ -115,7 +115,7 @@ namespace PegasusBackend.Repositorys.Implementations
                 return false;
             }
         }
-        public async Task<bool> UpdateDriver(UpdateDriverDTO request, Guid driverId)
+        public async Task<bool> UpdateDriver(UpdateDriverDto request, Guid driverId)
         {
             try
             {

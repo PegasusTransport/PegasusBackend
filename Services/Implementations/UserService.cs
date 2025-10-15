@@ -20,12 +20,12 @@ namespace PegasusBackend.Services.Implementations
 {
     public class UserService(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, IUserRepo userRepo, ILogger<UserService> logger) : IUserService
     {
-        public async Task<ServiceResponse<List<AllUserDTO>>> GetAllUsers()
+        public async Task<ServiceResponse<List<AllUserResponseDto>>> GetAllUsers()
         {
             try
             {
                 var allUsers = await userManager.Users.
-                    Select(u => new AllUserDTO
+                    Select(u => new AllUserResponseDto
                     {
                         UserName = u.UserName!,
                         FirstName = u.FirstName,
@@ -39,7 +39,7 @@ namespace PegasusBackend.Services.Implementations
                     ? $"Found {allUsers.Count} User(s)"
                     : "No Users found";
 
-                return ServiceResponse<List<AllUserDTO>>.SuccessResponse(
+                return ServiceResponse<List<AllUserResponseDto>>.SuccessResponse(
                    HttpStatusCode.OK,
                    allUsers,
                    message
@@ -48,21 +48,21 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error refreshing tokens from cookies");
-                return ServiceResponse<List<AllUserDTO>>.FailResponse(
+                return ServiceResponse<List<AllUserResponseDto>>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Something went wrong"
                 );
             }
 
         }
-        public async Task<ServiceResponse<RegistrationResponseDTO>> RegisterUserAsync(RegistrationRequestDTO request)
+        public async Task<ServiceResponse<RegistrationResponseDto>> RegisterUserAsync(RegistrationRequestDto request)
         {
             try
             {
                 var existingUser = await userManager.FindByEmailAsync(request.Email);
                 if (existingUser != null)
                 {
-                    return ServiceResponse<RegistrationResponseDTO>.FailResponse(
+                    return ServiceResponse<RegistrationResponseDto>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "User exist"
                     );
@@ -83,7 +83,7 @@ namespace PegasusBackend.Services.Implementations
                 // Use role from request
                 if (!await roleManager.RoleExistsAsync(request.Role.ToString()))
                 {
-                    return ServiceResponse<RegistrationResponseDTO>.FailResponse(
+                    return ServiceResponse<RegistrationResponseDto>.FailResponse(
                         HttpStatusCode.NotFound,
                         "Role doesn't exist"
                     );
@@ -94,7 +94,7 @@ namespace PegasusBackend.Services.Implementations
                 if (!result.Succeeded)
                 {
                     var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                    return ServiceResponse<RegistrationResponseDTO>.FailResponse(
+                    return ServiceResponse<RegistrationResponseDto>.FailResponse(
                         HttpStatusCode.BadRequest, 
                         $"Failed to create user: {errors}"
                     );
@@ -104,25 +104,25 @@ namespace PegasusBackend.Services.Implementations
 
                 await userManager.AddToRoleAsync(newUser, request.Role.ToString());
 
-                var response = new RegistrationResponseDTO
+                var response = new RegistrationResponseDto
                 {
                     FirstName = newUser.FirstName,
                     Email = newUser.Email,
                 };
 
-                return ServiceResponse<RegistrationResponseDTO>.SuccessResponse(
+                return ServiceResponse<RegistrationResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,response, 
                     "Created User");
             }
             catch (Exception ex)
             {
                 logger.LogWarning(ex.Message, ex);
-                return ServiceResponse<RegistrationResponseDTO>.FailResponse(
+                return ServiceResponse<RegistrationResponseDto>.FailResponse(
                     HttpStatusCode.InternalServerError, 
                     "Something went wrong");
             }
         }
-        public async Task<ServiceResponse<UpdateUserResponseDTO>> UpdateUserAsync(UpdateUserRequestDTO request, HttpContext httpContext)
+        public async Task<ServiceResponse<UpdateUserResponseDto>> UpdateUserAsync(UpdateUserRequestDto request, HttpContext httpContext)
         {
             try
             {
@@ -130,7 +130,7 @@ namespace PegasusBackend.Services.Implementations
 
                 if (user == null)
                 {
-                    return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                    return ServiceResponse<UpdateUserResponseDto>.FailResponse(
                             HttpStatusCode.NotFound,
                             "User not found"
                         );
@@ -141,7 +141,7 @@ namespace PegasusBackend.Services.Implementations
                     var existingUser = await userManager.FindByNameAsync(request.UserName);
                     if (existingUser != null)
                     {
-                        return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                        return ServiceResponse<UpdateUserResponseDto>.FailResponse(
                             HttpStatusCode.BadRequest,
                             "Username already exists"
                         );
@@ -154,7 +154,7 @@ namespace PegasusBackend.Services.Implementations
                     var existingUser = await userManager.FindByEmailAsync(request.Email);
                     if (existingUser != null)
                     {
-                        return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                        return ServiceResponse<UpdateUserResponseDto>.FailResponse(
                             HttpStatusCode.BadRequest,
                             "Email already exists"
                         );
@@ -167,7 +167,7 @@ namespace PegasusBackend.Services.Implementations
                         .FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
                     if (existingUser != null)
                     {
-                        return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                        return ServiceResponse<UpdateUserResponseDto>.FailResponse(
                             HttpStatusCode.BadRequest,
                             "PhoneNumber already exists"
                         );
@@ -182,15 +182,15 @@ namespace PegasusBackend.Services.Implementations
 
                 if (!result.Succeeded)
                 {
-                    return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                    return ServiceResponse<UpdateUserResponseDto>.FailResponse(
                         HttpStatusCode.BadRequest,
                         string.Join(", ", result.Errors.Select(e => e.Description))
                     );
                 }
 
-                return ServiceResponse<UpdateUserResponseDTO>.SuccessResponse(
+                return ServiceResponse<UpdateUserResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,
-                    new UpdateUserResponseDTO
+                    new UpdateUserResponseDto
                     {
                         UserName = user.UserName!
                     },
@@ -199,7 +199,7 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
                 logger.LogError(ex, "Server error");
-                return ServiceResponse<UpdateUserResponseDTO>.FailResponse(
+                return ServiceResponse<UpdateUserResponseDto>.FailResponse(
                             HttpStatusCode.InternalServerError,
                             "Server error"
                         );
@@ -301,27 +301,27 @@ namespace PegasusBackend.Services.Implementations
 
             return user;
         }
-        public async Task<ServiceResponse<UserDTO>> GetUserByEmail(string email)
+        public async Task<ServiceResponse<UserResponseDto>> GetUserByEmail(string email)
         {
             try
             {
                 var user = await userManager.FindByEmailAsync(email);
                 if (user == null)
                 {
-                    return ServiceResponse<UserDTO>.FailResponse(
+                    return ServiceResponse<UserResponseDto>.FailResponse(
                     HttpStatusCode.NotFound,
                     "User not found"
                     );
                 }
 
-                var userResponse = new UserDTO()
+                var userResponse = new UserResponseDto()
                 {
                     FirstName = user.FirstName,
                     LastName = user.LastName!,
                     UserName = user.UserName!,
                     Email = user.Email!
                 };
-                return ServiceResponse<UserDTO>.SuccessResponse(
+                return ServiceResponse<UserResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,
                     userResponse,
                     "User not found"
@@ -330,7 +330,7 @@ namespace PegasusBackend.Services.Implementations
             catch(Exception ex)
             {
                 logger.LogWarning(ex.Message, ex);
-                return ServiceResponse<UserDTO>.FailResponse(
+                return ServiceResponse<UserResponseDto>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Something went wrong");
             }

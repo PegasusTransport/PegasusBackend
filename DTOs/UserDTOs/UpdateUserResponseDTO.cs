@@ -1,6 +1,6 @@
 ﻿namespace PegasusBackend.DTOs.UserDTOs
 {
-    public class UpdateUserResponseDTO
+    public class UpdateUserResponseDto
     {
         public string UserName { get; set; }  = string.Empty;
     }

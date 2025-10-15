@@ -20,27 +20,27 @@ namespace PegasusBackend.Controllers
     {
         [HttpPost("CreateDriver")]
         [Authorize(Roles = "Driver")]
-        public async Task<ActionResult<CreatedDriverDTO>> CreateDriver(CreateDriverDTO request) =>
+        public async Task<ActionResult<CreatedResponseDriverDto>> CreateDriver(CreateRequestDriverDto request) =>
             Generate.ActionResult(await driverService.CreateDriverAsync(request, HttpContext));
 
         [HttpGet("GetAllDrivers")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<List<AllDriversDTO>>> GetAllDriver() =>
+        public async Task<ActionResult<List<AllDriversDto>>> GetAllDriver() =>
             Generate.ActionResult(await driverService.GetAllDriversAsync());
 
         [HttpGet("GetDriverById/{id}")]
         [Authorize]
-        public async Task<ActionResult<DriverDTO>> GetDriverById(Guid id) =>
+        public async Task<ActionResult<DriverResponseDto>> GetDriverById(Guid id) =>
             Generate.ActionResult(await driverService.GetDriverByIdAsync(id));
 
         [HttpGet("GetDriverByUserId")]
         [Authorize]
-        public async Task<ActionResult<DriverDTO>> GetDriverByUserId() =>
+        public async Task<ActionResult<DriverResponseDto>> GetDriverByUserId() =>
             Generate.ActionResult(await driverService.GetDriverByUserIdAsync(HttpContext));
 
         [HttpPut("UpdateDriver/{id}")]
         [Authorize(Roles = "Admin,Driver")]
-        public async Task<ActionResult<UpdateDriverResponseDTO>> UpdateDriver(Guid id, UpdateDriverDTO request) =>
+        public async Task<ActionResult<UpdateDriverResponseDto>> UpdateDriver(Guid id, UpdateDriverDto request) =>
             Generate.ActionResult(await driverService.UpdateDriverAsync(id, request, HttpContext));
 
         [HttpDelete("DeleteDriver/{id}")]

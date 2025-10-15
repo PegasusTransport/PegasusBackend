@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace PegasusBackend.DTOs.UserDTOs
 {
-    public class RegistrationRequestDTO
+    public class RegistrationRequestDto
     {
         [Required(ErrorMessage = "Username is required.")]
         public string UserName { get; set; } = null!;

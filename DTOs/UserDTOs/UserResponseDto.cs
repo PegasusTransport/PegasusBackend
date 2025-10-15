@@ -1,6 +1,8 @@
-﻿namespace PegasusBackend.DTOs.UserDTOs
+﻿using PegasusBackend.Models.Roles;
+
+namespace PegasusBackend.DTOs.UserDTOs
 {
-    public class UserDTO
+    public class UserResponseDto
     {
         public string UserName { get; set; } = string.Empty;    
         public string FirstName { get; set; } = string.Empty;   

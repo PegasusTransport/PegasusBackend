@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PegasusBackend.DTOs.DriverDTO
 {
-    public class CreateDriverDTO
+    public class CreateRequestDriverDto
     {
         [Required]
         public string ProfilePicture { get; set; } = string.Empty;

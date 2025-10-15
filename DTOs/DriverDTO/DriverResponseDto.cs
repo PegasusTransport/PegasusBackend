@@ -1,6 +1,6 @@
 ﻿namespace PegasusBackend.DTOs.DriverDTO
 {
-    public class DriverDTO
+    public class DriverResponseDto
     {
         public Guid DriverId { get; set; }
         public string FirstName { get; set; } = string.Empty;

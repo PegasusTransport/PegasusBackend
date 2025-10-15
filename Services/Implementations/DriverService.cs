@@ -13,12 +13,12 @@ namespace PegasusBackend.Services.Implementations
 {
     public class DriverService(UserManager<User> _userManager, IDriverRepo driverRepo,ILogger<DriverService> logger) : IDriverService
     {
-        public async Task<ServiceResponse<CreatedDriverDTO>> CreateDriverAsync(CreateDriverDTO request, HttpContext httpContext)
+        public async Task<ServiceResponse<CreatedResponseDriverDto>> CreateDriverAsync(CreateRequestDriverDto request, HttpContext httpContext)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(request.ProfilePicture))
-                    return ServiceResponse<CreatedDriverDTO>.FailResponse(
+                    return ServiceResponse<CreatedResponseDriverDto>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "Profile picture is required"
                     );
@@ -26,33 +26,33 @@ namespace PegasusBackend.Services.Implementations
                 var user = await _userManager.GetUserAsync(httpContext.User);
 
                 if (user == null)
-                    return ServiceResponse<CreatedDriverDTO>.FailResponse(
+                    return ServiceResponse<CreatedResponseDriverDto>.FailResponse(
                         HttpStatusCode.NotFound,
                         "No user with that mail"
                     );
 
                 if (!await _userManager.IsInRoleAsync(user, UserRoles.Driver.ToString()))
-                    return ServiceResponse<CreatedDriverDTO>.FailResponse(
+                    return ServiceResponse<CreatedResponseDriverDto>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "Not role as Driver"
                     );
                 if (user.IsDeleted)
-                    return ServiceResponse<CreatedDriverDTO>.FailResponse(
+                    return ServiceResponse<CreatedResponseDriverDto>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "Cannot create driver for deleted user"
                     );
                 if (await driverRepo.CreateDriver(request, user.Id))
                 {
-                    var newDriver = new CreatedDriverDTO
+                    var newDriver = new CreatedResponseDriverDto
                     {
                         DriverName = user.FirstName,
                         Email = user.Email!,
                     };
-                    return ServiceResponse<CreatedDriverDTO>.SuccessResponse(HttpStatusCode.OK, newDriver );
+                    return ServiceResponse<CreatedResponseDriverDto>.SuccessResponse(HttpStatusCode.OK, newDriver );
                 }
                 else
                 {
-                    return ServiceResponse<CreatedDriverDTO>.FailResponse(HttpStatusCode.BadRequest, "Failed to created driver");
+                    return ServiceResponse<CreatedResponseDriverDto>.FailResponse(HttpStatusCode.BadRequest, "Failed to created driver");
                 }
 
 
@@ -60,10 +60,10 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
                 logger.LogError(ex.Message);
-                return ServiceResponse<CreatedDriverDTO>.FailResponse(HttpStatusCode.InternalServerError, "Failed");
+                return ServiceResponse<CreatedResponseDriverDto>.FailResponse(HttpStatusCode.InternalServerError, "Failed");
             }
         }
-        public async Task<ServiceResponse<List<AllDriversDTO>>> GetAllDriversAsync()
+        public async Task<ServiceResponse<List<AllDriversDto>>> GetAllDriversAsync()
         {
             try
             {
@@ -73,7 +73,7 @@ namespace PegasusBackend.Services.Implementations
                     ? $"Found {drivers.Count} driver(s)"
                     : "No drivers found";
 
-                return ServiceResponse<List<AllDriversDTO>>.SuccessResponse(
+                return ServiceResponse<List<AllDriversDto>>.SuccessResponse(
                     HttpStatusCode.OK,
                     drivers,
                     message
@@ -82,14 +82,14 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
                 logger.LogError(ex, "Service error in GetAllDriversAsync");
-                return ServiceResponse<List<AllDriversDTO>>.FailResponse(
+                return ServiceResponse<List<AllDriversDto>>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Failed to retrieve drivers"
                 );
             }
 
         }
-        public async Task<ServiceResponse<DriverDTO>> GetDriverByUserIdAsync(HttpContext httpContext)
+        public async Task<ServiceResponse<DriverResponseDto>> GetDriverByUserIdAsync(HttpContext httpContext)
         {
             try
             {
@@ -97,7 +97,7 @@ namespace PegasusBackend.Services.Implementations
 
                 if (user == null)
                 {
-                    return ServiceResponse<DriverDTO>.FailResponse(
+                    return ServiceResponse<DriverResponseDto>.FailResponse(
                        HttpStatusCode.NotFound,
                        "Failed to find user"
                    );
@@ -106,12 +106,12 @@ namespace PegasusBackend.Services.Implementations
 
                 if (driver == null)
                 {
-                    return ServiceResponse<DriverDTO>.FailResponse(
+                    return ServiceResponse<DriverResponseDto>.FailResponse(
                        HttpStatusCode.NotFound,
                        "Failed to find driver"
                    );
                 }
-                var repsonse = new DriverDTO
+                var repsonse = new DriverResponseDto
                 {
                     DriverId = driver.DriverId,
                     FirstName = driver.FirstName,
@@ -119,7 +119,7 @@ namespace PegasusBackend.Services.Implementations
                     ProfilePicture = driver.ProfilePicture,
                     CarId = driver.CarId
                 };
-                return ServiceResponse<DriverDTO>.SuccessResponse(
+                return ServiceResponse<DriverResponseDto>.SuccessResponse(
                        HttpStatusCode.OK,
                        repsonse,
                        "Found driver"
@@ -128,7 +128,7 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error geting driver");
-                return ServiceResponse<DriverDTO>.FailResponse(
+                return ServiceResponse<DriverResponseDto>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Error while to get driver"
                 );
@@ -136,7 +136,7 @@ namespace PegasusBackend.Services.Implementations
 
 
         }
-        public async Task<ServiceResponse<DriverDTO>> GetDriverByIdAsync(Guid driverId)
+        public async Task<ServiceResponse<DriverResponseDto>> GetDriverByIdAsync(Guid driverId)
         {
             try
             {
@@ -144,13 +144,13 @@ namespace PegasusBackend.Services.Implementations
 
                 if (driver == null)
                 {
-                    return ServiceResponse<DriverDTO>.FailResponse(
+                    return ServiceResponse<DriverResponseDto>.FailResponse(
                         HttpStatusCode.NotFound,
                         "Driver not found"
                     );
                 }
 
-                return ServiceResponse<DriverDTO>.SuccessResponse(
+                return ServiceResponse<DriverResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,
                     driver,
                     "Driver retrieved"
@@ -159,7 +159,7 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error retrieving driver {DriverId}", driverId);
-                return ServiceResponse<DriverDTO>.FailResponse(
+                return ServiceResponse<DriverResponseDto>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Failed to retrieve driver"
                 );
@@ -204,13 +204,13 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
-        public async Task<ServiceResponse<UpdateDriverResponseDTO>> UpdateDriverAsync(Guid driverId, UpdateDriverDTO updatedDriver, HttpContext httpContext)
+        public async Task<ServiceResponse<UpdateDriverResponseDto>> UpdateDriverAsync(Guid driverId, UpdateDriverDto updatedDriver, HttpContext httpContext)
         {
             try
             {
                 if (!await CanUpdateDriver(httpContext, driverId))
                 {
-                    return ServiceResponse<UpdateDriverResponseDTO>.FailResponse(
+                    return ServiceResponse<UpdateDriverResponseDto>.FailResponse(
                         HttpStatusCode.Forbidden,
                         "You don't have permission to update this driver"
                     );
@@ -219,21 +219,21 @@ namespace PegasusBackend.Services.Implementations
                 var result = await driverRepo.UpdateDriver(updatedDriver, driverId);
                 if (!result)
                 {
-                    return ServiceResponse<UpdateDriverResponseDTO>.FailResponse(
+                    return ServiceResponse<UpdateDriverResponseDto>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "Failed to update driver"
                     );
                 }
 
                 var driver = await driverRepo.GetDriverByIdAsync(driverId);
-                var response = new UpdateDriverResponseDTO
+                var response = new UpdateDriverResponseDto
                 {
                     DriverId = driverId,
                     ProfilePicture = driver?.ProfilePicture ?? string.Empty,
                     CarId = driver?.CarId
                 };
 
-                return ServiceResponse<UpdateDriverResponseDTO>.SuccessResponse(
+                return ServiceResponse<UpdateDriverResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,
                     response,
                     "Driver updated"
@@ -242,7 +242,7 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error updating driver {DriverId}", driverId);
-                return ServiceResponse<UpdateDriverResponseDTO>.FailResponse(
+                return ServiceResponse<UpdateDriverResponseDto>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Failed to update driver"
                 );

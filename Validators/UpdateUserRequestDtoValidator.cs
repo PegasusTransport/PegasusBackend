@@ -33,7 +33,7 @@ namespace PegasusBackend.Validators
             {
                 RuleFor(x => x.PhoneNumber)
                     .Matches(@"^[\d\s\+\-\(\)]+$").WithMessage("Invalid phone number format.")
-                    .MinimumLength(8).WithMessage("Phone number must be at least 10 characters.")
+                    .MinimumLength(10).WithMessage("Phone number must be at least 10 characters.")
                     .MaximumLength(20).WithMessage("Phone number can't exceed 20 characters.");
             });
 

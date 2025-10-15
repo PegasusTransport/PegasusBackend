@@ -23,7 +23,7 @@ namespace PegasusBackend.Controllers
         public async Task<ActionResult<UserResponseDto>> GetUserByEmail(string email) =>
             Generate.ActionResult(await userService.GetUserByEmail(email));
 
-        [HttpPost("GetLoggedInUserData")]
+        [HttpGet("GetLoggedInUserData")]
         [Authorize]
         public async Task<ActionResult<UserResponseDto>> GetLoggedInUserData() =>
             Generate.ActionResult(await userService.GetLoggedInUser(HttpContext));

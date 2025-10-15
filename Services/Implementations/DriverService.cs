@@ -89,11 +89,11 @@ namespace PegasusBackend.Services.Implementations
             }
 
         }
-        public async Task<ServiceResponse<DriverResponseDto>> GetDriverByUserIdAsync(HttpContext httpContext)
+        public async Task<ServiceResponse<DriverResponseDto>> GetDriverByUserIdAsync(string userId)
         {
             try
             {
-                var user = await _userManager.GetUserAsync(httpContext.User);
+                var user = await _userManager.FindByIdAsync(userId);
 
                 if (user == null)
                 {

@@ -10,7 +10,7 @@ namespace PegasusBackend.Configurations
         {
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-            // Hämta alla roller från enum
+            // Get Roles from enum
             var roles = Enum.GetNames(typeof(UserRoles));
 
             foreach (var role in roles)

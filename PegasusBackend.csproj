@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="DTOs\AuthDTOs\LoginRequestDTO.cs" />
+    <None Include="DTOs\AuthDTOs\LoginRequestDto.cs" />
   </ItemGroup>
 
   <ItemGroup>

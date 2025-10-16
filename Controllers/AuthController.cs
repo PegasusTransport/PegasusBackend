@@ -18,8 +18,8 @@ namespace PegasusBackend.Controllers
     public class AuthController(IAuthService authService) : ControllerBase
     {
         [HttpPost("Login")]
-        public async Task<ActionResult<TokenResponse?>> Login(LoginRequestDTO request) =>
-            Generate.ActionResult<TokenResponse?>(await authService.LoginAsync(request, HttpContext));
+        public async Task<ActionResult<TokenResponseDto?>> Login(LoginRequestDto request) =>
+            Generate.ActionResult<TokenResponseDto?>(await authService.LoginAsync(request, HttpContext));
 
         [HttpPost("RefreshToken")]
         public async Task<ActionResult<string>> RefreshToken() =>

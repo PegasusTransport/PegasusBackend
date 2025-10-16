@@ -22,31 +22,38 @@ namespace PegasusBackend.Services.Implementations
         IUserService userService,
         ILogger<AuthService> logger) : IAuthService
     {
-        public async Task<ServiceResponse<TokenResponse?>> LoginAsync(
-            LoginRequestDTO request,
-            HttpContext httpContext)
+        public async Task<ServiceResponse<TokenResponseDto?>> LoginAsync(
+    LoginRequestDto request,
+    HttpContext httpContext)
         {
             try
             {
                 var user = await userManager.FindByEmailAsync(request.Email);
 
-                if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
+  
+                bool isPasswordValid = false;
+                if (user != null)
                 {
-                    return ServiceResponse<TokenResponse?>.FailResponse(
-                        HttpStatusCode.BadRequest,
+                    isPasswordValid = await userManager.CheckPasswordAsync(user, request.Password);
+                }
+
+                if (user == null || !isPasswordValid || user.IsDeleted)
+                {
+                    return ServiceResponse<TokenResponseDto?>.FailResponse(
+                        HttpStatusCode.Unauthorized,
                         "Invalid credentials"
                     );
                 }
 
                 if (await userManager.IsLockedOutAsync(user))
                 {
-                    return ServiceResponse<TokenResponse?>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Account is locked"
+                    return ServiceResponse<TokenResponseDto?>.FailResponse(
+                        HttpStatusCode.Forbidden, 
+                        "Account is locked. Please contact support."
                     );
                 }
 
-                var tokens = new TokenResponse
+                var tokens = new TokenResponseDto
                 {
                     AccessToken = await GenerateAccessToken(user),
                     RefreshToken = await CreateAndStoreRefreshToken(user)
@@ -57,7 +64,7 @@ namespace PegasusBackend.Services.Implementations
                     tokens.AccessToken,
                     tokens.RefreshToken);
 
-                return ServiceResponse<TokenResponse?>.SuccessResponse(
+                return ServiceResponse<TokenResponseDto?>.SuccessResponse(
                     HttpStatusCode.OK,
                     tokens,
                     "Login successful"
@@ -66,28 +73,28 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error during login for email: {Email}", request.Email);
-                return ServiceResponse<TokenResponse?>.FailResponse(
+                return ServiceResponse<TokenResponseDto?>.FailResponse(
                     HttpStatusCode.InternalServerError,
-                    "Something went wrong"
+                    "An unexpected error occurred"
                 );
             }
         }
 
-        public async Task<ServiceResponse<TokenResponse?>> RefreshTokensAsync(RefreshTokenRequest request)
+        public async Task<ServiceResponse<TokenResponseDto?>> RefreshTokensAsync(RefreshTokenRequestDto request)
         {
             try
             {
                 var user = await ValidateRefreshTokenAsync(request.UserId, request.RefreshToken);
                 if (user is null)
                 {
-                    return ServiceResponse<TokenResponse?>.FailResponse(
+                    return ServiceResponse<TokenResponseDto?>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "Invalid refresh token"
                     );
                 }
 
                 var tokens = await CreateTokenResponse(user);
-                return ServiceResponse<TokenResponse?>.SuccessResponse(
+                return ServiceResponse<TokenResponseDto?>.SuccessResponse(
                     HttpStatusCode.OK,
                     tokens,
                     "Tokens refreshed"
@@ -96,7 +103,7 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error refreshing tokens for user: {UserId}", request.UserId);
-                return ServiceResponse<TokenResponse?>.FailResponse(
+                return ServiceResponse<TokenResponseDto?>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Something went wrong"
                 );
@@ -124,7 +131,7 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                var refreshRequest = new RefreshTokenRequest
+                var refreshRequest = new RefreshTokenRequestDto
                 {
                     UserId = user.Id,
                     RefreshToken = refreshToken
@@ -210,9 +217,9 @@ namespace PegasusBackend.Services.Implementations
             return user;
         }
 
-        private async Task<TokenResponse> CreateTokenResponse(User user)
+        private async Task<TokenResponseDto> CreateTokenResponse(User user)
         {
-            return new TokenResponse
+            return new TokenResponseDto
             {
                 AccessToken = await GenerateAccessToken(user),
                 RefreshToken = await CreateAndStoreRefreshToken(user)

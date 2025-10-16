@@ -1,6 +1,6 @@
-﻿namespace PegasusBackend.Responses
+﻿namespace PegasusBackend.DTOs.AuthDTOs
 {
-    public class TokenResponse
+    public class TokenResponseDto
     {
         public string AccessToken { get; set; } = null!;
         public string RefreshToken { get; set; } = null!;

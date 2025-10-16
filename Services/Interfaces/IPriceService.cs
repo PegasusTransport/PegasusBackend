@@ -1,14 +1,14 @@
-﻿using PegasusBackend.DTOs;
+﻿using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Responses;
 
 public interface IPriceService
 {
-    Task<PriceResponse> TaxiMeterPrice(
+    Task<ServiceResponse<decimal>> TaxiMeterPrice(
     decimal? durationMinutes,
     decimal? distanceKm);
 
-    Task<PriceResponse> StopPriceCalculator(string pickUpAdress, string dropoffAdress, decimal? durationMinutes, decimal? distanceKm, decimal zonePrice);
+    Task<ServiceResponse<decimal>> StopPriceCalculator(string pickUpAdress, string dropoffAdress, decimal? durationMinutes, decimal? distanceKm, decimal zonePrice);
 
-    Task<PriceResponse> CalculateTotalPriceAsync(
+    Task<ServiceResponse<decimal>> CalculateTotalPriceAsync(
     PriceCalculationRequestDto Dto);
 }

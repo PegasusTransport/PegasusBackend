@@ -1,8 +1,9 @@
-﻿using PegasusBackend.DTOs;
-using PegasusBackend.Helpers.ZoneHelper;
+﻿using PegasusBackend.Helpers.ZoneHelper;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Services.Interfaces;
 using PegasusBackend.Responses;
+using PegasusBackend.DTOs.TaxiDTOs;
+using System.Net;
 
 namespace PegasusBackend.Services.Implementations
 {
@@ -15,7 +16,7 @@ namespace PegasusBackend.Services.Implementations
             _adminRepo = adminRepo;
         }
 
-        public async Task<PriceResponse> TaxiMeterPrice(
+        public async Task<ServiceResponse<decimal>> TaxiMeterPrice(
            decimal? durationMinutes,
            decimal? distanceKm)
         {
@@ -23,116 +24,149 @@ namespace PegasusBackend.Services.Implementations
 
             if (prices is null)
             {
-                return new PriceResponse
-                {
-                    Success = false,
-                    Price = null,
-                    Message = "kunde inte hämta priset från databasen."
-                };
+                return ServiceResponse<decimal>.FailResponse(
+                    HttpStatusCode.NotFound,
+                    "Didnt found the price in the database!"
+                );
             }
 
-            var price = (prices.KmPrice * distanceKm) + (prices.MinutePrice * durationMinutes) + prices.StartPrice;
+            var price = (prices.KmPrice * (distanceKm ?? 0)) +
+                (prices.MinutePrice * (durationMinutes ?? 0)) +
+                prices.StartPrice;
 
-            return new PriceResponse
-            {
-                Success = true,
-                Price = price,
-                Message = "Priset har räknats ut!"
-            };
+            return ServiceResponse<decimal>.SuccessResponse(
+                HttpStatusCode.OK,
+                price,
+                "Priset hämtas"
+            );
         }
 
-        public async Task<PriceResponse> StopPriceCalculator(string pickUpAdress, string dropoffAdress, decimal? durationMinutes, decimal? distanceKm, decimal zonePrice)
-        {
-            var price = await TaxiMeterPrice(durationMinutes ?? 0, distanceKm ?? 0);
-            var totalprice = price.Price ?? 0;
-
-            // När vi implementerar GoogleMaps Api, får vi göra en riktig arlanda check genom adress_components.
-            if ((ZoneHelper.ArlandaZone(pickUpAdress) && dropoffAdress.Contains("arlanda")) ||
-                (pickUpAdress.Contains("arlanda") && ZoneHelper.ArlandaZone(dropoffAdress)))
-            {
-                if (totalprice > zonePrice)
-                {
-                    return new PriceResponse
-                    {
-                        Success = true,
-                        Price = zonePrice,
-                        Message = "Upphämtning/avlämning är inom zon. Zonpriset gäller!"
-                    };
-                }
-                else
-                {
-                    return new PriceResponse
-                    {
-                        Success = true,
-                        Price = totalprice,
-                        Message = "Upphämtning/avlämning är inom zon. Priset blev under zonpris! "
-                    };
-                }
-            }
-
-            return new PriceResponse
-            {
-                Success = true,
-                Price = totalprice,
-                Message = "Upphämtning/avlämning är inte inom zon. Total pris gäller!"
-            };
-        }
-
-
-        // Ta emot lista av adresser istället för att få 3 adresser. Då kan man ha valfri antal stopp!!
-        public async Task<PriceResponse> CalculateTotalPriceAsync(PriceCalculationRequestDto Dto)
+        public async Task<ServiceResponse<decimal>> StopPriceCalculator(
+        string pickUpAdress,
+        string dropoffAdress,
+        decimal? durationMinutes,
+        decimal? distanceKm,
+        decimal zonePrice)
         {
             var prices = await _adminRepo.GetTaxiPricesAsync();
 
             if (prices is null)
             {
-                return new PriceResponse
+                return ServiceResponse<decimal>.FailResponse(
+                    HttpStatusCode.NotFound,
+                    "Kunde inte hämta priset från databasen."
+                );
+            }
+
+            var meterResponse = await TaxiMeterPrice(durationMinutes ?? 0, distanceKm ?? 0);
+            var totalPrice = meterResponse.Data;
+
+            bool pickupIsArlanda = pickUpAdress.Contains("arlanda", StringComparison.OrdinalIgnoreCase);
+            bool dropoffIsArlanda = dropoffAdress.Contains("arlanda", StringComparison.OrdinalIgnoreCase);
+
+            bool pickupInZone = ZoneHelper.ArlandaZone(pickUpAdress);
+            bool dropoffInZone = ZoneHelper.ArlandaZone(dropoffAdress);
+
+            bool eligibleForZonePrice =
+                (pickupIsArlanda && dropoffInZone) ||
+                (dropoffIsArlanda && pickupInZone);
+
+            if (eligibleForZonePrice)
+            {
+                if (totalPrice > zonePrice)
                 {
-                    Success = false,
-                    Price = null,
-                    Message = "kunde inte hämta priset från databasen."
-                };
+                    return ServiceResponse<decimal>.SuccessResponse(
+                        HttpStatusCode.OK,
+                        zonePrice,
+                        "Fastpris tillämpas för resa till eller från Arlanda inom zon."
+                    );
+                }
+            }
+
+            return ServiceResponse<decimal>.SuccessResponse(
+                HttpStatusCode.OK,
+                totalPrice,
+                "Taxameterpris tillämpas."
+            );
+        }
+
+        public async Task<ServiceResponse<decimal>> CalculateTotalPriceAsync(PriceCalculationRequestDto Dto)
+        {
+            var prices = await _adminRepo.GetTaxiPricesAsync();
+            if (prices is null)
+            {
+                return ServiceResponse<decimal>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Kunde inte hämta priset från databasen."
+                );
             }
 
             var zonePrice = prices.ZonePrice;
-
-            if (Dto.FirstStopAdress is null)
-            {
-                var totalPrice = await StopPriceCalculator(Dto.PickupAdress.ToLower().Trim(), Dto.DropoffAdress.ToLower().Trim(), Dto.LastDurationMinutes, Dto.LastDistanceKm, zonePrice);
-                return new PriceResponse
-                {
-                    Success = true,
-                    Price = totalPrice.Price,
-                    Message = "Pris beräknat utan stopp."
-                };
-            }
-
             decimal total = 0;
 
-            // Räknar mellan pickup till stopp, och stopp till dropoff.  
-            var FirstPart = await StopPriceCalculator(Dto.PickupAdress.ToLower().Trim(), Dto.FirstStopAdress.ToLower().Trim(), Dto.FirstStopDurationMinutes, Dto.FirstStopDistanceKm, zonePrice);
-
-            total += FirstPart.Price ?? 0;
-
-            // om andra stopp inte är null....
-            if (Dto.SecondStopAdress is not null)
+            if (string.IsNullOrWhiteSpace(Dto.FirstStopAdress))
             {
-                var secondPart = await StopPriceCalculator(Dto.FirstStopAdress.ToLower().Trim(), Dto.SecondStopAdress.ToLower().Trim(), Dto.SecondStopDurationMinutes, Dto.SecondStopDistanceKm, zonePrice);
-                var thirdPart = await StopPriceCalculator(Dto.SecondStopAdress.ToLower().Trim(), Dto.DropoffAdress.ToLower().Trim(), Dto.LastDurationMinutes, Dto.LastDistanceKm, zonePrice);
-                total += thirdPart.Price ?? 0 + secondPart.Price ?? 0;
+                var singleTrip = await StopPriceCalculator(
+                    Dto.PickupAdress,
+                    Dto.DropoffAdress,
+                    Dto.LastDurationMinutes,
+                    Dto.LastDistanceKm,
+                    zonePrice
+                );
+
+                return singleTrip;
+            }
+
+            var firstPart = await StopPriceCalculator(
+                Dto.PickupAdress,
+                Dto.FirstStopAdress,
+                Dto.FirstStopDurationMinutes,
+                Dto.FirstStopDistanceKm,
+                zonePrice
+            );
+
+            total += firstPart.Data;
+
+            if (!string.IsNullOrWhiteSpace(Dto.SecondStopAdress))
+            {
+                var secondPart = await StopPriceCalculator(
+                    Dto.FirstStopAdress,
+                    Dto.SecondStopAdress,
+                    Dto.SecondStopDurationMinutes,
+                    Dto.SecondStopDistanceKm,
+                    zonePrice
+                );
+
+                total += secondPart.Data;
+
+                var thirdPart = await StopPriceCalculator(
+                    Dto.SecondStopAdress,
+                    Dto.DropoffAdress,
+                    Dto.LastDurationMinutes,
+                    Dto.LastDistanceKm,
+                    zonePrice
+                );
+
+                total += thirdPart.Data;
             }
             else
             {
-                var secondPart = await StopPriceCalculator(Dto.FirstStopAdress.ToLower().Trim(), Dto.DropoffAdress.ToLower().Trim(), Dto.LastDurationMinutes, Dto.LastDistanceKm, zonePrice);
-                total += secondPart.Price ?? 0;
+                var lastPart = await StopPriceCalculator(
+                    Dto.FirstStopAdress,
+                    Dto.DropoffAdress,
+                    Dto.LastDurationMinutes,
+                    Dto.LastDistanceKm,
+                    zonePrice
+                );
+
+                total += lastPart.Data;
             }
 
-            return new PriceResponse
-            {
-                Success = true,
-                Price = total,
-                Message = "Pris beräknat med stopp."
-            };
+            return ServiceResponse<decimal>.SuccessResponse(
+                HttpStatusCode.OK,
+                total,
+                "Pris beräknat med stopp (taxameter + zonpris per segment)."
+            );
         }
     }
 }

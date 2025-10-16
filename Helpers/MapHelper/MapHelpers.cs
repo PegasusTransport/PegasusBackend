@@ -13,18 +13,29 @@ namespace PegasusBackend.Helpers
 
         public static string BuildDirectionsUrl(List<CoordinateDto> coordinates, string apiKey)
         {
+            if (coordinates == null || coordinates.Count < 2)
+                throw new ArgumentException("At least 2 coordinates are required.");
+
             string origin = $"{ToCoord(coordinates.First().Latitude)},{ToCoord(coordinates.First().Longitude)}";
             string destination = $"{ToCoord(coordinates.Last().Latitude)},{ToCoord(coordinates.Last().Longitude)}";
 
-            var stopps = string.Join("|", coordinates.Skip(1).Take(coordinates.Count - 2)
+            // Skapa waypoints (mellanliggande stopp)
+            var waypoints = string.Join("|", coordinates
+                .Skip(1)
+                .Take(coordinates.Count - 2)
                 .Select(c => $"{ToCoord(c.Latitude)},{ToCoord(c.Longitude)}"));
 
-            var url = $"https://maps.googleapis.com/maps/api/directions/json?origin={origin}&destination={destination}&key={apiKey}";
-            if (!string.IsNullOrEmpty(stopps))
-                url += $"&waypoints={stopps}";
+            // Bygg URL med svenska namn och optimerad väg
+            var url = $"https://maps.googleapis.com/maps/api/directions/json?" +
+                      $"origin={origin}" +
+                      $"&destination={destination}" +
+                      (!string.IsNullOrEmpty(waypoints) ? $"&waypoints={waypoints}" : string.Empty) +
+                      $"&language=sv" +
+                      $"&key={apiKey}";
 
             return url;
         }
+
 
         public static string BuildGeocodeUrl(CoordinateDto coord, string apiKey)
         {

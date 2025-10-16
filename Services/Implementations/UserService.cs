@@ -5,8 +5,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Identity.Client;
 using Org.BouncyCastle.Bcpg;
 using PegasusBackend.DTOs.DriverDTO;
+using PegasusBackend.DTOs.MailjetDTOs;
 using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Helpers.JwtCookieOptions;
+using PegasusBackend.Helpers.MailjetHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
@@ -18,7 +20,7 @@ using System.Runtime.CompilerServices;
 
 namespace PegasusBackend.Services.Implementations
 {
-    public class UserService(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, IUserRepo userRepo, ILogger<UserService> logger) : IUserService
+    public class UserService(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, IUserRepo userRepo, ILogger<UserService> logger, IMailjetEmailService mailjetEmailService) : IUserService
     {
         public async Task<ServiceResponse<List<AllUserResponseDto>>> GetAllUsers()
         {
@@ -139,6 +141,15 @@ namespace PegasusBackend.Services.Implementations
             
 
                 await userManager.AddToRoleAsync(newUser, request.Role.ToString());
+
+                // If the user is a customer, we send them a customer welcome template, if the are a driver, they get another template!
+                // Send a email about confirming their account. 
+                await mailjetEmailService.SendEmailAsync(
+                    newUser.Email,
+                    MailjetTemplateType.Welcome,
+                    new WelcomeRequestDto { firstname = newUser.FirstName },
+                    MailjetSubjects.Welcome
+                );
 
                 var response = new RegistrationResponseDto
                 {

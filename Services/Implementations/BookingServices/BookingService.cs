@@ -1,10 +1,15 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.BookingDTOs;
+using PegasusBackend.DTOs.MailjetDTOs;
+using PegasusBackend.Helpers.BookingHelper;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 using PegasusBackend.Services.Interfaces.BookingInterfaces;
+using System.Globalization;
 using System.Net;
 using System.Security.Claims;
 
@@ -14,28 +19,34 @@ namespace PegasusBackend.Services.Implementations.BookingServices
     {
         private readonly IBookingRepo _bookingRepo;
         private readonly UserManager<User> _userManager;
-        private readonly IEmailService _emailService;
+        private readonly IMailjetEmailService _mailjetEmailService;
         private readonly IBookingValidationService _validationService;
         private readonly IBookingFactoryService _bookingFactory;
         private readonly IBookingMapperService _bookingMapper;
         private readonly ILogger<BookingService> _logger;
+        private readonly MailJetSettings _settings;
+        private readonly IWebHostEnvironment _env;
 
         public BookingService(
             IBookingRepo bookingRepo,
             UserManager<User> userManager,
-            IEmailService emailService,
+            IMailjetEmailService mailjetEmailService,
             IBookingValidationService validationService,
             IBookingFactoryService bookingFactory,
             IBookingMapperService bookingMapper,
-            ILogger<BookingService> logger)
+            ILogger<BookingService> logger,
+            IOptions<MailJetSettings> mailJetSettings,
+            IWebHostEnvironment env)
         {
             _bookingRepo = bookingRepo;
             _userManager = userManager;
-            _emailService = emailService;
+            _mailjetEmailService = mailjetEmailService;
             _validationService = validationService;
             _bookingFactory = bookingFactory;
             _bookingMapper = bookingMapper;
             _logger = logger;
+            _settings = mailJetSettings.Value;
+            _env = env;
         }
 
         public async Task<ServiceResponse<BookingResponseDto>> CreateBookingAsync(CreateBookingDto bookingDto)
@@ -48,6 +59,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
 
                 var user = await _userManager.FindByEmailAsync(bookingDto.Email);
                 var isGuestBooking = user == null;
+
 
                 var booking = _bookingFactory.CreateBookingEntity(
                     bookingDto,
@@ -337,24 +349,54 @@ namespace PegasusBackend.Services.Implementations.BookingServices
 
         private async Task SendBookingEmailAsync(Bookings booking, CreateBookingDto bookingDto, bool isGuestBooking)
         {
+            var stopsText = BookingMailHelper.FormatStops(bookingDto);
+            var formattedTime = BookingMailHelper.FormatDateTime(bookingDto.PickUpDateTime);
+
+
+            var baseUrl = _env.IsDevelopment()
+            ? _settings.Links.LocalConfirmationBase
+            : _settings.Links.ProductionConfirmationBase;
+
+            var confirmationLink = $"{baseUrl}{booking.ConfirmationToken}";
+
             if (isGuestBooking)
             {
-                await _emailService.SendGuestConfirmationEmailAsync(
+
+                await _mailjetEmailService.SendEmailAsync(
                     bookingDto.Email,
-                    bookingDto.FirstName,
-                    booking.ConfirmationToken!,
-                    booking
-                );
+                    Helpers.MailjetHelpers.MailjetTemplateType.PendingConfirmation,
+                    new PendingConfirmationRequestDto
+                    {
+                        Firstname = bookingDto.FirstName,
+                        PickupAddress = bookingDto.PickUpAddress,
+                        Stops = stopsText,
+                        Destination = bookingDto.DropOffAddress,
+                        PickupTime = formattedTime,
+                        TotalPrice = booking.Price,
+                        ConfirmationLink = confirmationLink,
+                    },
+                    Helpers.MailjetHelpers.MailjetSubjects.PendingConfirmation
+                    );
             }
             else
             {
-                await _emailService.SendRegisteredUserBookingEmailAsync(
+                await _mailjetEmailService.SendEmailAsync(
                     bookingDto.Email,
-                    bookingDto.FirstName,
-                    booking
-                );
+                    Helpers.MailjetHelpers.MailjetTemplateType.BookingConfirmation,
+                    new BookingConfirmationRequestDto
+                    {
+                        Firstname = bookingDto.FirstName,
+                        PickupAddress = bookingDto.PickUpAddress,
+                        Stops = stopsText,
+                        Destination = bookingDto.DropOffAddress,
+                        PickupTime = formattedTime,
+                        TotalPrice = booking.Price,
+                    },
+                    Helpers.MailjetHelpers.MailjetSubjects.BookingConfirmation
+                    );
             }
         }
+
 
         private ServiceResponse<BookingResponseDto> BuildSuccessResponse(Bookings booking, bool isGuestBooking)
         {

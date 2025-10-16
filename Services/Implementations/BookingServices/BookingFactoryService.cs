@@ -23,7 +23,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 GuestFirstName = isGuestBooking ? bookingDto.FirstName : null,
                 GuestLastName = isGuestBooking ? bookingDto.LastName : null,
                 GuestPhoneNumber = isGuestBooking ? bookingDto.PhoneNumber : null,
-                Price = calculatedPrice,
+                Price = Math.Round(calculatedPrice, 2),
                 BookingDateTime = DateTime.UtcNow,
                 PickUpDateTime = bookingDto.PickUpDateTime,
                 PickUpAdress = bookingDto.PickUpAddress,

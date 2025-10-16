@@ -27,13 +27,19 @@ namespace PegasusBackend.Controllers
         {
             return Ok("Driver");
         }
+        [HttpGet("Admin")]
+        [Authorize(Roles ="Admin")]
+        public ActionResult AdminTest()
+        {
+            return Ok("You are admin");
+        }
         [HttpGet("check-roles")]
         [Authorize]
         public async Task<ActionResult> CheckMyRoles()
         {
             var user = await _userManager.GetUserAsync(User);
             var roles = await _userManager.GetRolesAsync(user!);
-            return Ok(new { user.Email, Roles = roles });
+            return Ok(new { user!.Email, Roles = roles });
         }
     }
 }

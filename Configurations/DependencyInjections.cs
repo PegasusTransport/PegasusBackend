@@ -20,12 +20,14 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IAdminRepo, AdminRepo>();
             services.AddScoped<IUserRepo, UserRepo>();
             services.AddScoped<IBookingRepo, BookingRepo>();
+            services.AddScoped<IDriverRepo, DriverRepo>();
 
             // Services
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IPriceService, PriceService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IDriverService, DriverService>();
             services.AddScoped<IMapService, MapService>();
             services.AddScoped<IBookingService, BookingService>();
 

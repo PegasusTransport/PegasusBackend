@@ -6,5 +6,6 @@ namespace PegasusBackend.Repositorys.Interfaces
     {
         Task<bool> HandleRefreshToken(User user, string? refreshtoken);
         Task<User?> GetUserByRefreshToken(string refreshtoken);
+        Task<bool> UserHasBookings(User user);
     }
 }

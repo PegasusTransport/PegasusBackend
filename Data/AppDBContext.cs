@@ -28,7 +28,8 @@ namespace PegasusBackend.Data
             driver
                 .HasOne(d => d.Car)
                 .WithOne(c => c.Driver)
-                .HasForeignKey<Drivers>(d => d.CarId);
+                .HasForeignKey<Drivers>(d => d.CarId)
+                .IsRequired(false);
 
             driver
                 .HasMany(d => d.Bookings)

@@ -15,6 +15,8 @@ namespace PegasusBackend.Models
         public string LastName { get; set; } = string.Empty;
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpireTime { get; set; }
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
 
         public virtual Drivers? Driver { get; set; }
     }

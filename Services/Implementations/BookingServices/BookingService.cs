@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.MailjetDTOs;
 using PegasusBackend.Helpers.BookingHelper;
@@ -22,6 +24,8 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         private readonly IBookingFactoryService _bookingFactory;
         private readonly IBookingMapperService _bookingMapper;
         private readonly ILogger<BookingService> _logger;
+        private readonly MailJetSettings _settings;
+        private readonly IWebHostEnvironment _env;
 
         public BookingService(
             IBookingRepo bookingRepo,
@@ -30,7 +34,9 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             IBookingValidationService validationService,
             IBookingFactoryService bookingFactory,
             IBookingMapperService bookingMapper,
-            ILogger<BookingService> logger)
+            ILogger<BookingService> logger,
+            IOptions<MailJetSettings> mailJetSettings,
+            IWebHostEnvironment env)
         {
             _bookingRepo = bookingRepo;
             _userManager = userManager;
@@ -39,6 +45,8 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             _bookingFactory = bookingFactory;
             _bookingMapper = bookingMapper;
             _logger = logger;
+            _settings = mailJetSettings.Value;
+            _env = env;
         }
 
         public async Task<ServiceResponse<BookingResponseDto>> CreateBookingAsync(CreateBookingDto bookingDto)
@@ -344,8 +352,12 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             var stopsText = BookingMailHelper.FormatStops(bookingDto);
             var formattedTime = BookingMailHelper.FormatDateTime(bookingDto.PickUpDateTime);
 
-            var confirmationLink = $"https://localhost:7161/api/booking/confirm?token={booking.ConfirmationToken}";
-            //var confirmationLink = $"https://pegasustransport.se/booking/confirm?token={booking.ConfirmationToken}";
+
+            var baseUrl = _env.IsDevelopment()
+            ? _settings.Links.LocalConfirmationBase
+            : _settings.Links.ProductionConfirmationBase;
+
+            var confirmationLink = $"{baseUrl}{booking.ConfirmationToken}";
 
             if (isGuestBooking)
             {
@@ -353,7 +365,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 await _mailjetEmailService.SendEmailAsync(
                     bookingDto.Email,
                     Helpers.MailjetHelpers.MailjetTemplateType.PendingConfirmation,
-                    new PendingConfirmationDto
+                    new PendingConfirmationRequestDto
                     {
                         Firstname = bookingDto.FirstName,
                         PickupAddress = bookingDto.PickUpAddress,
@@ -371,7 +383,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 await _mailjetEmailService.SendEmailAsync(
                     bookingDto.Email,
                     Helpers.MailjetHelpers.MailjetTemplateType.BookingConfirmation,
-                    new BookingConfirmationDto
+                    new BookingConfirmationRequestDto
                     {
                         Firstname = bookingDto.FirstName,
                         PickupAddress = bookingDto.PickUpAddress,

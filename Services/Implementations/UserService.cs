@@ -147,7 +147,7 @@ namespace PegasusBackend.Services.Implementations
                 await mailjetEmailService.SendEmailAsync(
                     newUser.Email,
                     MailjetTemplateType.Welcome,
-                    new WelcomeDto { firstname = newUser.FirstName },
+                    new WelcomeRequestDto { firstname = newUser.FirstName },
                     MailjetSubjects.Welcome
                 );
 

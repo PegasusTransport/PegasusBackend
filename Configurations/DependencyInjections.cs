@@ -18,7 +18,7 @@ namespace PegasusBackend.Configurations
         {
             // Mailjet settings korrekt
             services.Configure<MailJetSettings>(
-                configuration.GetSection("Mailjet")
+                configuration.GetSection("MailJetSettings")
             );
 
             // Repositories

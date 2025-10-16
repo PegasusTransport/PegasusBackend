@@ -75,8 +75,6 @@ namespace PegasusBackend.Services.Implementations
             {
                 if (totalPrice > zonePrice)
                 {
-                    Console.WriteLine($"[DEBUG] ZONPRIS tillämpas ({zonePrice}kr) " +
-                                      $"för resa mellan '{pickUpAdress}' och '{dropoffAdress}'");
                     return ServiceResponse<decimal>.SuccessResponse(
                         HttpStatusCode.OK,
                         zonePrice,
@@ -85,8 +83,6 @@ namespace PegasusBackend.Services.Implementations
                 }
             }
 
-            Console.WriteLine($"[DEBUG] TAXAMETERPRIS tillämpas ({totalPrice}kr) " +
-                              $"för resa mellan '{pickUpAdress}' och '{dropoffAdress}'");
             return ServiceResponse<decimal>.SuccessResponse(
                 HttpStatusCode.OK,
                 totalPrice,
@@ -108,8 +104,6 @@ namespace PegasusBackend.Services.Implementations
             var zonePrice = prices.ZonePrice;
             decimal total = 0;
 
-            Console.WriteLine($"[DEBUG] Start prisberäkning. Pickup: '{Dto.PickupAdress}', Dropoff: '{Dto.DropoffAdress}'");
-
             if (string.IsNullOrWhiteSpace(Dto.FirstStopAdress))
             {
                 var singleTrip = await StopPriceCalculator(
@@ -120,7 +114,6 @@ namespace PegasusBackend.Services.Implementations
                     zonePrice
                 );
 
-                Console.WriteLine($"[DEBUG] Enkel resa total: {singleTrip.Data}kr");
                 return singleTrip;
             }
 
@@ -133,7 +126,6 @@ namespace PegasusBackend.Services.Implementations
             );
 
             total += firstPart.Data;
-            Console.WriteLine($"[DEBUG] Första del: {firstPart.Data}kr ({Dto.PickupAdress} → {Dto.FirstStopAdress})");
 
             if (!string.IsNullOrWhiteSpace(Dto.SecondStopAdress))
             {
@@ -146,7 +138,6 @@ namespace PegasusBackend.Services.Implementations
                 );
 
                 total += secondPart.Data;
-                Console.WriteLine($"[DEBUG] Andra del: {secondPart.Data}kr ({Dto.FirstStopAdress} → {Dto.SecondStopAdress})");
 
                 var thirdPart = await StopPriceCalculator(
                     Dto.SecondStopAdress,
@@ -157,7 +148,6 @@ namespace PegasusBackend.Services.Implementations
                 );
 
                 total += thirdPart.Data;
-                Console.WriteLine($"[DEBUG] Tredje del: {thirdPart.Data}kr ({Dto.SecondStopAdress} → {Dto.DropoffAdress})");
             }
             else
             {
@@ -170,10 +160,8 @@ namespace PegasusBackend.Services.Implementations
                 );
 
                 total += lastPart.Data;
-                Console.WriteLine($"[DEBUG] Sista del: {lastPart.Data}kr ({Dto.FirstStopAdress} → {Dto.DropoffAdress})");
             }
 
-            Console.WriteLine($"[DEBUG] TOTALT pris: {total}kr");
             return ServiceResponse<decimal>.SuccessResponse(
                 HttpStatusCode.OK,
                 total,

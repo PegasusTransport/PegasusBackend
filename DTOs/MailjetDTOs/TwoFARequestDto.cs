@@ -2,7 +2,7 @@
 
 namespace PegasusBackend.DTOs.MailjetDTOs
 {
-    public class TwoFADto
+    public class TwoFARequestDto
     {
         [Required]
         [MaxLength(50)]

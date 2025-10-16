@@ -2,7 +2,7 @@
 
 namespace PegasusBackend.DTOs.MailjetDTOs
 {
-    public class PendingConfirmationDto
+    public class PendingConfirmationRequestDto
     {
         [Required(ErrorMessage = "Firstname is required.")]
         [MaxLength(50, ErrorMessage = "Firstname cannot exceed 50 characters.")]

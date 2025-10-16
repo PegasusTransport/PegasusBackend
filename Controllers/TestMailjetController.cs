@@ -24,7 +24,7 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await _mailjet.SendEmailAsync(
                 yourEmail,
                 MailjetTemplateType.Welcome,
-                new WelcomeDto { firstname = yourName },
+                new WelcomeRequestDto { firstname = yourName },
                 MailjetSubjects.Welcome));
 
         [HttpGet("testBookningConfirmationMail")]
@@ -39,7 +39,7 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await _mailjet.SendEmailAsync(
                 yourEmail,
                 MailjetTemplateType.BookingConfirmation,
-                new BookingConfirmationDto
+                new BookingConfirmationRequestDto
                 {
                     Firstname = firstName,
                     PickupAddress = pickupAdress,
@@ -59,7 +59,7 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await _mailjet.SendEmailAsync(
                 yourEmail,
                 MailjetTemplateType.ForgotPassword,
-                new ForgotPasswordDto
+                new ForgotPasswordRequestDto
                 {
                     Firstname = firstName,
                     ResetLink = resetLink
@@ -79,7 +79,7 @@ namespace PegasusBackend.Controllers
         => Generate.ActionResult(await _mailjet.SendEmailAsync(
             yourEmail,
             MailjetTemplateType.PendingConfirmation,
-            new PendingConfirmationDto
+            new PendingConfirmationRequestDto
             {
                 Firstname = firstName,
                 PickupAddress = pickupAddress,
@@ -96,7 +96,7 @@ namespace PegasusBackend.Controllers
             => Generate.ActionResult(await _mailjet.SendEmailAsync(
                 yourEmail,
                 MailjetTemplateType.TwoFA,
-                new TwoFADto
+                new TwoFARequestDto
                 {
                     Firstname = firstName,
                     VerificationCode = code

@@ -2,7 +2,7 @@
 
 namespace PegasusBackend.DTOs.MailjetDTOs
 {
-    public class BookingConfirmationDto
+    public class BookingConfirmationRequestDto
     {
         [Required]
         [MaxLength(50)]

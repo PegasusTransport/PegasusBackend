@@ -24,8 +24,6 @@ namespace PegasusBackend.Services.Implementations
 
         private MailjetRequest BuildMailjetRequest(string toEmail, long templateId, object variables, string subject)
         {
-            Console.WriteLine($"FromEmail: {_settings.SenderEmail}, Name: {_settings.SenderName}");
-
             return new MailjetRequest
             {
                 Resource = Send.Resource
@@ -84,10 +82,6 @@ namespace PegasusBackend.Services.Implementations
                 {
                     var errorDetails = response.GetErrorMessage();
                     var responseData = response.GetData();
-
-                    Console.WriteLine($"[MAILJET ERROR] Status: {response.StatusCode}");
-                    Console.WriteLine($"[MAILJET ERROR] Details: {errorDetails}");
-                    Console.WriteLine($"[MAILJET ERROR] Data: {responseData}");
 
                     return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest,

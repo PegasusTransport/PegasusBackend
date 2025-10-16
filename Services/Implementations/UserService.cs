@@ -142,7 +142,6 @@ namespace PegasusBackend.Services.Implementations
 
                 await userManager.AddToRoleAsync(newUser, request.Role.ToString());
 
-                var response = new RegistrationResponseDto
                 // If the user is a customer, we send them a customer welcome template, if the are a driver, they get another template!
                 // Send a email about confirming their account. 
                 await mailjetEmailService.SendEmailAsync(
@@ -152,7 +151,7 @@ namespace PegasusBackend.Services.Implementations
                     MailjetSubjects.Welcome
                 );
 
-                var response = new RegistrationResponseDTO
+                var response = new RegistrationResponseDto
                 {
                     FirstName = newUser.FirstName,
                     Email = newUser.Email,

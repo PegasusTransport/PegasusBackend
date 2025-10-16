@@ -9,7 +9,7 @@ namespace PegasusBackend.DTOs.MailjetDTOs
         public string Firstname { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Link for resetting the password is required.")]
-        [Url(ErrorMessage = "Please send in a valid link.")]
+        [Url(ErrorMessage = "Please send in a valid link.")] // Needs to validate that the link have https//: 
         public string ResetLink { get; set; } = string.Empty;
     }
 }

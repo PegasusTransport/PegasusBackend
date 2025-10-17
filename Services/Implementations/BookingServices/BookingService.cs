@@ -463,10 +463,10 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             return new CreateBookingDto
             {
                 // Dummy customer-data (required for validation but never used)
-                Email = "preview@dummy.com",
-                FirstName = "Preview",
-                LastName = "User",
-                PhoneNumber = "0000000000",
+                Email = string.Empty,
+                FirstName = string.Empty,
+                LastName = string.Empty,
+                PhoneNumber = string.Empty,
 
                 // Actual route data from the user
                 PickUpDateTime = previewDto.PickUpDateTime,

@@ -52,6 +52,13 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await _bookingService.GetUserBookingsAsync(User));
 
 
+        /// In advance Calculate price and route information WITHOUT creating a booking.
+        /// Does NOT require customer-data (email, name, phone).
+        [HttpPost("preview")]
+        public async Task<ActionResult<BookingPreviewResponseDto>> GetBookingPreview(
+            [FromBody] BookingPreviewRequestDto previewDto) =>
+            Generate.ActionResult(await _bookingService.GetBookingPreviewAsync(previewDto));
+
         /// Get all available bookings (for drivers/admins)
         [HttpGet("available")]
         [Authorize(Roles = "Driver,Admin")]

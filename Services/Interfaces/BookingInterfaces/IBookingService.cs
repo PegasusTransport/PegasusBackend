@@ -13,5 +13,7 @@ namespace PegasusBackend.Services.Interfaces.BookingInterfaces
         Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync();
         Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId, ClaimsPrincipal claimsPrincipal);
         Task<ServiceResponse<BookingResponseDto>> GetBookingByIdForGuestAsync(int bookingId, string email);
+        Task<ServiceResponse<BookingPreviewResponseDto>> GetBookingPreviewAsync(BookingPreviewRequestDto previewDto);
+
     }
 }

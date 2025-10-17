@@ -19,11 +19,12 @@ namespace PegasusBackend.Controllers
     public class AuthController(IAuthService authService) : ControllerBase
     {
         [HttpPost("Login")]
-        [EnableRateLimiting("LoginPolicy")]
+        [EnableRateLimiting("AuthPolicy")]
         public async Task<ActionResult<TokenResponseDto?>> Login(LoginRequestDto request) =>
             Generate.ActionResult<TokenResponseDto?>(await authService.LoginAsync(request, HttpContext));
 
         [HttpPost("RefreshToken")]
+        [EnableRateLimiting("AuthPolicy")]
         public async Task<ActionResult<string>> RefreshToken() =>
             Generate.ActionResult(await authService.RefreshTokensFromCookiesAsync(HttpContext));
 

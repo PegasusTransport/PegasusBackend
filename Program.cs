@@ -19,7 +19,7 @@ namespace PegasusBackend
             builder.Services.AddJwtAuthentication(builder.Configuration);
             builder.Services.AddCorsConfiguration();
             builder.Services.AddControllers();
-            builder.Services.AddRateLimitersPolicys();
+            builder.Services.AddRateLimitPolicies();
             builder.Services.AddFluentValidationAutoValidation();
             builder.Services.AddFluentValidationClientsideAdapters();
             builder.Services.AddValidatorsFromAssemblyContaining<CreateBookingDTOValidator>();

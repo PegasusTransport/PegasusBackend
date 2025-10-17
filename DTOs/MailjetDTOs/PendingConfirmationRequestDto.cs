@@ -31,7 +31,7 @@ namespace PegasusBackend.DTOs.MailjetDTOs
 
 
         [Required(ErrorMessage = "Confirmation link is required.")]
-        [Url(ErrorMessage = "Invalid confirmation link URL format.")]
+        [Url(ErrorMessage = "Invalid confirmation link URL format.")] // Needs to validate that the link have https//: 
         public string ConfirmationLink { get; set; } = string.Empty;
     }
 }

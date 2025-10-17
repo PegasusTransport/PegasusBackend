@@ -92,17 +92,28 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             var allAddresses = GetAllAddresses(bookingDto);
             var hasArlanda = allAddresses.Any(a => a.Contains("arlanda", StringComparison.OrdinalIgnoreCase));
 
-            if (hasArlanda &&
-                bookingDto.PickUpAddress.Contains("arlanda", StringComparison.OrdinalIgnoreCase) &&
-                string.IsNullOrEmpty(bookingDto.Flightnumber))
+            // At least 1 stop MUST be from Arlanda
+            if (!hasArlanda)
             {
-                _logger.LogWarning("Arlanda validation failed - no flight number");
+                _logger.LogWarning("Arlanda validation failed - no Arlanda address found");
                 return ServiceResponse<BookingResponseDto>.FailResponse(
                     HttpStatusCode.BadRequest,
-                    "Flight number is required for trips departing from Arlanda."
+                    "Minst en av adresserna (pickup, dropoff, eller stopp) måste vara Arlanda."
                 );
             }
 
+            // If pickup is from Arlanda, then flightnumber is required.
+            if (bookingDto.PickUpAddress.Contains("arlanda", StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrEmpty(bookingDto.Flightnumber))
+            {
+                _logger.LogWarning("Arlanda validation failed - no flight number for pickup from Arlanda");
+                return ServiceResponse<BookingResponseDto>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    "Flygnummer krävs för resor som hämtas upp från Arlanda."
+                );
+            }
+
+            _logger.LogInformation("Arlanda validation passed");
             return null;
         }
 

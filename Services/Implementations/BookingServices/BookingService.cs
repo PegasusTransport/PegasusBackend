@@ -345,6 +345,81 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             }
         }
 
+        public async Task<ServiceResponse<BookingPreviewResponseDto>> GetBookingPreviewAsync(
+    BookingPreviewRequestDto previewDto)
+        {
+            try
+            {
+                // Konvertera till CreateBookingDto för att återanvända befintlig validering
+                // Dummy customer-data krävs internt men syns ALDRIG för användaren
+                var bookingDto = new CreateBookingDto
+                {
+                    // Dummy customer-data (används INTE, bara för validering)
+                    Email = "preview@dummy.com",
+                    FirstName = "Preview",
+                    LastName = "User",
+                    PhoneNumber = "0000000000",
+
+                    // Faktisk ruttdata från användaren
+                    PickUpDateTime = previewDto.PickUpDateTime,
+                    PickUpAddress = previewDto.PickUpAddress,
+                    PickUpLatitude = previewDto.PickUpLatitude,
+                    PickUpLongitude = previewDto.PickUpLongitude,
+                    FirstStopAddress = previewDto.FirstStopAddress,
+                    FirstStopLatitude = previewDto.FirstStopLatitude,
+                    FirstStopLongitude = previewDto.FirstStopLongitude,
+                    SecondStopAddress = previewDto.SecondStopAddress,
+                    SecondStopLatitude = previewDto.SecondStopLatitude,
+                    SecondStopLongitude = previewDto.SecondStopLongitude,
+                    DropOffAddress = previewDto.DropOffAddress,
+                    DropOffLatitude = previewDto.DropOffLatitude,
+                    DropOffLongitude = previewDto.DropOffLongitude,
+                    Flightnumber = previewDto.Flightnumber
+                };
+
+                // Återanvänd EXAKT samma validering som CreateBookingAsync
+                // Detta inkluderar:
+                // - MapService.GetRouteInfoAsync()
+                // - PriceService.CalculateTotalPriceAsync()
+                // - Arlanda-validering (kräver att minst en adress är Arlanda)
+                // - Flygnummer-validering (om pickup från Arlanda)
+                var validationResult = await _validationService.ValidateBookingAsync(bookingDto);
+
+                if (!validationResult.IsValid)
+                {
+                    return ServiceResponse<BookingPreviewResponseDto>.FailResponse(
+                        validationResult.ErrorResponse!.StatusCode,
+                        validationResult.ErrorResponse.Message
+                    );
+                }
+
+                // Bygg response med beräknad data
+                var response = new BookingPreviewResponseDto
+                {
+                    DistanceKm = validationResult.RouteInfo!.DistanceKm,
+                    DurationMinutes = validationResult.RouteInfo.DurationMinutes,
+                    Price = Math.Round(validationResult.CalculatedPrice, 2),
+                    Message = "Beräknat pris för din resa.",
+                    Sections = validationResult.RouteInfo.Sections
+                };
+
+                // ✅ STOPP HÄR - ingen databas, ingen email!
+                return ServiceResponse<BookingPreviewResponseDto>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    response,
+                    "Prisförhandsvisning beräknad."
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating booking preview");
+                return ServiceResponse<BookingPreviewResponseDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Något gick fel vid prisberäkning."
+                );
+            }
+        }
+
         #region Private Helper Methods
 
         private async Task SendBookingEmailAsync(Bookings booking, CreateBookingDto bookingDto, bool isGuestBooking)

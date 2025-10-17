@@ -7,7 +7,7 @@ public static class RateLimitingConfiguration
     {
         services.AddRateLimiter(options =>
         {
-            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests; // rejection code
 
             AddAuthPolicy(options);
             AddRegistrationPolicy(options);
@@ -17,7 +17,7 @@ public static class RateLimitingConfiguration
 
         return services;
     }
-
+    // Ploicys
     private static void AddAuthPolicy(RateLimiterOptions options)
     {
         options.AddPolicy("AuthPolicy", httpContext =>

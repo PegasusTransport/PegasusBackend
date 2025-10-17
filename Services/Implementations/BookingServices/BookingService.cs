@@ -346,43 +346,14 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         }
 
         public async Task<ServiceResponse<BookingPreviewResponseDto>> GetBookingPreviewAsync(
-    BookingPreviewRequestDto previewDto)
+            BookingPreviewRequestDto previewDto)
         {
             try
             {
-                // Konvertera till CreateBookingDto för att återanvända befintlig validering
-                // Dummy customer-data krävs internt men syns ALDRIG för användaren
-                var bookingDto = new CreateBookingDto
-                {
-                    // Dummy customer-data (används INTE, bara för validering)
-                    Email = "preview@dummy.com",
-                    FirstName = "Preview",
-                    LastName = "User",
-                    PhoneNumber = "0000000000",
+                // Convert to CreateBookingDto to reuse existing validation
+                var bookingDto = ConvertPreviewToBookingDto(previewDto);
 
-                    // Faktisk ruttdata från användaren
-                    PickUpDateTime = previewDto.PickUpDateTime,
-                    PickUpAddress = previewDto.PickUpAddress,
-                    PickUpLatitude = previewDto.PickUpLatitude,
-                    PickUpLongitude = previewDto.PickUpLongitude,
-                    FirstStopAddress = previewDto.FirstStopAddress,
-                    FirstStopLatitude = previewDto.FirstStopLatitude,
-                    FirstStopLongitude = previewDto.FirstStopLongitude,
-                    SecondStopAddress = previewDto.SecondStopAddress,
-                    SecondStopLatitude = previewDto.SecondStopLatitude,
-                    SecondStopLongitude = previewDto.SecondStopLongitude,
-                    DropOffAddress = previewDto.DropOffAddress,
-                    DropOffLatitude = previewDto.DropOffLatitude,
-                    DropOffLongitude = previewDto.DropOffLongitude,
-                    Flightnumber = previewDto.Flightnumber
-                };
-
-                // Återanvänd EXAKT samma validering som CreateBookingAsync
-                // Detta inkluderar:
-                // - MapService.GetRouteInfoAsync()
-                // - PriceService.CalculateTotalPriceAsync()
-                // - Arlanda-validering (kräver att minst en adress är Arlanda)
-                // - Flygnummer-validering (om pickup från Arlanda)
+                // Reuses the exact same validation as CreateBookingAsync
                 var validationResult = await _validationService.ValidateBookingAsync(bookingDto);
 
                 if (!validationResult.IsValid)
@@ -393,7 +364,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                     );
                 }
 
-                // Bygg response med beräknad data
+                // Build response with calculated data
                 var response = new BookingPreviewResponseDto
                 {
                     DistanceKm = validationResult.RouteInfo!.DistanceKm,
@@ -403,7 +374,6 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                     Sections = validationResult.RouteInfo.Sections
                 };
 
-                // ✅ STOPP HÄR - ingen databas, ingen email!
                 return ServiceResponse<BookingPreviewResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,
                     response,
@@ -419,6 +389,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 );
             }
         }
+
 
         #region Private Helper Methods
 
@@ -485,6 +456,34 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 response,
                 message
             );
+        }
+
+        private static CreateBookingDto ConvertPreviewToBookingDto(BookingPreviewRequestDto previewDto)
+        {
+            return new CreateBookingDto
+            {
+                // Dummy customer-data (required for validation but never used)
+                Email = "preview@dummy.com",
+                FirstName = "Preview",
+                LastName = "User",
+                PhoneNumber = "0000000000",
+
+                // Actual route data from the user
+                PickUpDateTime = previewDto.PickUpDateTime,
+                PickUpAddress = previewDto.PickUpAddress,
+                PickUpLatitude = previewDto.PickUpLatitude,
+                PickUpLongitude = previewDto.PickUpLongitude,
+                FirstStopAddress = previewDto.FirstStopAddress,
+                FirstStopLatitude = previewDto.FirstStopLatitude,
+                FirstStopLongitude = previewDto.FirstStopLongitude,
+                SecondStopAddress = previewDto.SecondStopAddress,
+                SecondStopLatitude = previewDto.SecondStopLatitude,
+                SecondStopLongitude = previewDto.SecondStopLongitude,
+                DropOffAddress = previewDto.DropOffAddress,
+                DropOffLatitude = previewDto.DropOffLatitude,
+                DropOffLongitude = previewDto.DropOffLongitude,
+                Flightnumber = previewDto.Flightnumber
+            };
         }
 
         #endregion

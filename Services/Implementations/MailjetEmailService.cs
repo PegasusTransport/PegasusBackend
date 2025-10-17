@@ -37,20 +37,28 @@ namespace PegasusBackend.Services.Implementations
             {
                 new JObject
                 {
+
                     {"FromEmail", _settings.SenderEmail},
                     {"FromName", _settings.SenderName},
+
                     {"Recipients", new JArray {
                         new JObject {
                             {"Email", toEmail}
                         }
                     }},
+
                     {"Mj-TemplateID", templateId},
                     {"Mj-TemplateLanguage", "true"},
+
                     {"Vars", JObject.FromObject(variables)},
+
                     {"Subject", subject}
                 }
             });
         }
+
+        
+
 
         private long GetTemplateId(MailjetTemplateType type) => type switch
         {

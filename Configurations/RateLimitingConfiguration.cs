@@ -12,6 +12,7 @@ public static class RateLimitingConfiguration
             AddAuthPolicy(options);
             AddRegistrationPolicy(options);
             AddBookingPolicy(options);
+            AddMapAPIPolicy(options);
         });
 
         return services;
@@ -55,6 +56,19 @@ public static class RateLimitingConfiguration
                     PermitLimit = 10,
                     Window = TimeSpan.FromHours(1),
                     QueueLimit = 0,
+                    AutoReplenishment = true
+                }));
+    }
+    private static void AddMapAPIPolicy(RateLimiterOptions options)
+    {
+        options.AddPolicy("MapApiPolicy", httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                httpContext.Connection.RemoteIpAddress?.ToString(),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 100,
+                    Window = TimeSpan.FromHours(1),
+                    QueueLimit = 1,
                     AutoReplenishment = true
                 }));
     }

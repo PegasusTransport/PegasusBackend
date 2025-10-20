@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.MailjetDTOs;
@@ -19,12 +20,18 @@ namespace PegasusBackend.Controllers
             _mailjet = mailjet;
         }
 
+        //  Note: that the fluent validation dosent kick in when the dto isnt from the [FromBody]!
         [HttpGet("testWelcomeMail")]
-        public async Task<ActionResult<bool>> TestWelcomeRespons(string yourEmail, string yourName) =>
+        public async Task<ActionResult<bool>> TestWelcomeRespons(string yourEmail,string verificationLink, string yourName) =>
             Generate.ActionResult(await _mailjet.SendEmailAsync(
                 yourEmail,
                 MailjetTemplateType.Welcome,
-                new WelcomeRequestDto { firstname = yourName },
+                new AccountWelcomeRequestDto
+                {
+                    Firstname = yourName,
+                    VerificationLink = verificationLink,
+                    ButtonName = MailjetButtonType.Verify
+                },
                 MailjetSubjects.Welcome));
 
         [HttpGet("testBookningConfirmationMail")]

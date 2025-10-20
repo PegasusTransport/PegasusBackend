@@ -147,7 +147,12 @@ namespace PegasusBackend.Services.Implementations
                 await mailjetEmailService.SendEmailAsync(
                     newUser.Email,
                     MailjetTemplateType.Welcome,
-                    new WelcomeRequestDto { firstname = newUser.FirstName },
+                    new AccountWelcomeRequestDto
+                    {
+                        Firstname = newUser.FirstName,
+                        VerificationLink = "https://Google.se", // Needs to change to a real link and has to be stored in usersecrets!
+                        ButtonName = MailjetButtonType.Verify
+                    },
                     MailjetSubjects.Welcome
                 );
 

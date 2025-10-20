@@ -17,7 +17,9 @@ namespace PegasusBackend
             builder.Services.AddConnectionString(builder.Configuration);
             builder.Services.AddApplicationServices(builder.Configuration); // Alla DIs ska in hit!
             builder.Services.AddJwtAuthentication(builder.Configuration);
+            builder.Services.AddCorsConfiguration();
             builder.Services.AddControllers();
+            builder.Services.AddRateLimitPolicies();
             builder.Services.AddFluentValidationAutoValidation();
             builder.Services.AddFluentValidationClientsideAdapters();
             builder.Services.AddValidatorsFromAssemblyContaining<CreateBookingDTOValidator>();
@@ -65,8 +67,10 @@ namespace PegasusBackend
 
 
             app.UseHttpsRedirection();
+            app.UseCors("AllowFrontend");
             app.UseAuthentication();
-            app.UseAuthorization(); 
+            app.UseAuthorization();
+            app.UseRateLimiter();
             app.MapControllers();
 
             app.Run();

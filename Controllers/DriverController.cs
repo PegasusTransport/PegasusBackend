@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Extentions;
@@ -20,6 +21,7 @@ namespace PegasusBackend.Controllers
     {
         [HttpPost("CreateDriver")]
         [Authorize(Roles = "Driver")]
+        [EnableRateLimiting("RegistrationPolicy")]
         public async Task<ActionResult<CreatedResponseDriverDto>> CreateDriver(CreateRequestDriverDto request) =>
             Generate.ActionResult(await driverService.CreateDriverAsync(request, HttpContext));
 

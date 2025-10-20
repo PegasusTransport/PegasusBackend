@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PegasusBackend.DTOs.MapDTOs;
 using PegasusBackend.Helpers.StatusMapper;
 using PegasusBackend.Services.Interfaces;
@@ -18,10 +19,12 @@ namespace PegasusBackend.Controllers
         }
 
         [HttpPost("route-info")]
+        [EnableRateLimiting("MapApiPolicy")]
         public async Task<ActionResult<RouteInfoDto>> GetRouteInfo([FromBody] List<CoordinateDto> coordinates) =>
             Generate.ActionResult(await _mapService.GetRouteInfoAsync(coordinates));
 
         [HttpPost("location-info")]
+        [EnableRateLimiting("MapApiPolicy")]
         public async Task<ActionResult<LocationInfoDto>> GetLocationInfo([FromBody] CoordinateDto coordinate) =>
              Generate.ActionResult(await _mapService.GetLocationDetailsAsync(coordinate));
     }

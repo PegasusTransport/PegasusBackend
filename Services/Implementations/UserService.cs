@@ -142,27 +142,7 @@ namespace PegasusBackend.Services.Implementations
 
                 await userManager.AddToRoleAsync(newUser, request.Role.ToString());
 
-                // If the user is a customer, we send them a customer welcome template, if the are a driver, they get another template!
-                // Send a email about confirming their account. 
-                var token = await userManager.GenerateEmailConfirmationTokenAsync(newUser);
-                var encodedToken = Uri.EscapeDataString(token);
-                var encodedMail = Uri.EscapeDataString(newUser.Email);
-                var backendUrl = configuration["ConfirmMail:BackendUrl"];
-
-                var link = $"{backendUrl}/api/User/ConfirmEmail?token={encodedToken}&email={encodedMail}";
-
-
-                await mailjetEmailService.SendEmailAsync(
-                    newUser.Email,
-                    MailjetTemplateType.Welcome,
-                    new AccountWelcomeRequestDto
-                    {
-                        Firstname = newUser.FirstName,
-                        VerificationLink = link, // Needs to change to a real link and has to be stored in usersecrets!
-                        ButtonName = MailjetButtonType.Verify
-                    },
-                    MailjetSubjects.Welcome
-                );
+                await SendVerificationAndWelcomeMailAsync(newUser);
 
                 var response = new RegistrationResponseDto
                 {
@@ -181,6 +161,30 @@ namespace PegasusBackend.Services.Implementations
                     HttpStatusCode.InternalServerError, 
                     "Something went wrong");
             }
+        }
+        private async Task SendVerificationAndWelcomeMailAsync(User user)
+        {
+            // If the user is a customer, we send them a customer welcome template, if the are a driver, they get another template!
+            // Send a email about confirming their account. 
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+            var encodedToken = Uri.EscapeDataString(token);
+            var encodedMail = Uri.EscapeDataString(user.Email!);
+            var confirmationUrl = configuration["ConfirmMail:BackendUrl"];
+
+            var link = $"{confirmationUrl}/api/User/ConfirmEmail?token={encodedToken}&email={encodedMail}";
+
+
+            await mailjetEmailService.SendEmailAsync(
+                user.Email,
+                MailjetTemplateType.Welcome,
+                new AccountWelcomeRequestDto
+                {
+                    Firstname = user.FirstName,
+                    VerificationLink = link, // Needs to change to a real link and has to be stored in usersecrets!
+                    ButtonName = MailjetButtonType.Verify
+                },
+                MailjetSubjects.Welcome
+            );
         }
         public async Task<ServiceResponse<UpdateUserResponseDto>> UpdateUserAsync(UpdateUserRequestDto request, HttpContext httpContext)
         {

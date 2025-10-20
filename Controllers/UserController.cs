@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Org.BouncyCastle.Asn1.X509.Qualified;
 using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Helpers.StatusMapper;
@@ -16,6 +17,7 @@ namespace PegasusBackend.Controllers
     public class UserController(IUserService userService) : ControllerBase
     {
         [HttpPost("Registration")]
+        [EnableRateLimiting("RegistrationPolicy")]
         public async Task<ActionResult<RegistrationResponseDto>> RegisterUser(RegistrationRequestDto request) => 
             Generate.ActionResult(await userService.RegisterUserAsync(request));
         [HttpGet("GetUser/{email}")]

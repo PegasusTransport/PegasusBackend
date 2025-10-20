@@ -345,6 +345,52 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             }
         }
 
+        public async Task<ServiceResponse<BookingPreviewResponseDto>> GetBookingPreviewAsync(
+            BookingPreviewRequestDto previewDto)
+        {
+            try
+            {
+                // Convert to CreateBookingDto to reuse existing validation
+                var bookingDto = ConvertPreviewToBookingDto(previewDto);
+
+                // Reuses the exact same validation as CreateBookingAsync
+                var validationResult = await _validationService.ValidateBookingAsync(bookingDto);
+
+                if (!validationResult.IsValid)
+                {
+                    return ServiceResponse<BookingPreviewResponseDto>.FailResponse(
+                        validationResult.ErrorResponse!.StatusCode,
+                        validationResult.ErrorResponse.Message
+                    );
+                }
+
+                // Build response with calculated data
+                var response = new BookingPreviewResponseDto
+                {
+                    DistanceKm = validationResult.RouteInfo!.DistanceKm,
+                    DurationMinutes = validationResult.RouteInfo.DurationMinutes,
+                    Price = Math.Round(validationResult.CalculatedPrice, 2),
+                    Message = "Beräknat pris för din resa.",
+                    Sections = validationResult.RouteInfo.Sections
+                };
+
+                return ServiceResponse<BookingPreviewResponseDto>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    response,
+                    "Prisförhandsvisning beräknad."
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating booking preview");
+                return ServiceResponse<BookingPreviewResponseDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Något gick fel vid prisberäkning."
+                );
+            }
+        }
+
+
         #region Private Helper Methods
 
         private async Task SendBookingEmailAsync(Bookings booking, CreateBookingDto bookingDto, bool isGuestBooking)
@@ -410,6 +456,34 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 response,
                 message
             );
+        }
+
+        private static CreateBookingDto ConvertPreviewToBookingDto(BookingPreviewRequestDto previewDto)
+        {
+            return new CreateBookingDto
+            {
+                // Dummy customer-data (required for validation but never used)
+                Email = string.Empty,
+                FirstName = string.Empty,
+                LastName = string.Empty,
+                PhoneNumber = string.Empty,
+
+                // Actual route data from the user
+                PickUpDateTime = previewDto.PickUpDateTime,
+                PickUpAddress = previewDto.PickUpAddress,
+                PickUpLatitude = previewDto.PickUpLatitude,
+                PickUpLongitude = previewDto.PickUpLongitude,
+                FirstStopAddress = previewDto.FirstStopAddress,
+                FirstStopLatitude = previewDto.FirstStopLatitude,
+                FirstStopLongitude = previewDto.FirstStopLongitude,
+                SecondStopAddress = previewDto.SecondStopAddress,
+                SecondStopLatitude = previewDto.SecondStopLatitude,
+                SecondStopLongitude = previewDto.SecondStopLongitude,
+                DropOffAddress = previewDto.DropOffAddress,
+                DropOffLatitude = previewDto.DropOffLatitude,
+                DropOffLongitude = previewDto.DropOffLongitude,
+                Flightnumber = previewDto.Flightnumber
+            };
         }
 
         #endregion

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.Helpers.StatusMapper;
 using PegasusBackend.Services.Interfaces.BookingInterfaces;
@@ -21,6 +22,7 @@ namespace PegasusBackend.Controllers
 
         /// Create a new booking (for both guests and registered users)
         [HttpPost("create")]
+        [EnableRateLimiting("BookingPolicy")]
         public async Task<ActionResult<BookingResponseDto>> CreateBooking([FromBody] CreateBookingDto bookingDto) =>
             Generate.ActionResult(await _bookingService.CreateBookingAsync(bookingDto));
 
@@ -49,6 +51,13 @@ namespace PegasusBackend.Controllers
         public async Task<ActionResult<List<BookingResponseDto>>> GetMyBookings() =>
             Generate.ActionResult(await _bookingService.GetUserBookingsAsync(User));
 
+
+        /// In advance Calculate price and route information WITHOUT creating a booking.
+        /// Does NOT require customer-data (email, name, phone).
+        [HttpPost("preview")]
+        public async Task<ActionResult<BookingPreviewResponseDto>> GetBookingPreview(
+            [FromBody] BookingPreviewRequestDto previewDto) =>
+            Generate.ActionResult(await _bookingService.GetBookingPreviewAsync(previewDto));
 
         /// Get all available bookings (for drivers/admins)
         [HttpGet("available")]

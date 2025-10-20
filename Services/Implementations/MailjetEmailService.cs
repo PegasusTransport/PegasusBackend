@@ -1,5 +1,7 @@
-﻿using Mailjet.Client;
+﻿using FluentValidation;
+using Mailjet.Client;
 using Mailjet.Client.Resources;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using PegasusBackend.Configurations;
@@ -16,12 +18,40 @@ namespace PegasusBackend.Services.Implementations
         private readonly MailJetSettings _settings;
         private readonly MailjetClient _client;
         private readonly ILogger<MailjetEmailService> _logger;
+        private readonly IServiceProvider _serviceProvider;
 
-        public MailjetEmailService(IOptions<MailJetSettings> options, ILogger<MailjetEmailService> logger)
+
+        public MailjetEmailService(IOptions<MailJetSettings> options, ILogger<MailjetEmailService> logger, IServiceProvider serviceProvider)
         {
             _settings = options.Value;
             _client = new MailjetClient(_settings.ApiKey, _settings.SecretKey);
             _logger = logger;
+            _serviceProvider = serviceProvider;
+        }
+
+        private async Task<ServiceResponse<bool>?> ValidateEmailDtoAsync<T>(T dto, MailjetTemplateType templateType)
+        {
+            var validator = _serviceProvider.GetService<IValidator<T>>();
+            if (validator == null)
+            {
+                _logger.LogDebug("No validator found for DTO type {DtoType}", typeof(T).Name);
+
+                return null; // nothing to validate, keep going forvard!
+            }
+
+            var validation = await validator.ValidateAsync(dto);
+            if (!validation.IsValid)
+            {
+                var errors = string.Join(", ", validation.Errors.Select(e => e.ErrorMessage));
+                _logger.LogWarning("Validation failed for {Template}: {Errors}", templateType, errors);
+
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    $"Validation failed for {templateType}: {errors}"
+                );
+            }
+
+            return null;
         }
 
         private MailjetRequest BuildMailjetRequest(string toEmail, long templateId, object variables, string subject)
@@ -37,20 +67,28 @@ namespace PegasusBackend.Services.Implementations
             {
                 new JObject
                 {
+
                     {"FromEmail", _settings.SenderEmail},
                     {"FromName", _settings.SenderName},
+
                     {"Recipients", new JArray {
                         new JObject {
                             {"Email", toEmail}
                         }
                     }},
+
                     {"Mj-TemplateID", templateId},
                     {"Mj-TemplateLanguage", "true"},
+
                     {"Vars", JObject.FromObject(variables)},
+
                     {"Subject", subject}
                 }
             });
         }
+
+        
+
 
         private long GetTemplateId(MailjetTemplateType type) => type switch
         {
@@ -63,14 +101,18 @@ namespace PegasusBackend.Services.Implementations
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown template type")
         };
 
-        public async Task<ServiceResponse<bool>> SendEmailAsync(
+        public async Task<ServiceResponse<bool>> SendEmailAsync<T>(
             string toEmail,
             MailjetTemplateType templateType,
-            object variables,
+            T variables,
             string subject)
         {
             try
             {
+                var validationResult = await ValidateEmailDtoAsync(variables, templateType);
+                if (validationResult != null)
+                    return validationResult;
+
                 var templateId = GetTemplateId(templateType);
                 var request = BuildMailjetRequest(toEmail, templateId, variables, subject);
                 var response = await _client.PostAsync(request);
@@ -108,5 +150,6 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
+
     }
 }

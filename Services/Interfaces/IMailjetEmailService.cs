@@ -5,6 +5,10 @@ namespace PegasusBackend.Services.Interfaces
 {
     public interface IMailjetEmailService
     {
-        Task<ServiceResponse<bool>> SendEmailAsync(string toEmail, MailjetTemplateType templateType, object variables, string subject);
+        Task<ServiceResponse<bool>> SendEmailAsync<T>(
+            string toEmail,
+            MailjetTemplateType templateType,
+            T variables,
+            string subject);
     }
 }

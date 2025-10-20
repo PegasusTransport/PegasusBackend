@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.Data;
@@ -18,10 +19,12 @@ namespace PegasusBackend.Controllers
     public class AuthController(IAuthService authService) : ControllerBase
     {
         [HttpPost("Login")]
+        [EnableRateLimiting("AuthPolicy")]
         public async Task<ActionResult<TokenResponseDto?>> Login(LoginRequestDto request) =>
             Generate.ActionResult<TokenResponseDto?>(await authService.LoginAsync(request, HttpContext));
 
         [HttpPost("RefreshToken")]
+        [EnableRateLimiting("AuthPolicy")]
         public async Task<ActionResult<string>> RefreshToken() =>
             Generate.ActionResult(await authService.RefreshTokensFromCookiesAsync(HttpContext));
 

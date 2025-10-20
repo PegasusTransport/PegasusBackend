@@ -20,7 +20,7 @@ namespace PegasusBackend.Configurations
               .AddDefaultTokenProviders(); // Add token providers for password reset, email confirmation, etc.
 
             services.Configure<DataProtectionTokenProviderOptions>(options =>
-              options.TokenLifespan = TimeSpan.FromMinutes(30));
+              options.TokenLifespan = TimeSpan.FromHours(24));
 
             services.Configure<IdentityOptions>(options => options.SignIn.RequireConfirmedEmail = true);
 

@@ -164,27 +164,34 @@ namespace PegasusBackend.Services.Implementations
         }
         private async Task SendVerificationAndWelcomeMailAsync(User user)
         {
-            // If the user is a customer, we send them a customer welcome template, if the are a driver, they get another template!
-            // Send a email about confirming their account. 
-            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
-            var encodedToken = Uri.EscapeDataString(token);
-            var encodedMail = Uri.EscapeDataString(user.Email!);
-            var confirmationUrl = configuration["ConfirmMail:BackendUrl"];
+            try
+            {
+                // If the user is a customer, we send them a customer welcome template, if the are a driver, they get another template!
+                // Send a email about confirming their account. 
+                var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+                var encodedToken = Uri.EscapeDataString(token);
+                var encodedMail = Uri.EscapeDataString(user.Email!);
+                var confirmationUrl = configuration["ConfirmMail:BackendUrl"];
 
-            var link = $"{confirmationUrl}/api/User/ConfirmEmail?token={encodedToken}&email={encodedMail}";
+                var link = $"{confirmationUrl}?token={encodedToken}&email={encodedMail}";
 
 
-            await mailjetEmailService.SendEmailAsync(
-                user.Email,
-                MailjetTemplateType.Welcome,
-                new AccountWelcomeRequestDto
-                {
-                    Firstname = user.FirstName,
-                    VerificationLink = link, // Needs to change to a real link and has to be stored in usersecrets!
-                    ButtonName = MailjetButtonType.Verify
-                },
-                MailjetSubjects.Welcome
-            );
+                await mailjetEmailService.SendEmailAsync(
+                    user.Email!,
+                    MailjetTemplateType.Welcome,
+                    new AccountWelcomeRequestDto
+                    {
+                        Firstname = user.FirstName,
+                        VerificationLink = link, // Needs to change to a real link and has to be stored in usersecrets!
+                        ButtonName = MailjetButtonType.Verify
+                    },
+                    MailjetSubjects.Welcome
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error sending verification email to {Email}", user.Email);
+            }
         }
         public async Task<ServiceResponse<UpdateUserResponseDto>> UpdateUserAsync(UpdateUserRequestDto request, HttpContext httpContext)
         {
@@ -412,6 +419,12 @@ namespace PegasusBackend.Services.Implementations
                     "User not found"
                     );
                 }
+                if (user.EmailConfirmed)
+                    return ServiceResponse<string>.SuccessResponse(
+                        HttpStatusCode.OK,
+                        "Email is already confirmed"
+                    );
+
                 var confirm = await userManager.ConfirmEmailAsync(user, token);
 
                 if (confirm.Succeeded)

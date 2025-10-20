@@ -9,7 +9,7 @@
                 options.AddPolicy("AllowFrontend", policy =>
                 {
                     policy
-                        .WithOrigins("TIM FIXAR URL SNABBT ANNARS BLIR DE KALAS") 
+                        .WithOrigins("http://127.0.0.1:5500") // Testing b
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials(); 

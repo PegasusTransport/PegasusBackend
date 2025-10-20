@@ -7,6 +7,7 @@ using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Helpers.StatusMapper;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Responses;
+using PegasusBackend.Services.Implementations;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
 
@@ -19,12 +20,11 @@ namespace PegasusBackend.Controllers
         [HttpPost("Registration")]
         [EnableRateLimiting("RegistrationPolicy")]
         public async Task<ActionResult<RegistrationResponseDto>> RegisterUser(RegistrationRequestDto request) => 
-            Generate.ActionResult(await userService.RegisterUserAsync(request, $"{Request.Scheme}://{Request.Host}"));
+            Generate.ActionResult(await userService.RegisterUserAsync(request));
 
-        [HttpGet("ConfirmMail")]
-        public async Task<ActionResult<string>> ConfirmMail() => 
-            Generate.ActionResult(await userService.)
-
+        [HttpGet("ConfirmEmail")]
+        public async Task<ActionResult<string>> ConfirmEmail(string token, string email) =>
+            Generate.ActionResult(await userService.ConfirmUserEmailAsync(token, email));
 
         [HttpGet("GetUser/{email}")]
         [Authorize(Roles = "Admin")]

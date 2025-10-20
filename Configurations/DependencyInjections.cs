@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using FluentValidation;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using PegasusBackend.DTOs.EmailDTO;
 using PegasusBackend.Repositorys.Implementations;
@@ -7,6 +8,7 @@ using PegasusBackend.Services.Implementations;
 using PegasusBackend.Services.Implementations.BookingServices;
 using PegasusBackend.Services.Interfaces;
 using PegasusBackend.Services.Interfaces.BookingInterfaces;
+using PegasusBackend.Validators.MailjetValidators;
 
 namespace PegasusBackend.Configurations
 {
@@ -18,8 +20,11 @@ namespace PegasusBackend.Configurations
         {
             // Mailjet settings korrekt
             services.Configure<MailJetSettings>(
-                configuration.GetSection("MailJetSettings")
+                configuration.GetSection("Mailjet")
             );
+
+            // Register all FluentValidators
+            services.AddValidatorsFromAssemblyContaining<AccountWelcomeRequestValidator>();
 
             // Repositories
             services.AddScoped<IAdminRepo, AdminRepo>();

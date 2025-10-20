@@ -17,7 +17,7 @@ public static class RateLimitingConfiguration
 
         return services;
     }
-    // Ploicys
+    // Policys
     private static void AddAuthPolicy(RateLimiterOptions options)
     {
         options.AddPolicy("AuthPolicy", httpContext =>

@@ -93,7 +93,7 @@ namespace PegasusBackend.Services.Implementations
 
             }
         }
-        public async Task<ServiceResponse<RegistrationResponseDto>> RegisterUserAsync(RegistrationRequestDto request)
+        public async Task<ServiceResponse<RegistrationResponseDto>> RegisterUserAsync(RegistrationRequestDto request, string confirmationLink)
         {
             try
             {
@@ -147,7 +147,7 @@ namespace PegasusBackend.Services.Implementations
                 await mailjetEmailService.SendEmailAsync(
                     newUser.Email,
                     MailjetTemplateType.Welcome,
-                    new WelcomeRequestDto { firstname = newUser.FirstName },
+                    new ForgotPasswordRequestDto { Firstname = newUser.FirstName, ResetLink = confirmationLink },
                     MailjetSubjects.Welcome
                 );
 
@@ -379,6 +379,40 @@ namespace PegasusBackend.Services.Implementations
             {
                 logger.LogWarning(ex.Message, ex);
                 return ServiceResponse<UserResponseDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Something went wrong");
+            }
+        }
+        public async Task<ServiceResponse<string>> ConfirmUserEmailAsync(string email, string token)
+        {
+            try
+            {
+                var user = await userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    return ServiceResponse<string>.FailResponse(
+                    HttpStatusCode.NotFound,
+                    "User not found"
+                    );
+                }
+                var confirm = await userManager.ConfirmEmailAsync(user, token);
+
+                if (confirm.Succeeded)
+                {
+                    return ServiceResponse<string>.SuccessResponse(
+                   HttpStatusCode.OK,
+                   "Mail verified");
+                }
+
+                return ServiceResponse<string>.FailResponse(
+                   HttpStatusCode.BadRequest,
+                   "Verify failed");
+
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex.Message, ex);
+                return ServiceResponse<string>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Something went wrong");
             }

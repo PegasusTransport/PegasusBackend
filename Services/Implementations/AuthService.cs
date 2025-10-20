@@ -37,11 +37,19 @@ namespace PegasusBackend.Services.Implementations
                     isPasswordValid = await userManager.CheckPasswordAsync(user, request.Password);
                 }
 
-                if (user == null || !isPasswordValid || user.IsDeleted)
+                if (user == null || !isPasswordValid)
                 {
                     return ServiceResponse<TokenResponseDto?>.FailResponse(
                         HttpStatusCode.Unauthorized,
                         "Invalid credentials"
+                    );
+                }
+
+                if (user.IsDeleted || !user.EmailConfirmed)
+                {
+                    return ServiceResponse<TokenResponseDto?>.FailResponse(
+                        HttpStatusCode.Unauthorized,
+                        "Invalid credentials" 
                     );
                 }
 

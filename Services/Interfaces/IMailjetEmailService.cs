@@ -1,4 +1,5 @@
-﻿using PegasusBackend.Helpers.MailjetHelpers;
+﻿using PegasusBackend.DTOs.MailjetDTOs;
+using PegasusBackend.Helpers.MailjetHelpers;
 using PegasusBackend.Responses;
 
 namespace PegasusBackend.Services.Interfaces
@@ -10,5 +11,14 @@ namespace PegasusBackend.Services.Interfaces
             MailjetTemplateType templateType,
             T variables,
             string subject);
+
+        Task<ServiceResponse<bool>> SendEmailWithAttachmentAsync<T>(
+            string toEmail,
+            MailjetTemplateType templateType,
+            T variables,
+            string subject,
+            byte[] pdfAttachment,
+            string attachmentFileName = "receipt.pdf");
+
     }
 }

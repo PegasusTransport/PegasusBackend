@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Org.BouncyCastle.Utilities;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.MailjetDTOs;
 using PegasusBackend.Helpers.MailjetHelpers;
@@ -14,10 +15,12 @@ namespace PegasusBackend.Controllers
     public class TestMailjetController : ControllerBase
     {
         private readonly IMailjetEmailService _mailjet;
+        private readonly IPdfService _pdf;
 
-        public TestMailjetController(IMailjetEmailService mailjet)
+        public TestMailjetController(IMailjetEmailService mailjet, IPdfService pdf)
         {
             _mailjet = mailjet;
+            _pdf = pdf;
         }
 
         //  Note: that the fluent validation dosent kick in when the dto isnt from the [FromBody]!
@@ -109,6 +112,41 @@ namespace PegasusBackend.Controllers
                     VerificationCode = code
                 },
                 MailjetSubjects.TwoFA));
+
+
+        [HttpGet("testTwoFAMailWithAttachment")]
+        public async Task<ActionResult<bool>> TestTwoFAMailWithAttachment(
+        string yourEmail,
+        string firstName,
+        string code)
+        {
+            var fakeBookingData = new BookingConfirmationRequestDto
+            {
+                Firstname = firstName,
+                PickupAddress = "Testgatan 1",
+                Stops = "Inga stopp",
+                Destination = "Testvägen 2",
+                TotalPrice = 123,
+                PickupTime = DateTime.Now.ToString("g")
+            };
+
+            var pdfBytes = await _pdf.GenerateReceiptPdfAsync(fakeBookingData);
+
+            return Generate.ActionResult(await _mailjet.SendEmailWithAttachmentAsync(
+                yourEmail,
+                MailjetTemplateType.TwoFA,
+                new TwoFARequestDto
+                {
+                    Firstname = firstName,
+                    VerificationCode = code
+                },
+                MailjetSubjects.TwoFA,
+                pdfBytes,
+                "receipt-test.pdf"));
+        }
+
+
+
     }
 }
 

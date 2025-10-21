@@ -1,9 +1,10 @@
 ﻿using PegasusBackend.DTOs.MailjetDTOs;
+using PegasusBackend.Responses;
 
 namespace PegasusBackend.Services.Interfaces
 {
     public interface IPdfService
     {
-        Task<byte[]> GenerateReceiptPdfAsync(BookingConfirmationRequestDto variabel);
+        Task<ServiceResponse<byte[]>> GenerateReceiptPdfAsync(ReceiptRequestDto receiptData);
     }
 }

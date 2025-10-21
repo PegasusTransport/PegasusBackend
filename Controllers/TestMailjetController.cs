@@ -113,40 +113,6 @@ namespace PegasusBackend.Controllers
                 },
                 MailjetSubjects.TwoFA));
 
-
-        [HttpGet("testTwoFAMailWithAttachment")]
-        public async Task<ActionResult<bool>> TestTwoFAMailWithAttachment(
-        string yourEmail,
-        string firstName,
-        string code)
-        {
-            var fakeBookingData = new BookingConfirmationRequestDto
-            {
-                Firstname = firstName,
-                PickupAddress = "Testgatan 1",
-                Stops = "Inga stopp",
-                Destination = "Testvägen 2",
-                TotalPrice = 123,
-                PickupTime = DateTime.Now.ToString("g")
-            };
-
-            var pdfBytes = await _pdf.GenerateReceiptPdfAsync(fakeBookingData);
-
-            return Generate.ActionResult(await _mailjet.SendEmailWithAttachmentAsync(
-                yourEmail,
-                MailjetTemplateType.TwoFA,
-                new TwoFARequestDto
-                {
-                    Firstname = firstName,
-                    VerificationCode = code
-                },
-                MailjetSubjects.TwoFA,
-                pdfBytes,
-                "receipt-test.pdf"));
-        }
-
-
-
     }
 }
 

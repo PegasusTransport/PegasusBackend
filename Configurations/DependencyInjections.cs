@@ -19,7 +19,9 @@ namespace PegasusBackend.Configurations
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            QuestPDF.Settings.License = LicenseType.Community;
+            // Other Configs
+            services.AddHttpClient();
+            services.AddQuestPdfConfiguration();
 
             // Mailjet settings korrekt
             services.Configure<MailJetSettings>(
@@ -56,7 +58,6 @@ namespace PegasusBackend.Configurations
             services.AddSingleton(emailConfig!);
             services.AddScoped<IEmailService, EmailService>();
 
-            services.AddHttpClient();
 
             return services;
         }

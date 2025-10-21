@@ -19,6 +19,11 @@ namespace PegasusBackend.Configurations
               .AddEntityFrameworkStores<AppDBContext> ()
               .AddDefaultTokenProviders(); // Add token providers for password reset, email confirmation, etc.
 
+            services.Configure<DataProtectionTokenProviderOptions>(options =>
+              options.TokenLifespan = TimeSpan.FromHours(24));
+
+            services.Configure<IdentityOptions>(options => options.SignIn.RequireConfirmedEmail = true);
+
             return services;
         }
     }

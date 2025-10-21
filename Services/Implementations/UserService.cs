@@ -446,7 +446,6 @@ namespace PegasusBackend.Services.Implementations
             }
 
             var user = await GetUserByValidRefreshTokenAsync(refreshToken);
-
             return user;
         }
     }

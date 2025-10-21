@@ -4,7 +4,6 @@ using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.DTOs.AuthDTOs;
 using PegasusBackend.Helpers.JwtCookieOptions;
 using PegasusBackend.Models;
-using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
@@ -24,8 +23,8 @@ namespace PegasusBackend.Services.Implementations
         ILogger<AuthService> logger) : IAuthService
     {
         public async Task<ServiceResponse<TokenResponseDto?>> LoginAsync(
-            LoginRequestDto request,
-            HttpContext httpContext)
+    LoginRequestDto request,
+    HttpContext httpContext)
         {
             try
             {
@@ -38,19 +37,11 @@ namespace PegasusBackend.Services.Implementations
                     isPasswordValid = await userManager.CheckPasswordAsync(user, request.Password);
                 }
 
-                if (user == null || !isPasswordValid)
+                if (user == null || !isPasswordValid || user.IsDeleted)
                 {
                     return ServiceResponse<TokenResponseDto?>.FailResponse(
                         HttpStatusCode.Unauthorized,
                         "Invalid credentials"
-                    );
-                }
-
-                if (user.IsDeleted || !user.EmailConfirmed)
-                {
-                    return ServiceResponse<TokenResponseDto?>.FailResponse(
-                        HttpStatusCode.Unauthorized,
-                        "Invalid credentials" 
                     );
                 }
 
@@ -61,18 +52,11 @@ namespace PegasusBackend.Services.Implementations
                         "Account is locked. Please contact support."
                     );
                 }
-                var roleStrings = await userManager.GetRolesAsync(user);
-
-                var roles = roleStrings
-                    .Select(r => Enum.Parse<UserRoles>(r))  
-                    .ToList();
 
                 var tokens = new TokenResponseDto
                 {
                     AccessToken = await GenerateAccessToken(user),
-                    RefreshToken = await CreateAndStoreRefreshToken(user),
-                    IsAuthenticated = true,
-                    Roles = roles  
+                    RefreshToken = await CreateAndStoreRefreshToken(user)
                 };
 
                 HandleAuthenticationCookies.SetAuthenticationCookie(

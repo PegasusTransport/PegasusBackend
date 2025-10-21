@@ -9,7 +9,6 @@ using PegasusBackend.Services.Implementations.BookingServices;
 using PegasusBackend.Services.Interfaces;
 using PegasusBackend.Services.Interfaces.BookingInterfaces;
 using PegasusBackend.Validators.MailjetValidators;
-using QuestPDF.Infrastructure;
 
 namespace PegasusBackend.Configurations
 {
@@ -19,10 +18,6 @@ namespace PegasusBackend.Configurations
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            // Other Configs
-            services.AddHttpClient();
-            services.AddQuestPdfConfiguration();
-
             // Mailjet settings korrekt
             services.Configure<MailJetSettings>(
                 configuration.GetSection("Mailjet")
@@ -45,7 +40,6 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IDriverService, DriverService>();
             services.AddScoped<IMapService, MapService>();
             services.AddScoped<IMailjetEmailService, MailjetEmailService>();
-            services.AddScoped<IPdfService, PdfService>();
             services.AddScoped<IBookingService, BookingService>();
 
             // Booking-related services
@@ -57,7 +51,6 @@ namespace PegasusBackend.Configurations
             var emailConfig = configuration.GetSection("EmailConfig").Get<EmailConfig>();
             services.AddSingleton(emailConfig!);
             services.AddScoped<IEmailService, EmailService>();
-
 
             return services;
         }

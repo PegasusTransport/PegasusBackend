@@ -20,7 +20,7 @@ using System.Runtime.CompilerServices;
 
 namespace PegasusBackend.Services.Implementations
 {
-    public class UserService(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, IUserRepo userRepo, ILogger<UserService> logger, IMailjetEmailService mailjetEmailService, IConfiguration configuration) : IUserService
+    public class UserService(UserManager<User> userManager, RoleManager<IdentityRole> roleManager, IUserRepo userRepo, ILogger<UserService> logger, IMailjetEmailService mailjetEmailService) : IUserService
     {
         public async Task<ServiceResponse<List<AllUserResponseDto>>> GetAllUsers()
         {
@@ -93,41 +93,6 @@ namespace PegasusBackend.Services.Implementations
 
             }
         }
-        public async Task<ServiceResponse<UserResponseDto>> GetUserByEmail(string email)
-        {
-            try
-            {
-                var user = await userManager.FindByEmailAsync(email);
-                if (user == null)
-                {
-                    return ServiceResponse<UserResponseDto>.FailResponse(
-                    HttpStatusCode.NotFound,
-                    "User not found"
-                    );
-                }
-
-                var userResponse = new UserResponseDto()
-                {
-                    Id = user.Id,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName!,
-                    UserName = user.UserName!,
-                    Email = user.Email!
-                };
-                return ServiceResponse<UserResponseDto>.SuccessResponse(
-                    HttpStatusCode.OK,
-                    userResponse,
-                    "User found"
-                    );
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex.Message, ex);
-                return ServiceResponse<UserResponseDto>.FailResponse(
-                    HttpStatusCode.InternalServerError,
-                    "Something went wrong");
-            }
-        }
         public async Task<ServiceResponse<RegistrationResponseDto>> RegisterUserAsync(RegistrationRequestDto request)
         {
             try
@@ -173,11 +138,23 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                
+            
 
                 await userManager.AddToRoleAsync(newUser, request.Role.ToString());
 
-                await SendVerificationAndWelcomeMailAsync(newUser);
+                // If the user is a customer, we send them a customer welcome template, if the are a driver, they get another template!
+                // Send a email about confirming their account. 
+                await mailjetEmailService.SendEmailAsync(
+                    newUser.Email,
+                    MailjetTemplateType.Welcome,
+                    new AccountWelcomeRequestDto
+                    {
+                        Firstname = newUser.FirstName,
+                        VerificationLink = "https://Google.se", // Needs to change to a real link and has to be stored in usersecrets!
+                        ButtonName = MailjetButtonType.Verify
+                    },
+                    MailjetSubjects.Welcome
+                );
 
                 var response = new RegistrationResponseDto
                 {
@@ -194,78 +171,6 @@ namespace PegasusBackend.Services.Implementations
                 logger.LogWarning(ex.Message, ex);
                 return ServiceResponse<RegistrationResponseDto>.FailResponse(
                     HttpStatusCode.InternalServerError, 
-                    "Something went wrong");
-            }
-        }
-        private async Task SendVerificationAndWelcomeMailAsync(User user)
-        {
-            try
-            {
-                // If the user is a customer, we send them a customer welcome template, if the are a driver, they get another template!
-                // Send a email about confirming their account. 
-                var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
-                var encodedToken = Uri.EscapeDataString(token);
-                var encodedMail = Uri.EscapeDataString(user.Email!);
-                var confirmationUrl = configuration["ConfirmMail:BackendUrl"];
-
-                var link = $"{confirmationUrl}?token={encodedToken}&email={encodedMail}";
-
-
-                await mailjetEmailService.SendEmailAsync(
-                    user.Email!,
-                    MailjetTemplateType.Welcome,
-                    new AccountWelcomeRequestDto
-                    {
-                        Firstname = user.FirstName,
-                        VerificationLink = link, // Needs to change to a real link and has to be stored in usersecrets!
-                        ButtonName = MailjetButtonType.Verify
-                    },
-                    MailjetSubjects.Welcome
-                );
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error sending verification email to {Email}", user.Email);
-            }
-        }
-        public async Task<ServiceResponse<string>> ConfirmUserEmailAsync(string token, string email)
-        {
-            try
-            {
-                var user = await userManager.FindByEmailAsync(email);
-                if (user == null)
-                {
-                    return ServiceResponse<string>.FailResponse(
-                    HttpStatusCode.NotFound,
-                    "User not found"
-                    );
-                }
-                if (user.EmailConfirmed)
-                    return ServiceResponse<string>.SuccessResponse(
-                    HttpStatusCode.BadRequest,
-                    "Email is already confirmed"
-                    );
-
-                var confirm = await userManager.ConfirmEmailAsync(user, token);
-
-                if (confirm.Succeeded)
-                {
-
-                    return ServiceResponse<string>.SuccessResponse(
-                    HttpStatusCode.OK,
-                    "Mail verified");
-                }
-
-                return ServiceResponse<string>.FailResponse(
-                   HttpStatusCode.BadRequest,
-                   "Verify failed");
-
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex.Message, ex);
-                return ServiceResponse<string>.FailResponse(
-                    HttpStatusCode.InternalServerError,
                     "Something went wrong");
             }
         }
@@ -425,7 +330,6 @@ namespace PegasusBackend.Services.Implementations
             );
 
         }
-        // Helper methods
         public async Task<User?> GetUserByValidRefreshTokenAsync(string refreshToken)
         {
             if (string.IsNullOrEmpty(refreshToken))
@@ -446,7 +350,43 @@ namespace PegasusBackend.Services.Implementations
             }
 
             var user = await GetUserByValidRefreshTokenAsync(refreshToken);
+
             return user;
+        }
+        public async Task<ServiceResponse<UserResponseDto>> GetUserByEmail(string email)
+        {
+            try
+            {
+                var user = await userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    return ServiceResponse<UserResponseDto>.FailResponse(
+                    HttpStatusCode.NotFound,
+                    "User not found"
+                    );
+                }
+
+                var userResponse = new UserResponseDto()
+                {
+                    Id = user.Id,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName!,
+                    UserName = user.UserName!,
+                    Email = user.Email!
+                };
+                return ServiceResponse<UserResponseDto>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    userResponse,
+                    "User not found"
+                    );
+            }
+            catch(Exception ex)
+            {
+                logger.LogWarning(ex.Message, ex);
+                return ServiceResponse<UserResponseDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Something went wrong");
+            }
         }
     }
 }

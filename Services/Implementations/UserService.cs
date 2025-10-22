@@ -326,7 +326,7 @@ namespace PegasusBackend.Services.Implementations
 
 
                 var result = await userManager.UpdateAsync(user);
-
+                await userManager.UpdateSecurityStampAsync(user);
                 if (!result.Succeeded)
                 {
                     return ServiceResponse<UpdateUserResponseDto>.FailResponse(
@@ -334,7 +334,6 @@ namespace PegasusBackend.Services.Implementations
                         string.Join(", ", result.Errors.Select(e => e.Description))
                     );
                 }
-
                 return ServiceResponse<UpdateUserResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,
                     new UpdateUserResponseDto

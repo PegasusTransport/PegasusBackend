@@ -26,7 +26,7 @@ namespace PegasusBackend.Services.Implementations
         ILogger<AuthService> logger,
         IMailjetEmailService mailjetEmailService) : IAuthService
     {
-        public async Task<ServiceResponse<string>> LoginAsync(LoginRequestDto request)
+        public async Task<ServiceResponse<LoginResponseDto>> LoginAsync(LoginRequestDto request)
         {
             try
             {
@@ -41,7 +41,7 @@ namespace PegasusBackend.Services.Implementations
 
                 if (user == null || !isPasswordValid)
                 {
-                    return ServiceResponse<string>.FailResponse(
+                    return ServiceResponse<LoginResponseDto>.FailResponse(
                         HttpStatusCode.Unauthorized,
                         "Invalid credentials"
                     );
@@ -49,7 +49,7 @@ namespace PegasusBackend.Services.Implementations
 
                 if (user.IsDeleted || !user.EmailConfirmed)
                 {
-                    return ServiceResponse<string>.FailResponse(
+                    return ServiceResponse<LoginResponseDto>.FailResponse(
                         HttpStatusCode.Unauthorized,
                         "Invalid credentials" 
                     );
@@ -57,13 +57,16 @@ namespace PegasusBackend.Services.Implementations
 
                 if (await userManager.IsLockedOutAsync(user))
                 {
-                    return ServiceResponse<string>.FailResponse(
+                    return ServiceResponse<LoginResponseDto>.FailResponse(
                         HttpStatusCode.Forbidden, 
                         "Account is locked. Please contact support."
                     );
                 }
 
-                var otpToken = await userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultProvider);
+                var otpToken = await userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
+
+
+                logger.LogInformation(otpToken);
 
                 await mailjetEmailService.SendEmailAsync(
                     user.Email!,
@@ -73,18 +76,23 @@ namespace PegasusBackend.Services.Implementations
                         Firstname = user.FirstName,
                         VerificationCode = otpToken
                     },
-                    MailjetSubjects.TwoFA);                    
+                    MailjetSubjects.TwoFA);
 
-                return ServiceResponse<string>.SuccessResponse(
+
+                return ServiceResponse<LoginResponseDto>.SuccessResponse(
                         HttpStatusCode.OK,
-                        "A verification Code has been sent to your mail");
+                        new LoginResponseDto
+                        {
+                            Email = user.Email!
+                        },
+                        $"A verification Code has been sent to {user.Email}");
 
 
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error during login for email: {Email}", request.Email);
-                return ServiceResponse<string>.FailResponse(
+                return ServiceResponse<LoginResponseDto>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "An unexpected error occurred"
                 );
@@ -99,6 +107,13 @@ namespace PegasusBackend.Services.Implementations
                 var user = await userManager.FindByEmailAsync(verify2FaDto.Email);
                 var isValidOtp = await userManager.VerifyTwoFactorTokenAsync(user!, TokenOptions.DefaultEmailProvider, verify2FaDto.VerificationCode);
 
+                if (!isValidOtp)
+                {
+                    return ServiceResponse<TokenResponseDto?>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    "Wrong code"
+                );
+                }
 
                 var roleStrings = await userManager.GetRolesAsync(user!);
 

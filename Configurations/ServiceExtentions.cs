@@ -16,8 +16,8 @@ namespace PegasusBackend.Configurations
                 options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
 
             services.AddIdentity<User, IdentityRole>() // Use User and IdentityRole
-              .AddEntityFrameworkStores<AppDBContext> ()
-              .AddDefaultTokenProviders(); // Add token providers for password reset, email confirmation, etc.
+              .AddEntityFrameworkStores<AppDBContext>()
+              .AddDefaultTokenProviders();
 
             services.Configure<DataProtectionTokenProviderOptions>(options =>
               options.TokenLifespan = TimeSpan.FromHours(24));

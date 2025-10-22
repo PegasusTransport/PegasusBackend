@@ -108,7 +108,7 @@ namespace PegasusBackend.Services.Implementations
                 {
                     return ServiceResponse<TokenResponseDto?>.FailResponse(
                     HttpStatusCode.BadRequest,
-                    "Wrong code"
+                    "Wrong verifaction code"
                 );
                 }
 

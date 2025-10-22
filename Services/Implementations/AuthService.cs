@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.DTOs.AuthDTOs;
+using PegasusBackend.DTOs.MailjetDTOs;
 using PegasusBackend.Helpers.JwtCookieOptions;
+using PegasusBackend.Helpers.MailjetHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
@@ -21,11 +23,10 @@ namespace PegasusBackend.Services.Implementations
         IConfiguration configuration,
         IUserRepo repo,
         IUserService userService,
-        ILogger<AuthService> logger) : IAuthService
+        ILogger<AuthService> logger,
+        IMailjetEmailService mailjetEmailService) : IAuthService
     {
-        public async Task<ServiceResponse<TokenResponseDto?>> LoginAsync(
-            LoginRequestDto request,
-            HttpContext httpContext)
+        public async Task<ServiceResponse<string>> LoginAsync(LoginRequestDto request)
         {
             try
             {
@@ -40,7 +41,7 @@ namespace PegasusBackend.Services.Implementations
 
                 if (user == null || !isPasswordValid)
                 {
-                    return ServiceResponse<TokenResponseDto?>.FailResponse(
+                    return ServiceResponse<string>.FailResponse(
                         HttpStatusCode.Unauthorized,
                         "Invalid credentials"
                     );
@@ -48,7 +49,7 @@ namespace PegasusBackend.Services.Implementations
 
                 if (user.IsDeleted || !user.EmailConfirmed)
                 {
-                    return ServiceResponse<TokenResponseDto?>.FailResponse(
+                    return ServiceResponse<string>.FailResponse(
                         HttpStatusCode.Unauthorized,
                         "Invalid credentials" 
                     );
@@ -56,12 +57,50 @@ namespace PegasusBackend.Services.Implementations
 
                 if (await userManager.IsLockedOutAsync(user))
                 {
-                    return ServiceResponse<TokenResponseDto?>.FailResponse(
+                    return ServiceResponse<string>.FailResponse(
                         HttpStatusCode.Forbidden, 
                         "Account is locked. Please contact support."
                     );
                 }
-                var roleStrings = await userManager.GetRolesAsync(user);
+
+                var otpToken = await userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultProvider);
+
+                await mailjetEmailService.SendEmailAsync(
+                    user.Email!,
+                    MailjetTemplateType.TwoFA,
+                    new TwoFARequestDto
+                    {
+                        Firstname = user.FirstName,
+                        VerificationCode = otpToken
+                    },
+                    MailjetSubjects.TwoFA);                    
+
+                return ServiceResponse<string>.SuccessResponse(
+                        HttpStatusCode.OK,
+                        "A verification Code has been sent to your mail");
+
+
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error during login for email: {Email}", request.Email);
+                return ServiceResponse<string>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "An unexpected error occurred"
+                );
+            }
+        }
+
+        public async Task<ServiceResponse<TokenResponseDto?>> VerifyOTP2FAsync(Verify2FaDto verify2FaDto, HttpContext httpContext)
+        {
+            try
+            {
+
+                var user = await userManager.FindByEmailAsync(verify2FaDto.Email);
+                var isValidOtp = await userManager.VerifyTwoFactorTokenAsync(user!, TokenOptions.DefaultEmailProvider, verify2FaDto.VerificationCode);
+
+
+                var roleStrings = await userManager.GetRolesAsync(user!);
 
                 var roles = roleStrings
                     .Select(r => Enum.Parse<UserRoles>(r))  
@@ -69,8 +108,8 @@ namespace PegasusBackend.Services.Implementations
 
                 var tokens = new TokenResponseDto
                 {
-                    AccessToken = await GenerateAccessToken(user),
-                    RefreshToken = await CreateAndStoreRefreshToken(user),
+                    AccessToken = await GenerateAccessToken(user!),
+                    RefreshToken = await CreateAndStoreRefreshToken(user!),
                     IsAuthenticated = true,
                     Roles = roles  
                 };
@@ -88,7 +127,8 @@ namespace PegasusBackend.Services.Implementations
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error during login for email: {Email}", request.Email);
+
+                logger.LogError(ex, "Error during login for email: {Email}", verify2FaDto.Email);
                 return ServiceResponse<TokenResponseDto?>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "An unexpected error occurred"

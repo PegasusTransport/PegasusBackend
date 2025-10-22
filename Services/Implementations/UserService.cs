@@ -148,7 +148,7 @@ namespace PegasusBackend.Services.Implementations
                     LastName = request.LastName.Trim(),
                     Email = request.Email.Trim(),  
                     PhoneNumber = request.PhoneNumber.Trim(),
-                    //TwoFactorEnabled = true, // WHEN  we WANT 2FA 
+                    TwoFactorEnabled = true, // WHEN  we WANT 2FA 
 
                     SecurityStamp = Guid.NewGuid().ToString(),
                 };

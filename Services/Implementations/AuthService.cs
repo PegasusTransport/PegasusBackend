@@ -65,9 +65,6 @@ namespace PegasusBackend.Services.Implementations
 
                 var otpToken = await userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
 
-
-                logger.LogInformation(otpToken);
-
                 await mailjetEmailService.SendEmailAsync(
                     user.Email!,
                     MailjetTemplateType.TwoFA,

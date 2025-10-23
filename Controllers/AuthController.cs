@@ -22,10 +22,10 @@ namespace PegasusBackend.Controllers
         [EnableRateLimiting("AuthPolicy")]
         public async Task<ActionResult<LoginResponseDto>> Login(LoginRequestDto request) =>
             Generate.ActionResult<LoginResponseDto>(await authService.LoginAsync(request));
-        [HttpPost("Verify2Fa")]
+        [HttpPost("Verify2´TwoFa")]
         [EnableRateLimiting("AuthPolicy")]
-        public async Task<ActionResult<TokenResponseDto?>> Verify2FA(Verify2FaDto request) =>
-            Generate.ActionResult<TokenResponseDto?>(await authService.VerifyOTP2FAsync(request, HttpContext));
+        public async Task<ActionResult<TokenResponseDto?>> VerifyTwoFA(VerifyTwoFaDto request) =>
+            Generate.ActionResult<TokenResponseDto?>(await authService.VerifyTwoFaOTP(request, HttpContext));
 
         [HttpPost("RefreshToken")]
         [EnableRateLimiting("AuthPolicy")]

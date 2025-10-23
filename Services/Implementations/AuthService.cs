@@ -96,13 +96,13 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        public async Task<ServiceResponse<TokenResponseDto?>> VerifyOTP2FAsync(Verify2FaDto verify2FaDto, HttpContext httpContext)
+        public async Task<ServiceResponse<TokenResponseDto?>> VerifyTwoFaOTP(VerifyTwoFaDto verifyTwoFaDto, HttpContext httpContext)
         {
             try
             {
 
-                var user = await userManager.FindByEmailAsync(verify2FaDto.Email);
-                var isValidOtp = await userManager.VerifyTwoFactorTokenAsync(user!, TokenOptions.DefaultEmailProvider, verify2FaDto.VerificationCode);
+                var user = await userManager.FindByEmailAsync(verifyTwoFaDto.Email);
+                var isValidOtp = await userManager.VerifyTwoFactorTokenAsync(user!, TokenOptions.DefaultEmailProvider, verifyTwoFaDto.VerificationCode);
 
                 if (!isValidOtp)
                 {
@@ -140,7 +140,7 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
 
-                logger.LogError(ex, "Error during login for email: {Email}", verify2FaDto.Email);
+                logger.LogError(ex, "Error during login for email: {Email}", verifyTwoFaDto.Email);
                 return ServiceResponse<TokenResponseDto?>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "An unexpected error occurred"

@@ -3,7 +3,7 @@
 namespace PegasusBackend.DTOs.AuthDTOs
 {
     [ExportTsInterface]
-    public class Verify2FaDto
+    public class VerifyTwoFaDto
     {
         public string Email { get; set; } = string.Empty;
         public string VerificationCode { get; set; } = string.Empty;

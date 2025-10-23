@@ -4,13 +4,14 @@ using PegasusBackend.DTOs.BookingDTOs;
 
 namespace PegasusBackend.Validators.AuthValidators
 {
-    public class VerifyTwoFAValidator : AbstractValidator<Verify2FaDto>
+    public class VerifyTwoFAValidator : AbstractValidator<VerifyTwoFaDto>
     {
         public VerifyTwoFAValidator()
         {
             RuleFor(x => x.Email)
-               .NotEmpty().WithMessage("Email is required.")
-               .MaximumLength(200).WithMessage("Email cannot exceed 200 characters.");
+            .NotEmpty().WithMessage("Email is required.")
+            .EmailAddress().WithMessage("Invalid email format.")
+            .MaximumLength(150).WithMessage("Email can't exceed 100 characters.");
 
             RuleFor(x => x.VerificationCode)
                 .NotEmpty().WithMessage("Verification code is required.")

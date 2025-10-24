@@ -47,6 +47,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IMailjetEmailService, MailjetEmailService>();
             services.AddScoped<IPdfService, PdfService>();
             services.AddScoped<IBookingService, BookingService>();
+            services.AddScoped<IIdempotencyService, IdempotencyService>();
 
             // Booking-related services
             services.AddScoped<IBookingValidationService, BookingValidationService>();

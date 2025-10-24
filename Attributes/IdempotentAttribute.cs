@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using PegasusBackend.Services.Interfaces;
-using System.Net;
 using System.Text.Json;
 
 namespace PegasusBackend.Attributes
@@ -73,7 +72,7 @@ namespace PegasusBackend.Attributes
                 {
                     // Extract booking ID from response
                     var responseValue = objectResult.Value;
-                    int? bookingId = ExtractBookingId(responseValue);
+                    int? bookingId = ExtractBookingId(responseValue, logger);
 
                     if (bookingId.HasValue)
                     {
@@ -90,10 +89,15 @@ namespace PegasusBackend.Attributes
                             bookingId.Value,
                             key);
                     }
+                    else
+                    {
+                        logger.LogWarning(
+                            "Could not extract BookingId from response for key: {Key}. Idempotency record not saved.",
+                            key);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    // Log but don't fail the request - operation completed successfully
                     logger.LogError(ex,
                         "Failed to save idempotency record for key: {Key}. " +
                         "Operation completed successfully but may be vulnerable to duplicates on retry.",
@@ -102,44 +106,35 @@ namespace PegasusBackend.Attributes
             }
         }
 
-        /// <summary>
         /// Extract booking ID from response object
         /// Handles different response structures
-        /// </summary>
-        private int? ExtractBookingId(object? response)
+        private int? ExtractBookingId(object? response, ILogger logger)
         {
             if (response == null)
             {
-                Console.WriteLine("⚠️ Response is null");
+                logger.LogDebug("Response is null, cannot extract BookingId");
                 return null;
             }
 
             try
             {
                 var json = JsonSerializer.Serialize(response);
-                Console.WriteLine($"Response JSON: {json.Substring(0, Math.Min(200, json.Length))}...");
-
-                // Deserialize to dynamic object with case-insensitive options
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
+                logger.LogDebug("Attempting to extract BookingId from response: {ResponsePreview}",
+                    json.Substring(0, Math.Min(200, json.Length)));
 
                 using var doc = JsonDocument.Parse(json);
-
-                // Search through all properties recursively
-                return FindBookingIdRecursive(doc.RootElement);
+                return FindBookingIdRecursive(doc.RootElement, logger);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"🔥 Error extracting BookingId: {ex.Message}");
+                logger.LogError(ex, "Error extracting BookingId from response");
                 return null;
             }
         }
 
-        private int? FindBookingIdRecursive(JsonElement element)
+        /// recursively search JSON element for bookingId property (case-insensitive).
+        private int? FindBookingIdRecursive(JsonElement element, ILogger logger)
         {
-            // If this element is an object, check its properties
             if (element.ValueKind == JsonValueKind.Object)
             {
                 foreach (var property in element.EnumerateObject())
@@ -150,13 +145,13 @@ namespace PegasusBackend.Attributes
                         if (property.Value.ValueKind == JsonValueKind.Number)
                         {
                             var id = property.Value.GetInt32();
-                            Console.WriteLine($"✅ Found {property.Name}: {id}");
+                            logger.LogDebug("Found BookingId property: {BookingId}", id);
                             return id;
                         }
                     }
 
                     // Recursively search nested objects
-                    var nested = FindBookingIdRecursive(property.Value);
+                    var nested = FindBookingIdRecursive(property.Value, logger);
                     if (nested.HasValue)
                         return nested;
                 }

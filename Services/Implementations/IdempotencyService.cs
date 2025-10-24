@@ -1,6 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using PegasusBackend.Data;
-using PegasusBackend.Models;
+﻿using PegasusBackend.Models;
+using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Services.Interfaces;
 using System.Text.Json;
 
@@ -8,26 +7,20 @@ namespace PegasusBackend.Services.Implementations
 {
     public class IdempotencyService : IIdempotencyService
     {
-        private readonly AppDBContext _context;
+        private readonly IIdempotencyRepo _repo;
         private readonly ILogger<IdempotencyService> _logger;
 
-        public IdempotencyService(AppDBContext context, ILogger<IdempotencyService> logger)
+        public IdempotencyService(IIdempotencyRepo repo, ILogger<IdempotencyService> logger)
         {
-            _context = context;
+            _repo = repo;
             _logger = logger;
         }
 
-        /// Check if this idempotency key has been used before
         public async Task<IdempotencyRecord?> GetExistingRecordAsync(string key)
         {
             try
             {
-                // Find record with this key that hasn't expired
-                var record = await _context.IdempotencyRecords
-                    .Include(r => r.Booking) // Include booking for complete response
-                    .FirstOrDefaultAsync(r =>
-                        r.IdempotencyKey == key &&
-                        r.ExpiresAt > DateTime.UtcNow);
+                var record = await _repo.GetByKeyAsync(key);
 
                 if (record != null)
                 {
@@ -46,7 +39,6 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        /// Create a new idempotency record for a successful booking creation
         public async Task<IdempotencyRecord> CreateRecordAsync(
             string key,
             int bookingId,
@@ -56,7 +48,6 @@ namespace PegasusBackend.Services.Implementations
         {
             try
             {
-                // Serialize the response data to JSON
                 var serializedData = JsonSerializer.Serialize(responseData, new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -73,33 +64,15 @@ namespace PegasusBackend.Services.Implementations
                     ExpiresAt = DateTime.UtcNow.AddHours(expirationHours)
                 };
 
-                _context.IdempotencyRecords.Add(record);
-                await _context.SaveChangesAsync();
+                var createdRecord = await _repo.CreateAsync(record);
 
                 _logger.LogInformation(
                     "Created idempotency record for key: {Key}, BookingId: {BookingId}, Expires: {ExpiresAt}",
                     key,
                     bookingId,
-                    record.ExpiresAt);
+                    createdRecord.ExpiresAt);
 
-                return record;
-            }
-            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("duplicate key") == true)
-            {
-                // This can happen in rare race condition scenarios
-                // Two requests with same key arrive at exact same time
-                _logger.LogWarning(
-                    "Attempted to create duplicate idempotency record for key: {Key}. " +
-                    "This indicates a race condition - fetching existing record instead.",
-                    key);
-
-                // Fetch and return the existing record
-                var existing = await GetExistingRecordAsync(key);
-                if (existing != null)
-                    return existing;
-
-                // If we still can't find it, rethrow
-                throw;
+                return createdRecord;
             }
             catch (Exception ex)
             {
@@ -108,30 +81,18 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        /// Clean up old expired idempotency records to keep database clean
-        /// Should be called by a background job/scheduled task
         public async Task<int> CleanupExpiredRecordsAsync()
         {
             try
             {
-                var expiredRecords = await _context.IdempotencyRecords
-                    .Where(r => r.ExpiresAt <= DateTime.UtcNow)
-                    .ToListAsync();
+                var count = await _repo.DeleteExpiredAsync();
 
-                if (expiredRecords.Count == 0)
+                if (count > 0)
                 {
-                    _logger.LogInformation("No expired idempotency records to clean up");
-                    return 0;
+                    _logger.LogInformation("Cleaned up {Count} expired idempotency records", count);
                 }
 
-                _context.IdempotencyRecords.RemoveRange(expiredRecords);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation(
-                    "Cleaned up {Count} expired idempotency records",
-                    expiredRecords.Count);
-
-                return expiredRecords.Count;
+                return count;
             }
             catch (Exception ex)
             {

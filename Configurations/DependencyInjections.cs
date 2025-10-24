@@ -36,6 +36,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IUserRepo, UserRepo>();
             services.AddScoped<IBookingRepo, BookingRepo>();
             services.AddScoped<IDriverRepo, DriverRepo>();
+            services.AddScoped<IIdempotencyRepo, IdempotencyRepo>();
 
             // Services
             services.AddScoped<IAdminService, AdminService>();

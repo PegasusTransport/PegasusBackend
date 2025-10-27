@@ -17,6 +17,7 @@ namespace PegasusBackend
             builder.Services.AddConnectionString(builder.Configuration);
             builder.Services.AddApplicationServices(builder.Configuration); // Alla DIs ska in hit!
             builder.Services.AddJwtAuthentication(builder.Configuration);
+            builder.Services.AddIdempotencyServices(builder.Configuration);
             builder.Services.AddCorsConfiguration();
             builder.Services.AddControllers();
             builder.Services.AddRateLimitPolicies();
@@ -24,6 +25,7 @@ namespace PegasusBackend
             builder.Services.AddFluentValidationClientsideAdapters();
             builder.Services.AddValidatorsFromAssemblyContaining<CreateBookingDTOValidator>();
             builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerConfiguration();
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
@@ -32,6 +34,8 @@ namespace PegasusBackend
                     Version = "v1"
                 });
             });
+
+
             var app = builder.Build();
             // Seed roles
             using (var scope = app.Services.CreateScope())
@@ -63,6 +67,7 @@ namespace PegasusBackend
                     options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
                     options.OpenApiRoutePattern = "/swagger/v1/swagger.json";
                 });
+
             }
 
 

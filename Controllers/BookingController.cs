@@ -5,6 +5,7 @@ using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.Helpers.StatusMapper;
 using PegasusBackend.Services.Interfaces.BookingInterfaces;
 using System.Security.Claims;
+using PegasusBackend.Attributes;
 
 namespace PegasusBackend.Controllers
 {
@@ -23,6 +24,7 @@ namespace PegasusBackend.Controllers
         /// Create a new booking (for both guests and registered users)
         [HttpPost("create")]
         [EnableRateLimiting("BookingPolicy")]
+        [Idempotent]
         public async Task<ActionResult<BookingResponseDto>> CreateBooking([FromBody] CreateBookingDto bookingDto) =>
             Generate.ActionResult(await _bookingService.CreateBookingAsync(bookingDto));
 

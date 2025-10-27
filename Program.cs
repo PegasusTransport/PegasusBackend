@@ -4,8 +4,6 @@ using PegasusBackend.Validators;
 using Microsoft.OpenApi.Models;
 using PegasusBackend.Configurations;
 using Scalar.AspNetCore;
-using PegasusBackend.Services.BackgroundServices;
-using PegasusBackend.Filters;
 
 
 namespace PegasusBackend
@@ -19,6 +17,7 @@ namespace PegasusBackend
             builder.Services.AddConnectionString(builder.Configuration);
             builder.Services.AddApplicationServices(builder.Configuration); // Alla DIs ska in hit!
             builder.Services.AddJwtAuthentication(builder.Configuration);
+            builder.Services.AddIdempotencyServices(builder.Configuration);
             builder.Services.AddCorsConfiguration();
             builder.Services.AddControllers();
             builder.Services.AddRateLimitPolicies();
@@ -26,6 +25,7 @@ namespace PegasusBackend
             builder.Services.AddFluentValidationClientsideAdapters();
             builder.Services.AddValidatorsFromAssemblyContaining<CreateBookingDTOValidator>();
             builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerConfiguration();
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo
@@ -33,15 +33,8 @@ namespace PegasusBackend
                     Title = "Pegasus Backend API",
                     Version = "v1"
                 });
-
-                c.OperationFilter<IdempotencyHeaderFilter>();
             });
 
-            builder.Services.Configure<IdempotencySettings>(
-                builder.Configuration.GetSection("IdempotencySettings")
-            );
-
-            builder.Services.AddHostedService<IdempotencyCleanupService>();
 
             var app = builder.Build();
             // Seed roles

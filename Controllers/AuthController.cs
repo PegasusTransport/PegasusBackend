@@ -11,6 +11,7 @@ using PegasusBackend.DTOs.AuthDTOs;
 using PegasusBackend.Helpers.StatusMapper;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
+using System.Threading.Tasks.Dataflow;
 
 namespace PegasusBackend.Controllers
 {
@@ -24,8 +25,8 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult<LoginResponseDto>(await authService.LoginAsync(request));
         [HttpPost("VerifyTwoFA")]
         [EnableRateLimiting("AuthPolicy")]
-        public async Task<ActionResult<TokenResponseDto?>> VerifyTwoFA(VerifyTwoFaDto request) =>
-            Generate.ActionResult<TokenResponseDto?>(await authService.VerifyTwoFaOTP(request, HttpContext));
+        public async Task<ActionResult<AuthResponseDto?>> VerifyTwoFA(VerifyTwoFaDto request) =>
+            Generate.ActionResult<AuthResponseDto?>(await authService.VerifyTwoFaOTP(request, HttpContext));
 
         [HttpPost("RefreshToken")]
         [EnableRateLimiting("AuthPolicy")]
@@ -36,5 +37,9 @@ namespace PegasusBackend.Controllers
         [Authorize]
         public async Task<ActionResult<bool>> Logout() =>
             Generate.ActionResult(await authService.LogoutAsync(HttpContext));
+
+        [HttpGet("VerifyAuth")]
+        [Authorize]
+        public ActionResult VerifyAuth() => Ok("Authenticated");
     }
 }

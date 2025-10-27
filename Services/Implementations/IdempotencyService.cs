@@ -1,4 +1,6 @@
-﻿using PegasusBackend.Models;
+﻿using Microsoft.Extensions.Options;
+using PegasusBackend.Configurations;
+using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Services.Interfaces;
 using System.Text.Json;
@@ -9,11 +11,16 @@ namespace PegasusBackend.Services.Implementations
     {
         private readonly IIdempotencyRepo _repo;
         private readonly ILogger<IdempotencyService> _logger;
+        private readonly IdempotencySettings _settings;
 
-        public IdempotencyService(IIdempotencyRepo repo, ILogger<IdempotencyService> logger)
+        public IdempotencyService(
+            IIdempotencyRepo repo,
+            ILogger<IdempotencyService> logger,
+            IOptions<IdempotencySettings> settings)
         {
             _repo = repo;
             _logger = logger;
+            _settings = settings.Value;
         }
 
         public async Task<IdempotencyRecord?> GetExistingRecordAsync(string key)
@@ -43,8 +50,7 @@ namespace PegasusBackend.Services.Implementations
             string key,
             int bookingId,
             object responseData,
-            int statusCode,
-            int expirationHours = 24)
+            int statusCode)
         {
             try
             {
@@ -61,7 +67,7 @@ namespace PegasusBackend.Services.Implementations
                     ResponseData = serializedData,
                     StatusCode = statusCode,
                     CreatedAt = DateTime.UtcNow,
-                    ExpiresAt = DateTime.UtcNow.AddHours(expirationHours)
+                    ExpiresAt = DateTime.UtcNow.AddHours(_settings.ExpirationHours) 
                 };
 
                 var createdRecord = await _repo.CreateAsync(record);
@@ -90,6 +96,10 @@ namespace PegasusBackend.Services.Implementations
                 if (count > 0)
                 {
                     _logger.LogInformation("Cleaned up {Count} expired idempotency records", count);
+                }
+                else
+                {
+                    _logger.LogDebug("No expired idempotency records to clean up");
                 }
 
                 return count;

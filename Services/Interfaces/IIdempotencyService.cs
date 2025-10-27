@@ -11,12 +11,10 @@ namespace PegasusBackend.Services.Interfaces
 
         /// Create a new idempotency record after successfully creating a booking
         Task<IdempotencyRecord> CreateRecordAsync(
-            string key,
-            int bookingId,
-            object responseData,
-            int statusCode,
-            int expirationHours = 24);
-
+           string key,
+           int bookingId,
+           object responseData,
+           int statusCode);
         /// Clean up expired idempotency records (should be called periodically)
         Task<int> CleanupExpiredRecordsAsync();
     }

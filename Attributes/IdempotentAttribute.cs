@@ -20,7 +20,7 @@ namespace PegasusBackend.Attributes
             var logger = context.HttpContext.RequestServices
                 .GetRequiredService<ILogger<IdempotentAttribute>>();
 
-            // Extract idempotency key from header
+            // Extract idempotency key from header, See if I can put as parameter as header 
             if (!context.HttpContext.Request.Headers.TryGetValue(IdempotencyKeyHeader, out var idempotencyKey) ||
                 string.IsNullOrWhiteSpace(idempotencyKey))
             {
@@ -35,7 +35,7 @@ namespace PegasusBackend.Attributes
 
             var key = idempotencyKey.ToString();
 
-            // Check if this key has been used before
+            // Check if this key exists
             var existingRecord = await idempotencyService.GetExistingRecordAsync(key);
 
             if (existingRecord != null)
@@ -80,8 +80,8 @@ namespace PegasusBackend.Attributes
                             key: key,
                             bookingId: bookingId.Value,
                             responseData: responseValue!,
-                            statusCode: objectResult.StatusCode ?? 200,
-                            expirationHours: 24
+                            statusCode: objectResult.StatusCode!.Value
+
                         );
 
                         logger.LogInformation(

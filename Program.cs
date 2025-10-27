@@ -4,6 +4,7 @@ using PegasusBackend.Validators;
 using Microsoft.OpenApi.Models;
 using PegasusBackend.Configurations;
 using Scalar.AspNetCore;
+using PegasusBackend.Services.BackgroundServices;
 
 
 namespace PegasusBackend
@@ -32,6 +33,13 @@ namespace PegasusBackend
                     Version = "v1"
                 });
             });
+
+            builder.Services.Configure<IdempotencySettings>(
+                builder.Configuration.GetSection("IdempotencySettings")
+            );
+
+            builder.Services.AddHostedService<IdempotencyCleanupService>();
+
             var app = builder.Build();
             // Seed roles
             using (var scope = app.Services.CreateScope())

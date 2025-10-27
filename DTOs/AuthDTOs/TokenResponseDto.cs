@@ -6,7 +6,5 @@ namespace PegasusBackend.DTOs.AuthDTOs
     {
         public string AccessToken { get; set; } = null!;
         public string RefreshToken { get; set; } = null!;
-        public bool IsAuthenticated { get; set; }
-        public IList<UserRoles> Roles { get; set; } = [];
     }
 }

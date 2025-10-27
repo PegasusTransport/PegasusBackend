@@ -96,7 +96,7 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        public async Task<ServiceResponse<TokenResponseDto?>> VerifyTwoFaOTP(VerifyTwoFaDto verifyTwoFaDto, HttpContext httpContext)
+        public async Task<ServiceResponse<AuthResponseDto?>> VerifyTwoFaOTP(VerifyTwoFaDto verifyTwoFaDto, HttpContext httpContext)
         {
             try
             {
@@ -106,7 +106,7 @@ namespace PegasusBackend.Services.Implementations
 
                 if (!isValidOtp)
                 {
-                    return ServiceResponse<TokenResponseDto?>.FailResponse(
+                    return ServiceResponse<AuthResponseDto?>.FailResponse(
                     HttpStatusCode.BadRequest,
                     "Wrong verifaction code"
                 );
@@ -122,8 +122,6 @@ namespace PegasusBackend.Services.Implementations
                 {
                     AccessToken = await GenerateAccessToken(user!),
                     RefreshToken = await CreateAndStoreRefreshToken(user!),
-                    IsAuthenticated = true,
-                    Roles = roles  
                 };
 
                 HandleAuthenticationCookies.SetAuthenticationCookie(
@@ -131,9 +129,16 @@ namespace PegasusBackend.Services.Implementations
                     tokens.AccessToken,
                     tokens.RefreshToken);
 
-                return ServiceResponse<TokenResponseDto?>.SuccessResponse(
+                var authResposne = new AuthResponseDto
+                {
+                    IsAuthenticated = true,
+                    Roles = roles,
+                    AccessTokenExpiresIn = configuration.GetValue<int>("JwtSetting:Expire")
+                };
+
+                return ServiceResponse<AuthResponseDto?>.SuccessResponse(
                     HttpStatusCode.OK,
-                    tokens,
+                    authResposne,
                     "Login successful"
                 );
             }
@@ -141,7 +146,7 @@ namespace PegasusBackend.Services.Implementations
             {
 
                 logger.LogError(ex, "Error during login for email: {Email}", verifyTwoFaDto.Email);
-                return ServiceResponse<TokenResponseDto?>.FailResponse(
+                return ServiceResponse<AuthResponseDto?>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "An unexpected error occurred"
                 );

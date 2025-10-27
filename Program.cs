@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using PegasusBackend.Configurations;
 using Scalar.AspNetCore;
 using PegasusBackend.Services.BackgroundServices;
+using PegasusBackend.Filters;
 
 
 namespace PegasusBackend
@@ -32,6 +33,8 @@ namespace PegasusBackend
                     Title = "Pegasus Backend API",
                     Version = "v1"
                 });
+
+                c.OperationFilter<IdempotencyHeaderFilter>();
             });
 
             builder.Services.Configure<IdempotencySettings>(
@@ -71,6 +74,7 @@ namespace PegasusBackend
                     options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
                     options.OpenApiRoutePattern = "/swagger/v1/swagger.json";
                 });
+
             }
 
 

@@ -31,7 +31,6 @@ namespace PegasusBackend.Controllers
 
         /// Confirm a booking via email token (guests only)
         [HttpGet("confirm")]
-        [Idempotent]
         public async Task<ActionResult<BookingResponseDto>> ConfirmBooking([FromQuery] string token) =>
             Generate.ActionResult(await _bookingService.ConfirmBookingAsync(token));
 

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PegasusBackend.DTOs.MailjetDTOs;
-using PegasusBackend.Helpers.StatusMapper;
+using PegasusBackend.Helpers;
 using PegasusBackend.Services.Interfaces;
 
 namespace PegasusBackend.Controllers

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.Data;
 using PegasusBackend.DTOs.AuthDTOs;
-using PegasusBackend.Helpers.StatusMapper;
+using PegasusBackend.Helpers;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
 using System.Threading.Tasks.Dataflow;
@@ -23,6 +23,7 @@ namespace PegasusBackend.Controllers
         [EnableRateLimiting("AuthPolicy")]
         public async Task<ActionResult<LoginResponseDto>> Login(LoginRequestDto request) =>
             Generate.ActionResult<LoginResponseDto>(await authService.LoginAsync(request));
+
         [HttpPost("VerifyTwoFA")]
         [EnableRateLimiting("AuthPolicy")]
         public async Task<ActionResult<AuthResponseDto?>> VerifyTwoFA(VerifyTwoFaDto request) =>

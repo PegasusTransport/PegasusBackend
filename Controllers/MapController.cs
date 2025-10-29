@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PegasusBackend.DTOs.MapDTOs;
-using PegasusBackend.Helpers.StatusMapper;
+using PegasusBackend.Helpers;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
 

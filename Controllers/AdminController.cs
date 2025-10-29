@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Extentions;
-using PegasusBackend.Helpers.StatusMapper;
+using PegasusBackend.Helpers;
 using PegasusBackend.Models;
 using PegasusBackend.Services.Implementations;
 using PegasusBackend.Services.Interfaces;

@@ -2,7 +2,7 @@
 using PegasusBackend.Responses;
 using System.Net;
 
-namespace PegasusBackend.Helpers.StatusMapper
+namespace PegasusBackend.Helpers
 {
     public static class Generate
     {

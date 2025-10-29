@@ -9,7 +9,7 @@
                 options.AddPolicy("AllowFrontend", policy =>
                 {
                     policy
-                        .WithOrigins("TIM FIXAR URL SNABBT ANNARS BLIR DE KALAS") 
+                        .WithOrigins("TIM WILL FIX URL FAST OR WE GET PARTY") 
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials(); 

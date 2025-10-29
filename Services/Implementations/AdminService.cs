@@ -25,13 +25,13 @@ namespace PegasusBackend.Services.Implementations
             if (taxiSettings is null)
                 return ServiceResponse<TaxiSettings>.FailResponse(
                     HttpStatusCode.NotFound,
-                    "Inga prislistor hittades i databasen"
+                    "Couldnt find any price list in database!"
                 );
 
             return ServiceResponse<TaxiSettings>.SuccessResponse(
                 HttpStatusCode.OK, 
                 taxiSettings,
-                "Hämtade den senaste prislistan."
+                "Retriving the lates price settings!"
             );
         }
 
@@ -53,7 +53,7 @@ namespace PegasusBackend.Services.Implementations
                 return ServiceResponse<TaxiSettings>.SuccessResponse(
                     HttpStatusCode.OK,
                     newSettings,
-                    "Prislistan har uppdaterats."
+                    "PriceSettings is now updated!"
                 );
             }
             catch (Exception ex)

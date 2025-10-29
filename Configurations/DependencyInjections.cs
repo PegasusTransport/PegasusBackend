@@ -23,7 +23,7 @@ namespace PegasusBackend.Configurations
             services.AddHttpClient();
             services.AddQuestPdfConfiguration();
 
-            // Mailjet settings korrekt
+            // Mailjet settings correct
             services.Configure<MailJetSettings>(
                 configuration.GetSection("Mailjet")
             );
@@ -58,7 +58,7 @@ namespace PegasusBackend.Configurations
             // Email Configuration & Service
             var emailConfig = configuration.GetSection("EmailConfig").Get<EmailConfig>();
             services.AddSingleton(emailConfig!);
-            services.AddScoped<IEmailService, EmailService>();
+
 
 
             return services;

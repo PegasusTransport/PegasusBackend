@@ -119,7 +119,7 @@ namespace PegasusBackend.Services.Implementations
                     return ServiceResponse<RouteInfoDto>.SuccessResponse(
                         HttpStatusCode.OK,
                         routeInfo,
-                        "Ruttdata hämtad."
+                        "Route data retrieved."
                     );
                 }
             }
@@ -214,7 +214,7 @@ namespace PegasusBackend.Services.Implementations
                         );
                     }
 
-                    // Hämtar första resultatet (det mest relevanta i googles svar)
+                    // Getting the first result in google api witch is the most relevant
                     var firstResult = results[0];
 
                     string? formattedAddress = null;
@@ -239,13 +239,13 @@ namespace PegasusBackend.Services.Implementations
 
                                 var typeList = types.EnumerateArray().Select(t => t.GetString()).ToList();
 
-                                if (typeList.Contains("locality")) // stad || City
+                                if (typeList.Contains("locality")) // City
                                     city = component.GetProperty("long_name").GetString();
 
-                                if (typeList.Contains("administrative_area_level_2")) // kommun || Municipality
+                                if (typeList.Contains("administrative_area_level_2")) // Municipality
                                     municipality = component.GetProperty("long_name").GetString();
 
-                                if (typeList.Contains("postal_code")) // postnummer
+                                if (typeList.Contains("postal_code")) // Postal Code
                                     postalCode = component.GetProperty("long_name").GetString();
                             }
                             catch
@@ -280,24 +280,5 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
-
-        /*
-         * 
-         * {
-         * "results": [
-                {
-                  "formatted_address": "Arlanda Terminal 5, 190 45 Stockholm-Arlanda, Sverige",
-                  "address_components": [
-                    { "long_name": "190 45", "types": ["postal_code"] },
-                    { "long_name": "Stockholm-Arlanda", "types": ["locality"] },
-                    { "long_name": "Sigtuna kommun", "types": ["administrative_area_level_2"] },
-                    { "long_name": "Stockholms län", "types": ["administrative_area_level_1"] },
-                    { "long_name": "Sverige", "types": ["country", "political"] }
-                  ]
-                }
-              ],
-              "status": "OK"
-            }
-        */
     }
 }

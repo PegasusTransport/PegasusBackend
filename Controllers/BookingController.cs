@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using PegasusBackend.DTOs.BookingDTOs;
-using PegasusBackend.Helpers.StatusMapper;
+using PegasusBackend.Helpers;
 using PegasusBackend.Services.Interfaces.BookingInterfaces;
 using System.Security.Claims;
 

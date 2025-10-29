@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PegasusBackend.DTOs.TaxiDTOs;
-using PegasusBackend.Helpers.StatusMapper;
+using PegasusBackend.Helpers;
+
 namespace PegasusBackend.Controllers
 {
     [Route("api/[controller]")]
@@ -14,6 +15,7 @@ namespace PegasusBackend.Controllers
         {
             _priceService = priceService;
         }
+
         [HttpPost("CalculateFullPrice")]
         public async Task<ActionResult<decimal>> CalculateFullPrice([FromBody] PriceCalculationRequestDto priceCalculationRequestDTO) =>
             Generate.ActionResult<decimal>(await _priceService.CalculateTotalPriceAsync(priceCalculationRequestDTO));

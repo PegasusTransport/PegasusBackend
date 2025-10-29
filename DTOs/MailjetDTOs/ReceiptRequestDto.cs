@@ -7,7 +7,7 @@ namespace PegasusBackend.DTOs.MailjetDTOs
         public int BookingId { get; set; } // Comes from vue
         public string CustomerFirstname { get; set; } = string.Empty; // Comes from vue
         public string PickupAddress { get; set; } = string.Empty; // Comes from vue
-        public string? Stops { get; set; } = "Inga stopp angivna!"; // Comes from vue
+        public string? Stops { get; set; } = "No stopps!"; // Comes from vue
         public string Destination { get; set; } = string.Empty; // Comes from vue
         public string DriverFirstname { get; set; } = string.Empty; // Comes from vue
         public string LicensePlate { get; set; } // Comes from vue

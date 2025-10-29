@@ -154,13 +154,14 @@ namespace PegasusBackend.Services.Implementations
                     firstname = customerFirstName,
                 };
 
+
                 var emailSendResult = await SendEmailWithAttachmentAsync(
                     userEmail,
                     MailjetTemplateType.Receipt,
                     mailjetVariables,
                     MailjetSubjects.Receipt,
                     PdfBytes,
-                    $"kvitto: {booking.BookingId}, {DateTime.Now:yyyyMMdd_HHmm}.pdf");
+                    $"Reciept: {customerFirstName}, {DateTime.Now:yyyyMMdd_HHmm}.pdf");
 
                 return emailSendResult;
             }

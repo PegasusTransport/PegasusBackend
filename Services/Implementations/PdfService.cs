@@ -149,7 +149,7 @@ namespace PegasusBackend.Services.Implementations
                     col.Item().Text(settings.CompanyName)
                         .FontFamily(FontHeading)
                         .FontSize(28).Bold().FontColor(settings.HeaderColor);
-                    col.Item().Text("Kvitto på utförd resa")
+                    col.Item().Text("Receipt for Completed Trip")
                         .FontFamily(FontHeading)
                         .FontSize(14).SemiBold().FontColor(settings.HeaderColor);
                 });
@@ -185,7 +185,7 @@ namespace PegasusBackend.Services.Implementations
                 row.RelativeItem().Column(companyCol =>
                 {
                     companyCol.Spacing(1);
-                    companyCol.Item().Text("Från:")
+                    companyCol.Item().Text("From:")
                         .FontFamily(FontHeading).FontSize(10).Bold().FontColor(settings.LabelColor);
                     companyCol.Item().Text(settings.CompanyName).Bold();
                     companyCol.Item().Text(settings.CompanyEmail);
@@ -195,7 +195,7 @@ namespace PegasusBackend.Services.Implementations
                 row.RelativeItem().Column(customerCol =>
                 {
                     customerCol.Spacing(1);
-                    customerCol.Item().Text("Till:")
+                    customerCol.Item().Text("To:")
                         .FontFamily(FontHeading).FontSize(10).Bold().FontColor(settings.LabelColor);
                     customerCol.Item().Text(receipt.CustomerFirstname).FontSize(10).Bold();
                 });
@@ -212,16 +212,16 @@ namespace PegasusBackend.Services.Implementations
             col.Item().Column(details =>
             {
                 details.Spacing(2);
-                details.Item().Text("Resedetaljer")
+                details.Item().Text("Trip Details")
                     .FontFamily(FontHeading).FontSize(12).Bold().FontColor(settings.HeaderColor);
 
-                details.Item().Text(t => { t.Span("Upphämtning: ").Bold(); t.Span(receipt.PickupAddress); });
+                details.Item().Text(t => { t.Span("Pickup: ").Bold(); t.Span(receipt.PickupAddress); });
                 if (!string.IsNullOrWhiteSpace(receipt.Stops))
-                    details.Item().Text(t => { t.Span("Stopp: ").Bold(); t.Span(receipt.Stops); });
+                    details.Item().Text(t => { t.Span("Stops: ").Bold(); t.Span(receipt.Stops); });
                 details.Item().Text(t => { t.Span("Destination: ").Bold(); t.Span(receipt.Destination); });
-                details.Item().Text(t => { t.Span("Tid för upphämtning: ").Bold(); t.Span(receipt.PickupTime.ToString("yyyy-MM-dd HH:mm", svSE)); });
-                details.Item().Text(t => { t.Span("Distans: ").Bold(); t.Span($"{receipt.DistanceKm:N1} km"); });
-                details.Item().Text(t => { t.Span("Restid: ").Bold(); t.Span($"{totalDuration} min"); });
+                details.Item().Text(t => { t.Span("Pickup Time: ").Bold(); t.Span(receipt.PickupTime.ToString("yyyy-MM-dd HH:mm", svSE)); });
+                details.Item().Text(t => { t.Span("Distance: ").Bold(); t.Span($"{receipt.DistanceKm:N1} km"); });
+                details.Item().Text(t => { t.Span("Travel Time: ").Bold(); t.Span($"{totalDuration} min"); });
             });
         }
 
@@ -230,16 +230,16 @@ namespace PegasusBackend.Services.Implementations
             col.Item().Column(driver =>
             {
                 driver.Spacing(2);
-                driver.Item().Text("Förare & Fordon")
+                driver.Item().Text("Driver & Vehicle")
                     .FontFamily(FontHeading).FontSize(12).Bold().FontColor(settings.HeaderColor);
-                driver.Item().Text(t => { t.Span("Förare: ").Bold(); t.Span(receipt.DriverFirstname); });
-                driver.Item().Text(t => { t.Span("Reg.nr: ").Bold(); t.Span(receipt.LicensePlate); });
+                driver.Item().Text(t => { t.Span("Driver: ").Bold(); t.Span(receipt.DriverFirstname); });
+                driver.Item().Text(t => { t.Span("License Plate: ").Bold(); t.Span(receipt.LicensePlate); });
             });
         }
 
         private void BuildTotalPriceSection(ColumnDescriptor col, ReceiptRequestDto receipt, PdfSettingsModel settings, CultureInfo svSE)
         {
-            col.Item().AlignRight().Text($"Totalt pris: {receipt.TotalPrice.ToString("C", svSE)}")
+            col.Item().AlignRight().Text($"Total Price: {receipt.TotalPrice.ToString("C", svSE)}")
                 .FontFamily(FontHeading).FontSize(14).Bold().FontColor(settings.PriceColor);
         }
 
@@ -250,7 +250,7 @@ namespace PegasusBackend.Services.Implementations
                 .Text(text =>
                 {
                     text.DefaultTextStyle(x => x.FontSize(7).FontColor(Colors.Grey.Darken1));
-                    text.Span("Tack för att du reser med ");
+                    text.Span("Thank you for traveling with ");
                     text.Span(settings.CompanyName).Bold();
                     text.Span("!");
                 });

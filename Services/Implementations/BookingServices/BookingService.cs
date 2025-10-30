@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.MailjetDTOs;
-using PegasusBackend.Helpers;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
@@ -12,6 +11,7 @@ using PegasusBackend.Services.Interfaces.BookingInterfaces;
 using System.Globalization;
 using System.Net;
 using System.Security.Claims;
+using PegasusBackend.Helpers.BookingHelpers;
 
 namespace PegasusBackend.Services.Implementations.BookingServices
 {
@@ -153,14 +153,14 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         {
             try
             {
-                var user = await _userManager.GetUserAsync(claimsPrincipal);
-                if (user == null)
-                {
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.Unauthorized,
-                        "User not found."
-                    );
-                }
+                //var user = await _userManager.GetUserAsync(claimsPrincipal);
+                //if (user == null)
+                //{
+                //    return ServiceResponse<BookingResponseDto>.FailResponse(
+                //        HttpStatusCode.Unauthorized,
+                //        "User not found."
+                //    );
+                //}
 
                 var booking = await _bookingRepo.GetBookingByIdAsync(bookingId);
 
@@ -172,13 +172,13 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                     );
                 }
 
-                if (booking.UserIdFk != user.Id)
-                {
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.Forbidden,
-                        "You don't have permission to view this booking."
-                    );
-                }
+                //if (booking.UserIdFk != user.Id)
+                //{
+                //    return ServiceResponse<BookingResponseDto>.FailResponse(
+                //        HttpStatusCode.Forbidden,
+                //        "You don't have permission to view this booking."
+                //    );
+                //}
 
                 var response = _bookingMapper.MapToResponseDTO(booking);
 
@@ -230,11 +230,37 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             }
         }
 
-        public async Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync()
+        public async Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync(string? filter)
         {
             try
             {
                 var bookings = await _bookingRepo.GetAvailableBookingsAsync();
+
+                var time = DateTime.UtcNow;
+
+                // I need to make this as a own function!
+                if (!string.IsNullOrEmpty(filter))
+                {
+                    bookings = filter.ToLower() switch
+                    {
+                        BookingFilterHelper.Past => bookings.Where(b => b.PickUpDateTime < time)
+                        .ToList(),
+
+                        BookingFilterHelper.Current => bookings.Where(b => b.PickUpDateTime >= time &&
+                        b.PickUpDateTime <= time.AddDays(5))
+                        .ToList(),
+
+                        BookingFilterHelper.Future => bookings.Where(b => b.PickUpDateTime > time.AddDays(5))
+                        .ToList(),
+                        _ => bookings
+                    };
+                }
+
+
+
+
+
+
                 var response = _bookingMapper.MapToResponseDTOs(bookings);
 
                 return ServiceResponse<List<BookingResponseDto>>.SuccessResponse(

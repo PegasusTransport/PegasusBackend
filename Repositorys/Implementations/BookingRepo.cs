@@ -49,11 +49,7 @@ namespace PegasusBackend.Repositorys.Implementations
         {
             return await _context.Bookings
                 .Include(b => b.User)
-                .Where(b => b.IsAvailable
-                    && b.IsConfirmed
-                    && b.Status == BookingStatus.Confirmed
-                    && b.DriverIdFK == null)  // Not yet assigned to driver
-                .OrderBy(b => b.PickUpDateTime)
+                .Where(b => b.IsAvailable)
                 .ToListAsync();
         }
 

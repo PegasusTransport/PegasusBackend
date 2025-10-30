@@ -64,8 +64,8 @@ namespace PegasusBackend.Controllers
         /// Get all available bookings (for drivers/admins)
         [HttpGet("available")]
         [Authorize(Roles = "Driver,Admin")]
-        public async Task<ActionResult<List<BookingResponseDto>>> GetAvailableBookings() =>
-            Generate.ActionResult(await _bookingService.GetAvailableBookingsAsync());
+        public async Task<ActionResult<List<BookingResponseDto>>> GetAvailableBookings([FromQuery] string? filter = null) =>
+            Generate.ActionResult(await _bookingService.GetAvailableBookingsAsync(filter));
 
 
         /// Cancel a booking (registered users only)

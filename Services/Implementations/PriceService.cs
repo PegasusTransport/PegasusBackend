@@ -141,7 +141,6 @@ namespace PegasusBackend.Services.Implementations
 
                 var thirdPart = await StopPriceCalculator(
                     Dto.SecondStopAdress,
-                    Dto.DropoffAdress,
                     Dto.LastDurationMinutes,
                     Dto.LastDistanceKm,
                     zonePrice

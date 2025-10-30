@@ -18,6 +18,9 @@ namespace PegasusBackend.Services.Implementations
             _logger = logger;
         }
 
+        // En admin ska kunna se boking by id!
+        // ha en put på booking by id!
+        // ha en delete på booking by id!
         public async Task<ServiceResponse<TaxiSettings>> GetTaxiPricesAsync()
         {
             var taxiSettings = await _adminRepo.GetTaxiPricesAsync();

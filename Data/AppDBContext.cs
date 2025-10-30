@@ -10,6 +10,7 @@ namespace PegasusBackend.Data
         public DbSet<Cars> Cars { get; set; }
         public DbSet<Bookings> Bookings { get; set; }
         public DbSet<TaxiSettings> TaxiSettings { get; set; }
+        public DbSet<IdempotencyRecord> IdempotencyRecords { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -18,7 +19,7 @@ namespace PegasusBackend.Data
             var user = modelBuilder.Entity<User>();
             var driver = modelBuilder.Entity<Drivers>();
             var taxiSettings = modelBuilder.Entity<TaxiSettings>();
-
+            var idempotencyRecord = modelBuilder.Entity<IdempotencyRecord>();
 
             user
                 .HasOne(u => u.Driver)
@@ -55,6 +56,19 @@ namespace PegasusBackend.Data
             taxiSettings
                 .Property(p => p.UpdatedAt)
                 .HasDefaultValueSql("GETUTCDATE()");
+
+            idempotencyRecord
+                .HasIndex(i => i.IdempotencyKey)
+                .IsUnique(); // ← Viktigt! En key kan bara finnas en gång
+
+            idempotencyRecord
+                .HasIndex(i => i.ExpiresAt); // ← För snabb cleanup av gamla records
+
+            idempotencyRecord
+                .HasOne(i => i.Booking)
+                .WithMany()
+                .HasForeignKey(i => i.BookingId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

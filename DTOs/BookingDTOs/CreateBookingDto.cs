@@ -10,7 +10,7 @@ namespace PegasusBackend.DTOs.BookingDTOs
         public string LastName { get; set; } = null!;
         public string PhoneNumber { get; set; } = null!;
 
-        // Pickup info (obligatorisk)
+        // Pickup info (mandatory)
         public DateTime PickUpDateTime { get; set; }
         public string PickUpAddress { get; set; } = null!;
         public double PickUpLatitude { get; set; }
@@ -26,7 +26,7 @@ namespace PegasusBackend.DTOs.BookingDTOs
         public double? SecondStopLatitude { get; set; }
         public double? SecondStopLongitude { get; set; }
 
-        // Dropoff info (obligatorisk)
+        // Dropoff info (mandatory)
         public string DropOffAddress { get; set; } = null!;
         public double DropOffLatitude { get; set; }
         public double DropOffLongitude { get; set; }

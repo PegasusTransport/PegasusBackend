@@ -23,7 +23,7 @@ namespace PegasusBackend.Configurations
             services.AddHttpClient();
             services.AddQuestPdfConfiguration();
 
-            // Mailjet settings korrekt
+            // Mailjet settings correct
             services.Configure<MailJetSettings>(
                 configuration.GetSection("Mailjet")
             );
@@ -36,6 +36,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IUserRepo, UserRepo>();
             services.AddScoped<IBookingRepo, BookingRepo>();
             services.AddScoped<IDriverRepo, DriverRepo>();
+            services.AddScoped<IIdempotencyRepo, IdempotencyRepo>();
 
             // Services
             services.AddScoped<IAdminService, AdminService>();
@@ -47,6 +48,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IMailjetEmailService, MailjetEmailService>();
             services.AddScoped<IPdfService, PdfService>();
             services.AddScoped<IBookingService, BookingService>();
+            services.AddScoped<IIdempotencyService, IdempotencyService>();
 
             // Booking-related services
             services.AddScoped<IBookingValidationService, BookingValidationService>();
@@ -56,7 +58,7 @@ namespace PegasusBackend.Configurations
             // Email Configuration & Service
             var emailConfig = configuration.GetSection("EmailConfig").Get<EmailConfig>();
             services.AddSingleton(emailConfig!);
-            services.AddScoped<IEmailService, EmailService>();
+
 
 
             return services;

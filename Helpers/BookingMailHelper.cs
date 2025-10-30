@@ -1,7 +1,7 @@
 ﻿using PegasusBackend.DTOs.BookingDTOs;
 using System.Globalization;
 
-namespace PegasusBackend.Helpers.BookingHelper
+namespace PegasusBackend.Helpers
 {
     public static class BookingMailHelper
     {

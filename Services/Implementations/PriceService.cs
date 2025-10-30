@@ -54,7 +54,7 @@ namespace PegasusBackend.Services.Implementations
             {
                 return ServiceResponse<decimal>.FailResponse(
                     HttpStatusCode.NotFound,
-                    "Kunde inte hämta priset från databasen."
+                    "Couldnt get data from database"
                 );
             }
 
@@ -78,7 +78,7 @@ namespace PegasusBackend.Services.Implementations
                     return ServiceResponse<decimal>.SuccessResponse(
                         HttpStatusCode.OK,
                         zonePrice,
-                        "Fastpris tillämpas för resa till eller från Arlanda inom zon."
+                        "Fixed price applies for trips to or from Arlanda within the zone.\r\n"
                     );
                 }
             }
@@ -86,7 +86,7 @@ namespace PegasusBackend.Services.Implementations
             return ServiceResponse<decimal>.SuccessResponse(
                 HttpStatusCode.OK,
                 totalPrice,
-                "Taxameterpris tillämpas."
+                "Taxameter price applies!"
             );
         }
 
@@ -97,7 +97,7 @@ namespace PegasusBackend.Services.Implementations
             {
                 return ServiceResponse<decimal>.FailResponse(
                     HttpStatusCode.InternalServerError,
-                    "Kunde inte hämta priset från databasen."
+                    "Couldnt get the prcie from database"
                 );
             }
 
@@ -165,7 +165,7 @@ namespace PegasusBackend.Services.Implementations
             return ServiceResponse<decimal>.SuccessResponse(
                 HttpStatusCode.OK,
                 total,
-                "Pris beräknat med stopp (taxameter + zonpris per segment)."
+                "Price calculated with stops (taximeter + zone price per segment)."
             );
         }
     }

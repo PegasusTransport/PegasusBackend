@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Org.BouncyCastle.Utilities;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.MailjetDTOs;
+using PegasusBackend.Helpers;
 using PegasusBackend.Helpers.MailjetHelpers;
-using PegasusBackend.Helpers.StatusMapper;
 using PegasusBackend.Services.Interfaces;
 
 namespace PegasusBackend.Controllers

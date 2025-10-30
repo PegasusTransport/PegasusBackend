@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Extentions;
-using PegasusBackend.Helpers.StatusMapper;
+using PegasusBackend.Helpers;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Implementations;

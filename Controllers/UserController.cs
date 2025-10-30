@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Org.BouncyCastle.Asn1.X509.Qualified;
 using PegasusBackend.DTOs.UserDTOs;
-using PegasusBackend.Helpers.StatusMapper;
+using PegasusBackend.Helpers;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Implementations;

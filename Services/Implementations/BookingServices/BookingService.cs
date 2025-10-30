@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.MailjetDTOs;
-using PegasusBackend.Helpers.BookingHelper;
+using PegasusBackend.Helpers;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
@@ -370,14 +370,14 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                     DistanceKm = validationResult.RouteInfo!.DistanceKm,
                     DurationMinutes = validationResult.RouteInfo.DurationMinutes,
                     Price = Math.Round(validationResult.CalculatedPrice, 2),
-                    Message = "Beräknat pris för din resa.",
+                    Message = "Calculated price for your trip.",
                     Sections = validationResult.RouteInfo.Sections
                 };
 
                 return ServiceResponse<BookingPreviewResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,
                     response,
-                    "Prisförhandsvisning beräknad."
+                    "Price preview calculated."
                 );
             }
             catch (Exception ex)
@@ -385,7 +385,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 _logger.LogError(ex, "Error calculating booking preview");
                 return ServiceResponse<BookingPreviewResponseDto>.FailResponse(
                     HttpStatusCode.InternalServerError,
-                    "Något gick fel vid prisberäkning."
+                    "Something went wrong during price calculation."
                 );
             }
         }

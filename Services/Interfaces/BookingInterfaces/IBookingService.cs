@@ -7,13 +7,15 @@ namespace PegasusBackend.Services.Interfaces.BookingInterfaces
     public interface IBookingService
     {
         Task<ServiceResponse<BookingResponseDto>> CreateBookingAsync(CreateBookingDto bookingDto);
-        Task<ServiceResponse<BookingResponseDto>> ConfirmBookingAsync(string confirmationToken);
-        Task<ServiceResponse<BookingResponseDto>> GetBookingByIdAsync(int bookingId, ClaimsPrincipal claimsPrincipal);
-        Task<ServiceResponse<List<BookingResponseDto>>> GetUserBookingsAsync(ClaimsPrincipal claimsPrincipal);
-        Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync(string? filter);
-        Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId, ClaimsPrincipal claimsPrincipal);
-        Task<ServiceResponse<BookingResponseDto>> GetBookingByIdForGuestAsync(int bookingId, string email);
         Task<ServiceResponse<BookingPreviewResponseDto>> GetBookingPreviewAsync(BookingPreviewRequestDto previewDto);
+        Task<ServiceResponse<BookingResponseDto>> ConfirmBookingAsync(string confirmationToken);
 
+        // my new implemented services!
+        Task<ServiceResponse<BookingResponseDto>> UpdateBookingAsync(UpdateBookingDto updateDto, string? token = null, ClaimsPrincipal? user = null);
+        Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId);
+
+        // this one is specially for frontend to be able to prefill the form for guest users who wants
+        // to update their booking!
+        Task<ServiceResponse<BookingResponseDto>> GetBookingByTokenAsync(string token); 
     }
 }

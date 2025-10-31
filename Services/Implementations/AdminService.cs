@@ -1,4 +1,6 @@
-﻿using PegasusBackend.DTOs.TaxiDTOs;
+﻿using Microsoft.Extensions.Options;
+using PegasusBackend.Configurations;
+using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
@@ -11,11 +13,13 @@ namespace PegasusBackend.Services.Implementations
     {
         private readonly IAdminRepo _adminRepo;
         private readonly ILogger<AdminService> _logger;
+        private readonly PaginationSettings _paginationSettings;
 
-        public AdminService(IAdminRepo adminRepo, ILogger<AdminService> logger)
+        public AdminService(IAdminRepo adminRepo, ILogger<AdminService> logger, IOptions<PaginationSettings> paginationOptions)
         {
             _adminRepo = adminRepo;
             _logger = logger;
+            _paginationSettings = paginationOptions.Value;
         }
 
         // En admin ska kunna se boking by id!

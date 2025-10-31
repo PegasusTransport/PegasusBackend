@@ -28,6 +28,13 @@ namespace PegasusBackend.Configurations
                 configuration.GetSection("Mailjet")
             );
 
+            //PaginationService
+            services.Configure<PaginationSettings>(configuration.GetSection("Pagination"));
+
+            //bookingRulesService
+            services.Configure<BookingRulesSettings>(configuration.GetSection("BookingRules"));
+
+
             // Register all FluentValidators
             services.AddValidatorsFromAssemblyContaining<AccountWelcomeRequestValidator>();
 

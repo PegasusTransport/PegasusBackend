@@ -14,6 +14,21 @@ namespace PegasusBackend.Repositorys.Implementations
             _context = context;
         }
 
+        public IQueryable<Bookings> GetAllQueryable(bool includeRelations = true)
+        {
+            var query = _context.Bookings.AsQueryable();
+
+            if (includeRelations)
+            {
+                query = query
+                    .Include(b => b.User)
+                    .Include(b => b.Driver)
+                        .ThenInclude(d => d.User);
+            }
+
+            return query;
+        }
+
         public async Task<Bookings> CreateBookingAsync(Bookings booking)
         {
             _context.Bookings.Add(booking);
@@ -23,23 +38,19 @@ namespace PegasusBackend.Repositorys.Implementations
 
         public async Task<Bookings?> GetBookingByIdAsync(int bookingId)
         {
-            return await _context.Bookings
-                .Include(b => b.User)
-                .Include(b => b.Driver)
+            return await GetAllQueryable(false)
                 .FirstOrDefaultAsync(b => b.BookingId == bookingId);
         }
 
         public async Task<Bookings?> GetBookingByConfirmationTokenAsync(string token)
         {
-            return await _context.Bookings
-                .Include(b => b.User)
+            return await GetAllQueryable(true)
                 .FirstOrDefaultAsync(b => b.ConfirmationToken == token);
         }
 
         public async Task<List<Bookings>> GetUserBookingsAsync(string userId)
         {
-            return await _context.Bookings
-                .Include(b => b.Driver)
+            return await GetAllQueryable(true)
                 .Where(b => b.UserIdFk == userId)
                 .OrderByDescending(b => b.BookingDateTime)
                 .ToListAsync();
@@ -47,8 +58,7 @@ namespace PegasusBackend.Repositorys.Implementations
 
         public async Task<List<Bookings>> GetAvailableBookingsAsync()
         {
-            return await _context.Bookings
-                .Include(b => b.User)
+            return await GetAllQueryable(true)
                 .Where(b => b.IsAvailable)
                 .ToListAsync();
         }
@@ -59,12 +69,8 @@ namespace PegasusBackend.Repositorys.Implementations
             return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task<bool> DeleteBookingAsync(int bookingId)
+        public async Task<bool> DeleteBookingAsync(Bookings booking)
         {
-            var booking = await _context.Bookings.FindAsync(bookingId);
-            if (booking == null)
-                return false;
-
             _context.Bookings.Remove(booking);
             return await _context.SaveChangesAsync() > 0;
         }

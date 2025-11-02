@@ -38,7 +38,7 @@ namespace PegasusBackend.Repositorys.Implementations
 
         public async Task<Bookings?> GetBookingByIdAsync(int bookingId)
         {
-            return await GetAllQueryable(false)
+            return await GetAllQueryable(true)
                 .FirstOrDefaultAsync(b => b.BookingId == bookingId);
         }
 
@@ -65,7 +65,6 @@ namespace PegasusBackend.Repositorys.Implementations
 
         public async Task<bool> UpdateBookingAsync(Bookings booking)
         {
-            _context.Bookings.Update(booking);
             return await _context.SaveChangesAsync() > 0;
         }
 

@@ -21,10 +21,10 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             }
             else
             {
-                email = booking.User!.Email!;
-                firstName = booking.User.FirstName;
-                lastName = booking.User.LastName;
-                phoneNumber = booking.User.PhoneNumber!;
+                email = booking.User?.Email ?? "unknown@unknown.com";
+                firstName = booking.User?.FirstName ?? "";
+                lastName = booking.User?.LastName ?? "";
+                phoneNumber = booking.User?.PhoneNumber ?? "";
             }
 
             return new BookingResponseDto

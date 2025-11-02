@@ -4,7 +4,6 @@
     {
         // Identifies which booking to update
         public int BookingId { get; set; }
-
         public DateTime PickUpDateTime { get; set; }
         public string PickUpAddress { get; set; } = null!;
         public double PickUpLatitude { get; set; }

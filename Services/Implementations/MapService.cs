@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using PegasusBackend.DTOs.MapDTOs;
+using PegasusBackend.DTOs.MapDTOs.GoogleResponses;
 using PegasusBackend.Helpers;
-using PegasusBackend.Helpers.GoogleResponses;
 using PegasusBackend.Models;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
@@ -15,6 +15,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
 
 namespace PegasusBackend.Services.Implementations
@@ -304,6 +305,7 @@ namespace PegasusBackend.Services.Implementations
                 var requestBody = new
                 {
                     input = request.Input,
+                    sessionToken = request.SessionToken,
                     includedRegionCodes = new[] { "SE" },
                     languageCode = "sv"
                 };
@@ -330,14 +332,18 @@ namespace PegasusBackend.Services.Implementations
                 }
                 var result = await response.Content.ReadAsStringAsync();
 
-                var googleResponse = JsonSerializer.Deserialize<GooglePlacesResponse>(result);
+                var googleResponse = JsonSerializer.Deserialize<GooglePlacesResponseDto>(result);
 
                 var suggestions = googleResponse?.Suggestions?
-                    .Select(s => s.PlacePrediction?.Text?.Text)
-                    .Where(address => !string.IsNullOrEmpty(address))
+                    .Where(s => !string.IsNullOrEmpty(s.PlacePrediction?.Text.Text)) 
+                    .Select(s => new AutocompleteSuggestionDto
+                    {
+                        Description = s.PlacePrediction.Text.Text,
+                        PlaceId = s.PlacePrediction.PlaceId
+                    })
                     .ToList() ?? [];
 
-               
+
                 return ServiceResponse<AutoCompleteResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,
                     new AutoCompleteResponseDto

@@ -1,23 +1,27 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+﻿using Mailjet.Client.Resources;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using PegasusBackend.DTOs.MapDTOs;
 using PegasusBackend.Helpers;
+using PegasusBackend.Helpers.GoogleResponses;
 using PegasusBackend.Models;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 using System;
 using System.Globalization;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using static System.Net.WebRequestMethods;
 
 namespace PegasusBackend.Services.Implementations
 {
-    public class MapService(IConfiguration config) : IMapService
+    public class MapService(IConfiguration config, IHttpClientFactory httpClientFactory) : IMapService
     {
-        private readonly HttpClient _httpClient = new();
+        private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
         private readonly string _key = config["GoogleMaps:ApiKey"]!;
 
 
@@ -279,6 +283,78 @@ namespace PegasusBackend.Services.Implementations
                     $"Unexpected error: {ex.Message}"
                 );
             }
+        }
+
+        public async Task<ServiceResponse<AutoCompleteResponseDto>> AutoCompleteAddreses(AutocompleteRequestDto request)
+        {
+            try
+            {
+
+                if (string.IsNullOrWhiteSpace(request.Input) || request.Input.Length < 2)
+                {
+                    return ServiceResponse<AutoCompleteResponseDto>.SuccessResponse(
+                            HttpStatusCode.OK,
+                            new AutoCompleteResponseDto
+                            {
+                                Suggestions = [] // return empty list untill user entered more the 2 letters
+                            }
+                        );
+                }
+
+                var requestBody = new
+                {
+                    input = request.Input,
+                    includedRegionCodes = new[] { "SE" },
+                    languageCode = "sv"
+                };
+
+                var jsonContent = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                var requestMessage = new HttpRequestMessage(HttpMethod.Post, "https://places.googleapis.com/v1/places:autocomplete")
+                {
+                    Content = content
+                };
+
+                requestMessage.Headers.Add("X-Goog-Api-Key", _key);
+
+                var response = await _httpClient.SendAsync(requestMessage);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return ServiceResponse<AutoCompleteResponseDto>.FailResponse(
+                        response.StatusCode,
+                        $"Google API error: {errorContent}"
+                    );
+                }
+                var result = await response.Content.ReadAsStringAsync();
+
+                var googleResponse = JsonSerializer.Deserialize<GooglePlacesResponse>(result);
+
+                var suggestions = googleResponse?.Suggestions?
+                    .Select(s => s.PlacePrediction?.Text?.Text)
+                    .Where(address => !string.IsNullOrEmpty(address))
+                    .ToList() ?? [];
+
+               
+                return ServiceResponse<AutoCompleteResponseDto>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    new AutoCompleteResponseDto
+                    {
+                        Suggestions = suggestions
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                return ServiceResponse<AutoCompleteResponseDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    $"Error calling Google API: {ex.Message}"
+                );
+            }
+
+
         }
     }
 }

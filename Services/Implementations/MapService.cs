@@ -360,7 +360,65 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
 
+        }
+        public async Task<ServiceResponse<CoordinateDto>> GetCoordinatesByPlaceIdAsync(string placeIdRequest)
+        {
+            if (string.IsNullOrWhiteSpace(placeIdRequest))
+            {
+                return ServiceResponse<CoordinateDto>.FailResponse(
+                   HttpStatusCode.NotFound,
+                   $"NO PLACE ID FOUND"
+               );
+            }
+            try
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, $"https://places.googleapis.com/v1/places/{placeIdRequest}");
 
+                request.Headers.Add("X-Goog-FieldMask", "location");
+                request.Headers.Add("X-Goog-Api-Key", _key);
+
+                var response = await _httpClient.SendAsync(request);
+
+
+                if(!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return ServiceResponse<CoordinateDto>.FailResponse(
+                        response.StatusCode,
+                        $"Google API error: {errorContent}"
+                    );
+                }
+
+                var result = await response.Content.ReadAsStringAsync();
+
+                var googleResponse = JsonSerializer.Deserialize<GooglePlaceLocationDetailsDto>(result);
+
+                if (googleResponse.Location == null)
+                {
+                    return ServiceResponse<CoordinateDto>.FailResponse(
+                    HttpStatusCode.NotFound,
+                    $"Could not get coordniatee"
+                    );
+                }
+
+                return ServiceResponse<CoordinateDto>.SuccessResponse(
+                   HttpStatusCode.OK,
+                   new CoordinateDto
+                   {
+                       Latitude = googleResponse.Location.Lat,
+                       Longitude = googleResponse.Location.Lng,
+                   }
+                );
+
+
+            }
+            catch (Exception ex)
+            {
+                return ServiceResponse<CoordinateDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    $"Error calling Google API: {ex.Message}"
+                );
+            }
         }
     }
 }

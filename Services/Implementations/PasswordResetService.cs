@@ -95,9 +95,12 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
+                // URL-decode token in case it comes encoded from email
+                var decodedToken = Uri.UnescapeDataString(request.Token);
+
                 var result = await _userManager.ResetPasswordAsync(
                     user,
-                    request.Token,
+                    decodedToken,  // Use decoded token
                     request.NewPassword
                 );
 

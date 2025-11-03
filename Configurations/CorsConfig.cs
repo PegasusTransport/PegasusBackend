@@ -10,6 +10,7 @@
                 {
                     policy
                         .WithOrigins("https://localhost:7051") 
+                        .WithOrigins("http://localhost:5173")
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials(); 

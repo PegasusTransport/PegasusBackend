@@ -10,7 +10,7 @@ namespace PegasusBackend.Validators.AuthValidators
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("Email is required.")
                 .EmailAddress().WithMessage("Invalid email format.")
-                .MaximumLength(150).WithMessage("Email can't exceed 150 characters.");
+                .MaximumLength(150).WithMessage("Email cannot exceed 150 characters.");
         }
     }
 }

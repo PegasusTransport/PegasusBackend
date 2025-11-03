@@ -75,7 +75,8 @@ namespace PegasusBackend.Services.Implementations
                     FirstName = user.FirstName,
                     LastName = user.LastName!,
                     UserName = user.UserName!,
-                    Email = user.Email!
+                    Email = user.Email!,
+                    PhoneNumber = user.PhoneNumber!
                 };
                 return ServiceResponse<UserResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,
@@ -112,7 +113,9 @@ namespace PegasusBackend.Services.Implementations
                     FirstName = user.FirstName,
                     LastName = user.LastName!,
                     UserName = user.UserName!,
-                    Email = user.Email!
+                    Email = user.Email!,
+                    
+                    
                 };
                 return ServiceResponse<UserResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,

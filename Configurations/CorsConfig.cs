@@ -9,7 +9,7 @@
                 options.AddPolicy("AllowFrontend", policy =>
                 {
                     policy
-                        .WithOrigins("TIM WILL FIX URL FAST OR WE GET PARTY") 
+                        .WithOrigins("http://localhost:5173")
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials(); 

@@ -3,6 +3,6 @@
     public class PlaceIdRequestDto
     {
         public string PlaceId { get; set; } = null!;
-        public string SessionToken { get; set; } = null!;
+        public string? SessionToken { get; set; } 
     }
 }

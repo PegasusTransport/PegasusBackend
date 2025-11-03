@@ -375,7 +375,7 @@ namespace PegasusBackend.Services.Implementations
                 var url = $"https://places.googleapis.com/v1/places/{request.PlaceId}";
                 if (!string.IsNullOrEmpty(request.SessionToken))
                 {
-                    url += $"?sessiontoken={request.SessionToken}";
+                    url += $"?sessionToken={request.SessionToken}";
                 }
 
                 var httpRequest = new HttpRequestMessage(HttpMethod.Get, url);

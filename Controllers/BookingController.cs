@@ -1,11 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using PegasusBackend.Attributes;
+using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.Helpers;
 using PegasusBackend.Services.Interfaces.BookingInterfaces;
 using System.Security.Claims;
-using PegasusBackend.Attributes;
 
 namespace PegasusBackend.Controllers
 {
@@ -40,8 +41,8 @@ namespace PegasusBackend.Controllers
 
         [HttpGet("getMyBookings")]
         [Authorize]
-        public async Task<ActionResult<List<BookingResponseDto>>> GetMyBookings() =>
-            Generate.ActionResult(await _bookingService.GetMyBookingsAsync());
+        public async Task<ActionResult<PaginatedResult<BookingResponseDto>>> GetMyBookings([FromQuery] BookingSearchRequestDto query) => 
+            Generate.ActionResult(await _bookingService.GetMyBookingsAsync(query));
 
         [HttpPut("updateBooking")]
         [Authorize]

@@ -4,6 +4,8 @@ using Microsoft.Extensions.Options;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.MailjetDTOs;
+using PegasusBackend.DTOs.UserDTOs;
+using PegasusBackend.Helpers;
 using PegasusBackend.Helpers.BookingHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
@@ -31,6 +33,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         private readonly BookingRulesSettings _bookingRules;
         private readonly IUserService _userService;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly PaginationSettings _paginationSettings;
 
         public BookingService(
             IBookingRepo bookingRepo,
@@ -44,7 +47,8 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             IOptions<BookingRulesSettings> bookingRules,
             IWebHostEnvironment env,
             IUserService userService,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            IOptions<PaginationSettings> paginationSettings)
         {
             _bookingRepo = bookingRepo;
             _userManager = userManager;
@@ -58,13 +62,13 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             _env = env;
             _userService = userService;
             _httpContextAccessor = httpContextAccessor;
+            _paginationSettings = paginationSettings.Value;
         }
         #endregion
 
         /* TO DO
             – Send cancellation emails to driver, admin and customer
             – Restrict address change within 24h of pickup
-            - Add pagination and search for customer!
         */
 
         public async Task<ServiceResponse<BookingResponseDto>> CreateBookingAsync(CreateBookingDto bookingDto)
@@ -164,20 +168,16 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         {
             try
             {
-                var httpContext = _httpContextAccessor.HttpContext;
-                var currentUser = await _userService.GetLoggedInUser(httpContext);
-
-                if (currentUser.Data == null)
-                {
+                var currentUser = await GetAuthenticatedUserAsync();
+                if (currentUser == null)
                     return ServiceResponse<BookingResponseDto>.FailResponse(
                         HttpStatusCode.Unauthorized,
-                        "You must be logged in to update a booking."
+                        "You must be logged in to view your bookings."
                     );
-                }
 
                 var booking = await _bookingRepo
                     .GetAllQueryable(true)
-                    .FirstOrDefaultAsync(b => b.BookingId == updateDto.BookingId && b.UserIdFk == currentUser.Data.Id);
+                    .FirstOrDefaultAsync(b => b.BookingId == updateDto.BookingId && b.UserIdFk == currentUser.Id);
 
                 if (booking == null)
                 {
@@ -220,24 +220,26 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             }
         }
 
-        public async Task<ServiceResponse<List<BookingResponseDto>>> GetMyBookingsAsync()
+        public async Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetMyBookingsAsync(BookingSearchRequestDto query)
         {
-            var httpContext = _httpContextAccessor.HttpContext;
-            var currentUser = await _userService.GetLoggedInUser(httpContext);
-
-            if (currentUser.Data == null)
-                return ServiceResponse<List<BookingResponseDto>>.FailResponse(
+            var user = await GetAuthenticatedUserAsync();
+            if (user == null)
+                return ServiceResponse<PaginatedResult<BookingResponseDto>>.FailResponse(
                     HttpStatusCode.Unauthorized,
                     "You must be logged in to view your bookings."
                 );
 
-            var bookings = await _bookingRepo.GetUserBookingsAsync(currentUser.Data.Id);
-            var bookingList = _bookingMapper.MapToResponseDTOs(bookings);
+            var (currentPage, pageSize, sortBy, sortOrder) = ResolvePaginationSettings(query);
+            var bookingsQuery = BuildUserBookingsQuery(user.Id, query);
 
-            return ServiceResponse<List<BookingResponseDto>>.SuccessResponse(
+            var pagedResult = await bookingsQuery.ToPagedResultAsync(currentPage, pageSize, sortBy, sortOrder);
+
+            var mappedResult = MapPagedResult(pagedResult);
+
+            return ServiceResponse<PaginatedResult<BookingResponseDto>>.SuccessResponse(
                 HttpStatusCode.OK,
-                bookingList,
-                 $"You have {bookingList.Count} bookings listed successfully."
+                mappedResult,
+                $"You have {mappedResult.Items.Count} bookings listed successfully."
             );
         }
 
@@ -245,20 +247,16 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         {
             try
             {
-                var httpContext = _httpContextAccessor.HttpContext;
-                var currentUser = await _userService.GetLoggedInUser(httpContext);
-
-                if (currentUser.Data == null)
-                {
+                var currentUser = await GetAuthenticatedUserAsync();
+                if (currentUser == null)
                     return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.Unauthorized,
-                        "You must be logged in to cancel a booking."
+                        "You must be logged in to view your bookings."
                     );
-                }
 
                 var booking = await _bookingRepo
                     .GetAllQueryable(true)
-                    .FirstOrDefaultAsync(b => b.BookingId == bookingId && b.UserIdFk == currentUser.Data.Id);
+                    .FirstOrDefaultAsync(b => b.BookingId == bookingId && b.UserIdFk == currentUser.Id);
 
                 if (booking is null)
                     return ServiceResponse<bool>.FailResponse(HttpStatusCode.NotFound, "Couldnt fetch data from database! Check that you are Authorize!");
@@ -285,6 +283,75 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         }
 
         #region Private Helpers
+        private async Task<UserResponseDto?> GetAuthenticatedUserAsync()
+        {
+            var result = await _userService.GetLoggedInUser(_httpContextAccessor.HttpContext);
+            return result?.Data;
+        }
+
+        private (int Page, int PageSize, string SortBy, string SortOrder) ResolvePaginationSettings(BookingSearchRequestDto query)
+        {
+            var settings = _paginationSettings;
+            int page = query.Page ?? settings.DefaultPage;
+            int pageSize = Math.Min(query.PageSize ?? settings.DefaultPageSize, settings.MaxPageSize);
+            string sortBy = query.SortBy ?? settings.SortBy;
+            string sortOrder = query.SortOrder.ToString().ToLower();
+
+            return (page, pageSize, sortBy, sortOrder);
+        }
+
+        private IQueryable<Bookings> BuildUserBookingsQuery(string userId, BookingSearchRequestDto query)
+        {
+            var bookings = _bookingRepo.GetAllQueryable(true)
+                .Where(b => b.UserIdFk == userId);
+
+            if (!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var term = query.Search.ToLower();
+                bookings = bookings.Where(b =>
+                    b.PickUpAdress.ToLower().Contains(term) ||
+                    b.DropOffAdress.ToLower().Contains(term) ||
+                    (b.Flightnumber != null && b.Flightnumber.ToLower().Contains(term)) ||
+                    (b.Comment != null && b.Comment.ToLower().Contains(term))
+                );
+            }
+
+            if (query.MinPrice.HasValue)
+                bookings = bookings.Where(b => b.Price >= query.MinPrice.Value);
+
+            if (query.MaxPrice.HasValue)
+                bookings = bookings.Where(b => b.Price <= query.MaxPrice.Value);
+
+            if (query.FromDate.HasValue)
+                bookings = bookings.Where(b => b.PickUpDateTime >= query.FromDate.Value);
+
+            if (query.ToDate.HasValue)
+                bookings = bookings.Where(b => b.PickUpDateTime <= query.ToDate.Value);
+
+            if (query.Status.HasValue)
+            {
+                var statusValue = (BookingStatus)query.Status.Value;
+                bookings = bookings.Where(b => b.Status == statusValue);
+            }
+
+            if (query.UpcomingOnly == true)
+                bookings = bookings.Where(b => b.PickUpDateTime > DateTime.UtcNow);
+
+            return bookings;
+        }
+
+        private PaginatedResult<BookingResponseDto> MapPagedResult(PaginatedResult<Bookings> paged)
+        {
+            return new PaginatedResult<BookingResponseDto>
+            {
+                Items = _bookingMapper.MapToResponseDTOs(paged.Items),
+                TotalCount = paged.TotalCount,
+                Page = paged.Page,
+                PageSize = paged.PageSize,
+                CurrentCount = paged.CurrentCount
+            };
+        }
+
         private async Task<ServiceResponse<BookingResponseDto>?> ValidateUpdateRulesAsync(Bookings booking, UpdateBookingDto dto)
         {
             // How about if they change adresses? maybe the driver dosent have time for their next customer?

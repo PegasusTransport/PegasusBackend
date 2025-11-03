@@ -2,6 +2,7 @@
 {
     public class BookingRulesSettings
     {
-        public int MinHoursBeforePickupForChange { get; set; } = 24;
+        public int MinHoursBeforePickupForChange { get; set; }
+        public int MinMinutesBeforePickup { get; set; }
     }
 }

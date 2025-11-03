@@ -56,7 +56,9 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 Comment = booking.Comment,
                 Status = booking.Status,
                 IsConfirmed = booking.IsConfirmed,
-                DriverId = booking.DriverIdFK
+                DriverId = booking.DriverIdFK,
+                DriverName = booking.Driver != null
+                ? $"{booking.Driver.User.FirstName} {booking.Driver.User.LastName}" : null
             };
         }
 

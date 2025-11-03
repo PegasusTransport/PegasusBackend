@@ -42,6 +42,12 @@ namespace PegasusBackend.Repositorys.Implementations
                 throw; 
             }
         }
+        public async Task<Drivers?> GetDriverEntityByIdAsync(Guid driverId)
+        {
+            return await context.Drivers
+                .Include(d => d.Bookings)
+                .FirstOrDefaultAsync(d => d.DriverId == driverId);
+        }
         public async Task<DriverResponseDto?> GetDriverByUserIdAsync(string userId)
         {
             try
@@ -66,20 +72,16 @@ namespace PegasusBackend.Repositorys.Implementations
                 return null;
             }
         }
-        public async Task<List<AllDriversDto>> GetAllDrivers()
+        public async Task<List<Drivers>> GetAllDriversAsync()
         {
             try
             {
                 var drivers = await context.Drivers
+                    .Include(d => d.User)
+                    .Include(d => d.Bookings)
                     .Where(d => !d.IsDeleted && !d.User.IsDeleted)
-                    .Select(d => new AllDriversDto  
-                    {
-                        Id = d.DriverId,
-                        FirstName = d.User.FirstName,
-                        LastName = d.User.LastName,
-                        ProfilePicture = d.ProfilePicture
-                    })
                     .ToListAsync();
+
                 return drivers; 
             }
             catch (Exception ex)

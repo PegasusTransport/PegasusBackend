@@ -2,9 +2,17 @@
 {
     public class PaginationSettings
     {
-        public int DefaultPage { get; set; } = 1;
-        public int DefaultPageSize { get; set; } = 10;
-        public int MaxPageSize { get; set; } = 200;
+        public int DefaultPage { get; set; }
+        public int DefaultPageSize { get; set; }
+        public int MaxPageSize { get; set; }
+        public string DefaultSortOrder { get; set; } = string.Empty;
+        public string SortBy { get; set; } = string.Empty;
+    }
+
+    public enum SortOrder
+    {
+        Asc,
+        Desc
     }
 
 }

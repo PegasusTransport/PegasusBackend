@@ -18,11 +18,15 @@ namespace PegasusBackend.Services.Interfaces
 
         //// Booking features
         //Task<ServiceResponse<List<BookingResponseDto>>> GetDriverBookingsAsync(string driverId, string? statusFilter);
-        //Task<ServiceResponse<BookingResponseDto>> AcceptBookingAsync(int bookingId, string driverId);
-        //Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId, string driverId);
-        //Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync(BookingFilterDto? filters);
-        //Task<ServiceResponse<BookingResponseDto>> CompleteBookingAsync(int bookingId, string driverId);
-        //Task<ServiceResponse<bool>> SendReceiptAsync(ReceiptRequestDto receiptDto, string driverId);
 
+        //Task<ServiceResponse<BookingResponseDto>> AcceptBookingAsync(int bookingId, string driverId);
+
+        //Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId, string driverId);
+
+        //Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync(BookingFilterDto? filters);
+
+        //Task<ServiceResponse<BookingResponseDto>> CompleteBookingAsync(int bookingId, string driverId);
+
+        //Task<ServiceResponse<bool>> SendReceiptAsync(ReceiptRequestDto receiptDto, string driverId);
     }
 }

@@ -67,15 +67,23 @@ namespace PegasusBackend.Services.Implementations
         {
             try
             {
-                var drivers = await driverRepo.GetAllDrivers();
+                var drivers = await driverRepo.GetAllDriversAsync();
 
-                string message = drivers.Count > 0
-                    ? $"Found {drivers.Count} driver(s)"
+                var driverDtos = drivers.Select(d => new AllDriversDto
+                {
+                    Id = d.DriverId,
+                    FirstName = d.User.FirstName,
+                    LastName = d.User.LastName,
+                    ProfilePicture = d.ProfilePicture,
+                }).ToList();
+
+                string message = driverDtos.Count > 0
+                    ? $"Found {driverDtos.Count} driver(s)"
                     : "No drivers found";
 
                 return ServiceResponse<List<AllDriversDto>>.SuccessResponse(
                     HttpStatusCode.OK,
-                    drivers,
+                    driverDtos,
                     message
                 );
             }
@@ -87,7 +95,6 @@ namespace PegasusBackend.Services.Implementations
                     "Failed to retrieve drivers"
                 );
             }
-
         }
         public async Task<ServiceResponse<DriverResponseDto>> GetDriverByUserIdAsync(string userId)
         {

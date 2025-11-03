@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.Options;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.BookingDTOs;
+using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.MapDTOs;
 using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Helpers;
+using PegasusBackend.Helpers.BookingHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
@@ -13,6 +15,7 @@ using System.Net;
 
 public class AdminService : IAdminService
 {
+    #region Dependencys
     private readonly IAdminRepo _adminRepo;
     private readonly ILogger<AdminService> _logger;
     private readonly PaginationSettings _paginationSettings;
@@ -21,6 +24,10 @@ public class AdminService : IAdminService
     private readonly IDriverRepo _driverRepo;
     private readonly IMapService _mapService;
     private readonly BookingRulesSettings _bookingRules;
+    private readonly RecalculateIfAddressChangedHelper _recalculateHelper;
+    private readonly ValidateUpdateRuleHelper _validateUpdateRuleHelper;
+    private readonly IBookingService _bookingService;
+    private readonly IBookingValidationService _validationService;
 
     public AdminService(
         IAdminRepo adminRepo,
@@ -30,7 +37,11 @@ public class AdminService : IAdminService
         IBookingMapperService bookingMapperService,
         IDriverRepo driverRepo,
         IMapService mapService,
-        IOptions<BookingRulesSettings> bookingRules)
+        IOptions<BookingRulesSettings> bookingRules,
+        RecalculateIfAddressChangedHelper recalculateHelper,
+        ValidateUpdateRuleHelper validateUpdateRuleHelper,
+        IBookingService bookingService,
+        IBookingValidationService validationService)
     {
         _adminRepo = adminRepo;
         _logger = logger;
@@ -40,10 +51,14 @@ public class AdminService : IAdminService
         _driverRepo = driverRepo;
         _mapService = mapService;
         _bookingRules = bookingRules.Value;
+        _recalculateHelper = recalculateHelper;
+        _validateUpdateRuleHelper = validateUpdateRuleHelper;
+        _bookingService = bookingService;
+        _validationService = validationService;
     }
+    #endregion
 
-    // Remember to add controller for admin to cancell a booking!!!!!
-    // dont forget email sending functions. in assign driver
+    // TODOLATER: dont forget email sending functions. in assign driver
     public async Task<ServiceResponse<TaxiSettings>> GetTaxiPricesAsync()
     {
         try
@@ -106,8 +121,7 @@ public class AdminService : IAdminService
         }
     }
 
-    public async Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetAllBookingsAsync(
-        BookingFilterDto? filters, BookingSearchRequestDto searchRequestDto)
+    public async Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetAllBookingsAsync(BookingSearchRequestDto searchRequestDto)
     {
         try
         {
@@ -183,7 +197,7 @@ public class AdminService : IAdminService
                 return ServiceResponse<bool>.FailResponse(HttpStatusCode.NotFound, "Could not find the driver!");
             }
 
-            var isAvailable = await DriverAvibility(driver, booking);
+            var isAvailable = await DriverAvailabilityAsync(driver, booking);
             if (!isAvailable)
             {
                 _logger.LogInformation("AssignDriverAsync: Driver {DriverId} is not available for booking {BookingId}.", driverId, bookingId);
@@ -191,6 +205,7 @@ public class AdminService : IAdminService
             }
 
             booking.DriverIdFK = driverId;
+            booking.IsAvailable = false;
             await _bookingRepo.UpdateBookingAsync(booking);
 
             _logger.LogInformation("AssignDriverAsync: Driver {DriverId} assigned to booking {BookingId}.", driverId, bookingId);
@@ -211,7 +226,7 @@ public class AdminService : IAdminService
         }
     }
 
-    public async Task<ServiceResponse<List<Drivers>>> GetAvailbleDrivers(int bookingId)
+    public async Task<ServiceResponse<List<AvailableDriverResponsDto>>> GetAvailbleDrivers(int bookingId)
     {
         try
         {
@@ -219,32 +234,52 @@ public class AdminService : IAdminService
             if (booking is null)
             {
                 _logger.LogWarning("GetAvailbleDrivers: Booking with ID {BookingId} not found.", bookingId);
-                return ServiceResponse<List<Drivers>>.FailResponse(
+                return ServiceResponse<List<AvailableDriverResponsDto>>.FailResponse(
                     HttpStatusCode.NotFound,
                     "Could not find the booking!");
             }
 
             var drivers = await _driverRepo.GetAllDriversAsync();
+
+            var preliminaryDrivers = drivers
+                .Where(d => !d.Bookings.Any(b =>
+                    b.Status != BookingStatus.Cancelled &&
+                    b.Status != BookingStatus.Completed &&
+                    b.PickUpDateTime < booking.PickUpDateTime.AddMinutes((double)booking.DurationMinutes) &&
+                    b.PickUpDateTime.AddMinutes((double)b.DurationMinutes) > booking.PickUpDateTime
+                ))
+                .ToList();
+
             var freeDrivers = new List<Drivers>();
 
-            foreach (var driver in drivers)
+            foreach (var driver in preliminaryDrivers)
             {
-                var freeDriver = await DriverAvibility(driver, booking);
-                if (freeDriver)
+                var canReachInTime = await DriverAvailabilityAsync(driver, booking);
+                if (canReachInTime)
                     freeDrivers.Add(driver);
             }
 
+            var availbleDriversDto = freeDrivers.Select(drivers => new AvailableDriverResponsDto
+            {
+                DriverId = drivers.DriverId, // I need to send their Id so frontend can assign a driver base on Id
+                ProfilePicture = drivers.ProfilePicture,
+                FullName = $"{drivers.User?.FirstName ?? "Unknown"} {drivers.User?.LastName ?? ""}".Trim(),
+                PhoneNumber = drivers.User.PhoneNumber ?? "No phoneNumber registered!",
+                CarModel = drivers.Car.Model ?? "This driver dosent have a car assignd!",
+                RegistrationNumber = drivers.Car.LicensePlate ?? "N/A"
+            }).ToList();
+
             _logger.LogInformation("GetAvailbleDrivers: Found {Count} available drivers for booking {BookingId}.", freeDrivers.Count, bookingId);
 
-            return ServiceResponse<List<Drivers>>.SuccessResponse(
+            return ServiceResponse<List<AvailableDriverResponsDto>>.SuccessResponse(
                 HttpStatusCode.OK,
-                freeDrivers,
+                availbleDriversDto,
                 "Listing all available drivers for this booking.");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "GetAvailbleDrivers: Unexpected error while retrieving available drivers for booking {BookingId}.", bookingId);
-            return ServiceResponse<List<Drivers>>.FailResponse(
+            return ServiceResponse<List<AvailableDriverResponsDto>>.FailResponse(
                 HttpStatusCode.InternalServerError,
                 "An unexpected error occurred while retrieving available drivers.");
         }
@@ -288,11 +323,29 @@ public class AdminService : IAdminService
         }
     }
 
-    public async Task<ServiceResponse<BookingResponseDto>> ChangeBookingById(int bookingId)
+    public async Task<ServiceResponse<BookingResponseDto>> ChangeBookingById(UpdateBookingDto updateBookingDto)
     {
         try
         {
-            throw new NotImplementedException();
+            var booking = await _bookingRepo.GetBookingByIdAsync(updateBookingDto.BookingId);
+
+            if (booking is null)
+            {
+                _logger.LogWarning("GetBookingByIdAsync: Booking with ID {BookingId} not found.", updateBookingDto.BookingId);
+                return ServiceResponse<BookingResponseDto>.FailResponse(
+                    HttpStatusCode.NotFound,
+                    "Could not get the booking from database!");
+            }
+
+            if (booking.Status == BookingStatus.Completed || booking.Status == BookingStatus.Cancelled)
+            {
+                return ServiceResponse<BookingResponseDto>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    "Cannot update a booking that is already completed or cancelled.");
+            }
+
+            return await _bookingService.UpdateBookingInternalAsync(booking, updateBookingDto);
+
         }
         catch (Exception ex)
         {
@@ -302,40 +355,108 @@ public class AdminService : IAdminService
         }
     }
 
-    #region Private Helpers
-    private async Task<bool> DriverAvibility(Drivers driver, Bookings newBooking)
+    public async Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId)
     {
-        var driverLastBooking = driver.Bookings
-            .Where(b => b.PickUpDateTime < newBooking.PickUpDateTime && b.Status is BookingStatus.Confirmed)
-            .OrderByDescending(b => b.PickUpDateTime)
-            .FirstOrDefault();
+        try
+        {
+            var booking = await _bookingRepo.GetBookingByIdAsync(bookingId);
 
-        if (driverLastBooking == null)
-            return true;
+            if (booking is null)
+            {
+                _logger.LogWarning("GetBookingByIdAsync: Booking with ID {BookingId} not found.", bookingId);
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.NotFound,
+                    "Could not get the booking from database!");
+            }
 
+            if (booking.Status == BookingStatus.Completed || booking.Status == BookingStatus.Cancelled)
+                return ServiceResponse<bool>.FailResponse(HttpStatusCode.BadRequest, "Booking is already cancelled or completed.");
+
+            booking.Status = BookingStatus.Cancelled;
+            booking.IsAvailable = false;
+            await _bookingRepo.UpdateBookingAsync(booking);
+
+            return ServiceResponse<bool>.SuccessResponse(
+                HttpStatusCode.OK, 
+                true, 
+                "Booking cancelled successfully.");
+        }
+        catch (Exception)
+        {
+            return ServiceResponse<bool>.FailResponse(
+                HttpStatusCode.InternalServerError,
+                "An unexpected error occurred while cancelling the booking.");
+        }
+    }
+
+    #region Private Helpers
+    private async Task<bool> DriverAvailabilityAsync(Drivers driver, Bookings newBooking)
+    {
+
+        var confirmedBookings = driver.Bookings
+            .Where(b => b.Status == BookingStatus.Confirmed)
+            .OrderBy(b => b.PickUpDateTime)
+            .ToList();
+
+        var bookingBefore = confirmedBookings
+            .LastOrDefault(b => b.PickUpDateTime < newBooking.PickUpDateTime);
+
+        var bookingAfter = confirmedBookings
+            .FirstOrDefault(b => b.PickUpDateTime > newBooking.PickUpDateTime);
+
+        if (bookingBefore != null)
+        {
+            bool canTravelFromLast = await CanDriverTravelBetweenBookings(bookingBefore, newBooking);
+            if (!canTravelFromLast)
+            {
+                return false;
+            }
+        }
+
+        if (bookingAfter != null)
+        {
+            bool canTravelToNext = await CanDriverTravelBetweenBookings(newBooking, bookingAfter);
+            if (!canTravelToNext)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private async Task<bool> CanDriverTravelBetweenBookings(Bookings firstBooking, Bookings secondBooking)
+    {
         var coordinates = new List<CoordinateDto>
         {
             new CoordinateDto
             {
-                Latitude = (decimal)driverLastBooking.DropOffLatitude,
-                Longitude = (decimal)driverLastBooking.DropOffLongitude
+                Latitude = (decimal)firstBooking.DropOffLatitude,
+                Longitude = (decimal)firstBooking.DropOffLongitude
             },
             new CoordinateDto
             {
-                Latitude = (decimal)newBooking.PickUpLatitude,
-                Longitude = (decimal)newBooking.PickUpLongitude
+                Latitude = (decimal)secondBooking.PickUpLatitude,
+                Longitude = (decimal)secondBooking.PickUpLongitude
             }
         };
 
         var routeResult = await _mapService.GetRouteInfoAsync(coordinates);
         if (routeResult.Data is null)
+        {
+            _logger.LogWarning("CanDriverTravelBetweenBookings: MapService API call failed.");
             return false;
+        }
 
-        var travelTime = routeResult.Data.DurationMinutes;
-        var lastBookingEnd = driverLastBooking.PickUpDateTime.AddMinutes((double)driverLastBooking.DurationMinutes);
-        var minutesBeforePickup = _bookingRules.MinMinutesBeforePickup;
+        var travelTimeNeeded = (double)routeResult.Data.DurationMinutes;
+        var firstBookingEndTime = firstBooking.PickUpDateTime.AddMinutes((double)firstBooking.DurationMinutes);
+        var secondBookingStartTime = secondBooking.PickUpDateTime;
 
-        return lastBookingEnd.AddMinutes((double)travelTime) <= newBooking.PickUpDateTime.AddMinutes(-minutesBeforePickup);
+        var availableTime = (secondBookingStartTime - firstBookingEndTime).TotalMinutes;
+
+        var minutesBeforePickupBuffer = _bookingRules.MinMinutesBeforePickup;
+
+        return availableTime >= (travelTimeNeeded + minutesBeforePickupBuffer);
     }
 
     private PaginatedResult<BookingResponseDto> MapPagedResult(PaginatedResult<Bookings> paged)

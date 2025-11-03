@@ -79,6 +79,7 @@ namespace PegasusBackend.Repositorys.Implementations
                 var drivers = await context.Drivers
                     .Include(d => d.User)
                     .Include(d => d.Bookings)
+                    .Include(d => d.Car)
                     .Where(d => !d.IsDeleted && !d.User.IsDeleted)
                     .ToListAsync();
 

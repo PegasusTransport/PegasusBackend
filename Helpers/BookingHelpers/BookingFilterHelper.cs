@@ -1,9 +1,10 @@
-﻿using PegasusBackend.Helpers.BookingHelpers;
+﻿using PegasusBackend.DTOs.BookingDTOs;
+using PegasusBackend.Helpers.BookingHelpers;
 using PegasusBackend.Models;
 
 public static class BookingFilterHelper
 {
-    public static IQueryable<Bookings> ApplyFilters(this IQueryable<Bookings> query, BookingFilterDto filters)
+    public static IQueryable<Bookings> ApplyFilters(this IQueryable<Bookings> query, BookingFilterRequestDto filters)
     {
         if (filters == null)
             return query;
@@ -16,7 +17,7 @@ public static class BookingFilterHelper
         return query;
     }
 
-    private static IQueryable<Bookings> ApplyStatusFilters(IQueryable<Bookings> query, BookingFilterDto filters)
+    private static IQueryable<Bookings> ApplyStatusFilters(IQueryable<Bookings> query, BookingFilterRequestDto filters)
     {
         if (!string.IsNullOrWhiteSpace(filters.Status))
             query = query.Where(b => b.Status.ToString().ToLower() == filters.Status.ToLower());
@@ -30,7 +31,7 @@ public static class BookingFilterHelper
         return query;
     }
 
-    private static IQueryable<Bookings> ApplyTimeFilters(IQueryable<Bookings> query, BookingFilterDto filters)
+    private static IQueryable<Bookings> ApplyTimeFilters(IQueryable<Bookings> query, BookingFilterRequestDto filters)
     {
         var now = DateTime.UtcNow;
 
@@ -76,7 +77,7 @@ public static class BookingFilterHelper
         return query;
     }
 
-    private static IQueryable<Bookings> ApplyTextFilters(IQueryable<Bookings> query, BookingFilterDto filters)
+    private static IQueryable<Bookings> ApplyTextFilters(IQueryable<Bookings> query, BookingFilterRequestDto filters)
     {
         if (!string.IsNullOrWhiteSpace(filters.PickupAddress))
             query = query.Where(b => b.PickUpAdress.ToLower().Contains(filters.PickupAddress.ToLower()));
@@ -90,7 +91,7 @@ public static class BookingFilterHelper
         return query;
     }
 
-    private static IQueryable<Bookings> ApplyRelationFilters(IQueryable<Bookings> query, BookingFilterDto filters)
+    private static IQueryable<Bookings> ApplyRelationFilters(IQueryable<Bookings> query, BookingFilterRequestDto filters)
     {
         if (!string.IsNullOrWhiteSpace(filters.CustomerName))
             query = query.Where(b =>

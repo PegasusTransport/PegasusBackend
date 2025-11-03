@@ -1,4 +1,5 @@
 ﻿using PegasusBackend.DTOs.BookingDTOs;
+using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Helpers;
 using PegasusBackend.Models;
@@ -12,19 +13,18 @@ namespace PegasusBackend.Services.Interfaces
         Task<ServiceResponse<TaxiSettings>> GetTaxiPricesAsync();
         Task<ServiceResponse<TaxiSettings>> CreatePricesAsync(NewTaxiSettingsDTO taxiSettingsDTO);
 
-        Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetAllBookingsAsync(
-            BookingFilterDto? filters, BookingSearchRequestDto searchRequestDto);
+        Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetAllBookingsAsync(BookingSearchRequestDto searchRequestDto);
 
         Task<ServiceResponse<BookingResponseDto>> GetBookingByIdAsync(int bookingId);
 
         Task<ServiceResponse<bool>> AssignDriverAsync(int bookingId, Guid driverId);
 
-        Task<ServiceResponse<List<Drivers>>> GetAvailbleDrivers(int bookingId);
+        Task<ServiceResponse<List<AvailableDriverResponsDto>>> GetAvailbleDrivers(int bookingId);
 
         Task<ServiceResponse<bool>> DeleteBookingByIdAsync(int bookingId);
 
-        Task<ServiceResponse<BookingResponseDto>> ChangeBookingById(int bookingId);
+        Task<ServiceResponse<BookingResponseDto>> ChangeBookingById(UpdateBookingDto updateBookingDto);
 
-
+        Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId);
     }
 }

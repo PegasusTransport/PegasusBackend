@@ -37,6 +37,7 @@ namespace PegasusBackend
 
 
             var app = builder.Build();
+
             // Seed roles
             using (var scope = app.Services.CreateScope())
             {

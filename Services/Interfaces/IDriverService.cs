@@ -9,7 +9,7 @@ namespace PegasusBackend.Services.Interfaces
 {
     public interface IDriverService
     {
-        Task<ServiceResponse<List<AllDriversDto>>> GetAllDriversAsync();
+        Task<ServiceResponse<List<AllDriversRequestDto>>> GetAllDriversAsync();
         Task<ServiceResponse<DriverResponseDto>> GetDriverByIdAsync(Guid driverId);
         Task<ServiceResponse<DriverResponseDto>> GetDriverByUserIdAsync(string userId);
         Task<ServiceResponse<CreatedResponseDriverDto>> CreateDriverAsync(CreateRequestDriverDto driver ,HttpContext httpContext);
@@ -23,7 +23,7 @@ namespace PegasusBackend.Services.Interfaces
 
         Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId, string driverId);
 
-        Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync(BookingFilterDto? filters);
+        Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync(BookingFilterRequestDto? filters);
 
         Task<ServiceResponse<BookingResponseDto>> CompleteBookingAsync(int bookingId, string driverId);
 

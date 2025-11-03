@@ -47,7 +47,7 @@ namespace PegasusBackend.Controllers
         [HttpPut("updateBooking")]
         [Authorize]
         public async Task<ActionResult<BookingResponseDto>> updateBooking([FromBody] UpdateBookingDto updateBookingDto) =>
-            Generate.ActionResult(await _bookingService.UpdateBookingAsync(updateBookingDto));
+            Generate.ActionResult(await _bookingService.UpdateBookingForUserAsync(updateBookingDto));
 
         [HttpDelete("deleteBooking/{bookingId}")]
         [Authorize]

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using PegasusBackend.DTOs.EmailDTO;
+using PegasusBackend.Helpers.BookingHelpers;
 using PegasusBackend.Repositorys.Implementations;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Services.Implementations;
@@ -31,9 +32,13 @@ namespace PegasusBackend.Configurations
             //PaginationService
             services.Configure<PaginationSettings>(configuration.GetSection("Pagination"));
 
-            //bookingRulesService
+            //bookingRule and helpers
             services.Configure<BookingRulesSettings>(configuration.GetSection("BookingRules"));
+            services.AddSingleton(resolver =>
+                resolver.GetRequiredService<IOptions<BookingRulesSettings>>().Value);
 
+            services.AddScoped<RecalculateIfAddressChangedHelper>();
+            services.AddScoped<ValidateUpdateRuleHelper>();
 
             // Register all FluentValidators
             services.AddValidatorsFromAssemblyContaining<AccountWelcomeRequestValidator>();

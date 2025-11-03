@@ -29,11 +29,13 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         private readonly IBookingMapperService _bookingMapper;
         private readonly ILogger<BookingService> _logger;
         private readonly MailJetSettings _settings;
-        private readonly IWebHostEnvironment _env;
         private readonly BookingRulesSettings _bookingRules;
+        private readonly IWebHostEnvironment _env;
         private readonly IUserService _userService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly PaginationSettings _paginationSettings;
+        private readonly RecalculateIfAddressChangedHelper _recalculateHelper;
+        private readonly ValidateUpdateRuleHelper _validateUpdateRuleHelper;
 
         public BookingService(
             IBookingRepo bookingRepo,
@@ -48,7 +50,9 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             IWebHostEnvironment env,
             IUserService userService,
             IHttpContextAccessor httpContextAccessor,
-            IOptions<PaginationSettings> paginationSettings)
+            IOptions<PaginationSettings> paginationSettings,
+            RecalculateIfAddressChangedHelper recalculateHelper,
+            ValidateUpdateRuleHelper validateUpdateRuleHelper)
         {
             _bookingRepo = bookingRepo;
             _userManager = userManager;
@@ -63,12 +67,13 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             _userService = userService;
             _httpContextAccessor = httpContextAccessor;
             _paginationSettings = paginationSettings.Value;
+            _recalculateHelper = recalculateHelper;
+            _validateUpdateRuleHelper = validateUpdateRuleHelper;
         }
         #endregion
 
         /* TO DO
             – Send cancellation emails to driver, admin and customer
-            – Restrict address change within 24h of pickup
         */
 
         public async Task<ServiceResponse<BookingResponseDto>> CreateBookingAsync(CreateBookingDto bookingDto)
@@ -164,7 +169,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             }
         }
 
-        public async Task<ServiceResponse<BookingResponseDto>> UpdateBookingAsync(UpdateBookingDto updateDto)
+        public async Task<ServiceResponse<BookingResponseDto>> UpdateBookingForUserAsync(UpdateBookingDto updateDto)
         {
             try
             {
@@ -193,23 +198,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                         "Cannot update a booking that is already completed or cancelled.");
                 }
 
-                var ruleValidation = await ValidateUpdateRulesAsync(booking, updateDto);
-                if (ruleValidation != null)
-                    return ruleValidation;
-
-                var recalculateResponse = await RecalculateIfAddressChangedAsync(booking, updateDto);
-                if (recalculateResponse != null)
-                    return recalculateResponse;
-
-                UpdateBookingFields(booking, updateDto);
-
-                if (!await _bookingRepo.UpdateBookingAsync(booking))
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.InternalServerError,
-                        "Failed to update booking in the database.");
-
-                var result = _bookingMapper.MapToResponseDTO(booking);
-                return ServiceResponse<BookingResponseDto>.SuccessResponse(HttpStatusCode.OK, result, "Booking updated successfully.");
+                return await UpdateBookingInternalAsync(booking, updateDto);
             }
             catch (Exception ex)
             {
@@ -218,6 +207,29 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                     HttpStatusCode.InternalServerError,
                     "Something went wrong while updating the booking.");
             }
+        }
+
+        // This method can be used in driverServcie and AdminService. It only contains the logic for updating a booking without any user!! 
+        public async Task<ServiceResponse<BookingResponseDto>> UpdateBookingInternalAsync(Bookings booking, UpdateBookingDto updateDto)
+        {
+            var ruleValidation = await _validateUpdateRuleHelper.ValidateUpdateRulesAsync(booking, updateDto);
+            if (ruleValidation != null)
+                return ruleValidation;
+
+            var recalcResponse = await _recalculateHelper.RecalculateIfAddressChangedAsync(booking, updateDto);
+            if (recalcResponse != null)
+                return recalcResponse;
+
+            UpdateBookingFields(booking, updateDto);
+
+            if (!await _bookingRepo.UpdateBookingAsync(booking))
+                return ServiceResponse<BookingResponseDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Failed to update booking in the database."
+                );
+
+            var result = _bookingMapper.MapToResponseDTO(booking);
+            return ServiceResponse<BookingResponseDto>.SuccessResponse(HttpStatusCode.OK, result, "Booking updated successfully.");
         }
 
         public async Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetMyBookingsAsync(BookingSearchRequestDto query)
@@ -281,6 +293,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 return HandleError<bool>(ex, "cancelling booking");
             }
         }
+
 
         #region Private Helpers
         private async Task<UserResponseDto?> GetAuthenticatedUserAsync()
@@ -350,68 +363,6 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 PageSize = paged.PageSize,
                 CurrentCount = paged.CurrentCount
             };
-        }
-
-        private async Task<ServiceResponse<BookingResponseDto>?> ValidateUpdateRulesAsync(Bookings booking, UpdateBookingDto dto)
-        {
-            // How about if they change adresses? maybe the driver dosent have time for their next customer?
-            if (booking.PickUpDateTime != dto.PickUpDateTime)
-            {
-                var result = await _validationService.ValidatePickupTimeAsync(dto.PickUpDateTime, _bookingRules.MinHoursBeforePickupForChange);
-                if (result.StatusCode != HttpStatusCode.OK)
-                    return ServiceResponse<BookingResponseDto>.FailResponse(HttpStatusCode.Forbidden, "It's too late to change your pickup time.");
-            }
-
-            return null;
-        }
-
-        private async Task<ServiceResponse<BookingResponseDto>?> RecalculateIfAddressChangedAsync(Bookings booking, UpdateBookingDto dto)
-        {
-            bool addressChanged =
-                booking.PickUpAdress != dto.PickUpAddress ||
-                booking.FirstStopAddress != dto.FirstStopAddress ||
-                booking.SecondStopAddress != dto.SecondStopAddress ||
-                booking.DropOffAdress != dto.DropOffAddress;
-
-            if (!addressChanged)
-                return null;
-
-            var tempDto = new CreateBookingDto
-            {
-                PickUpDateTime = dto.PickUpDateTime,
-                PickUpAddress = dto.PickUpAddress,
-                PickUpLatitude = dto.PickUpLatitude,
-                PickUpLongitude = dto.PickUpLongitude,
-                FirstStopAddress = dto.FirstStopAddress,
-                FirstStopLatitude = dto.FirstStopLatitude,
-                FirstStopLongitude = dto.FirstStopLongitude,
-                SecondStopAddress = dto.SecondStopAddress,
-                SecondStopLatitude = dto.SecondStopLatitude,
-                SecondStopLongitude = dto.SecondStopLongitude,
-                DropOffAddress = dto.DropOffAddress,
-                DropOffLatitude = dto.DropOffLatitude,
-                DropOffLongitude = dto.DropOffLongitude
-            };
-
-            var arlandaValidation = _validationService.ValidateArlandaRequirements(tempDto);
-            if (arlandaValidation.StatusCode != HttpStatusCode.OK)
-            {
-                return ServiceResponse<BookingResponseDto>.FailResponse(arlandaValidation.StatusCode, arlandaValidation.Message);
-            }
-
-            var route = await _validationService.VerifyRouteAsync(tempDto);
-            if (!route.IsValid)
-                return ServiceResponse<BookingResponseDto>.FailResponse(HttpStatusCode.BadRequest, "Could not verify the new route. Please check addresses.");
-
-            var price = await _validationService.CalculateAndVerifyPriceAsync(tempDto, route.RouteInfo!);
-            if (!price.IsValid)
-                return ServiceResponse<BookingResponseDto>.FailResponse(HttpStatusCode.BadRequest, "Could not calculate a price for the new route.");
-
-            booking.DistanceKm = route.RouteInfo.DistanceKm;
-            booking.DurationMinutes = route.RouteInfo.DurationMinutes;
-            booking.Price = price.Price;
-
-            return null;
         }
 
         private void UpdateBookingFields(Bookings booking, UpdateBookingDto dto)

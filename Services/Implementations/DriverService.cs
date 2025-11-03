@@ -65,13 +65,13 @@ namespace PegasusBackend.Services.Implementations
                 return ServiceResponse<CreatedResponseDriverDto>.FailResponse(HttpStatusCode.InternalServerError, "Failed");
             }
         }
-        public async Task<ServiceResponse<List<AllDriversDto>>> GetAllDriversAsync()
+        public async Task<ServiceResponse<List<AllDriversRequestDto>>> GetAllDriversAsync()
         {
             try
             {
                 var drivers = await driverRepo.GetAllDriversAsync();
 
-                var driverDtos = drivers.Select(d => new AllDriversDto
+                var driverDtos = drivers.Select(d => new AllDriversRequestDto
                 {
                     Id = d.DriverId,
                     FirstName = d.User.FirstName,
@@ -83,7 +83,7 @@ namespace PegasusBackend.Services.Implementations
                     ? $"Found {driverDtos.Count} driver(s)"
                     : "No drivers found";
 
-                return ServiceResponse<List<AllDriversDto>>.SuccessResponse(
+                return ServiceResponse<List<AllDriversRequestDto>>.SuccessResponse(
                     HttpStatusCode.OK,
                     driverDtos,
                     message
@@ -92,7 +92,7 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
                 logger.LogError(ex, "Service error in GetAllDriversAsync");
-                return ServiceResponse<List<AllDriversDto>>.FailResponse(
+                return ServiceResponse<List<AllDriversRequestDto>>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Failed to retrieve drivers"
                 );
@@ -299,7 +299,7 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        public async Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync(BookingFilterDto? filters)
+        public async Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync(BookingFilterRequestDto? filters)
         {
             try
             {

@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PegasusBackend.DTOs.BookingDTOs;
+using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Extentions;
 using PegasusBackend.Helpers;
@@ -21,13 +24,49 @@ namespace PegasusBackend.Controllers
         }
 
         [HttpGet("GetAllTaxiPrices")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<TaxiSettings>> GetTaxiPrices() =>
             Generate.ActionResult(await _adminService.GetTaxiPricesAsync());
 
 
         [HttpPost("CreateNewTaxiPrices")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<TaxiSettings>> CreatNewTaxiPrices(NewTaxiSettingsDTO taxiSettingsDTO) =>
             Generate.ActionResult(await _adminService.CreatePricesAsync(taxiSettingsDTO));
- 
+
+        [HttpGet("getAllBookings")]
+        [Authorize(Roles = "Admin")]
+        public async Task <ActionResult<PaginatedResult<BookingResponseDto>>> GetAllBookings([FromQuery] BookingSearchRequestDto searchRequestDto) =>
+            Generate.ActionResult(await _adminService.GetAllBookingsAsync(searchRequestDto));
+
+        [HttpGet("GetBookingById/{bookingId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<BookingResponseDto>> GetBookingById([FromRoute] int bookingId) =>
+            Generate.ActionResult(await _adminService.GetBookingByIdAsync(bookingId));
+
+        [HttpPut("AssignDriver/{bookingId}/{driverId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<bool>> AssignDriver([FromRoute] int bookingId, Guid driverId) =>
+            Generate.ActionResult(await _adminService.AssignDriverAsync(bookingId, driverId));
+
+        [HttpGet("GetAvailableDrivers/{bookingId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<List<AvailableDriverResponsDto>>> GetAvailableDrivers([FromRoute] int bookingId) =>
+            Generate.ActionResult(await _adminService.GetAvailbleDrivers(bookingId));
+
+        [HttpDelete("deleteBooking/{bookingId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<bool>> DeleteBooking([FromRoute] int bookingId) =>
+            Generate.ActionResult(await _adminService.DeleteBookingByIdAsync(bookingId));
+
+        [HttpPut("CancelBooking/{bookingId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<bool>> CancelBooking([FromRoute] int bookingId) =>
+            Generate.ActionResult(await _adminService.CancelBookingAsync(bookingId));
+
+        [HttpPut("UpdateBooking")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<BookingResponseDto>> UpdateBookingById([FromBody] UpdateBookingDto updateBookingDto) =>
+            Generate.ActionResult(await _adminService.ChangeBookingById(updateBookingDto));
     }
 }

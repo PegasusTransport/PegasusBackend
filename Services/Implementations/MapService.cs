@@ -336,7 +336,7 @@ namespace PegasusBackend.Services.Implementations
 
                 var suggestions = googleResponse?.Suggestions?
                     .Where(s => !string.IsNullOrEmpty(s.PlacePrediction?.Text.Text)) 
-                    .Select(s => new AutocompleteSuggestionDto
+                    .Select(s => new AutoCompleteSuggestionDto
                     {
                         Description = s.PlacePrediction.Text.Text,
                         PlaceId = s.PlacePrediction.PlaceId

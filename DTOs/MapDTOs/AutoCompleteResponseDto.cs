@@ -2,6 +2,6 @@
 {
     public class AutoCompleteResponseDto
     {
-        public List<AutocompleteSuggestionDto> Suggestions { get; set; } = [];
+        public List<AutoCompleteSuggestionDto> Suggestions { get; set; } = [];
     } 
 }

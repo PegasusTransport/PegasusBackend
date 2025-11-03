@@ -7,6 +7,7 @@ using PegasusBackend.Data;
 using PegasusBackend.Filters;
 using PegasusBackend.Models;
 using PegasusBackend.Services.BackgroundServices;
+using PegasusBackend.Helpers;
 
 
 namespace PegasusBackend.Configurations
@@ -21,6 +22,13 @@ namespace PegasusBackend.Configurations
             services.AddIdentity<User, IdentityRole>() // Use User and IdentityRole
               .AddEntityFrameworkStores<AppDBContext>()
               .AddDefaultTokenProviders();
+
+            var passwordResetTokenLifetimeHours = config
+             .GetSection("PasswordResetSettings")
+             .GetValue<int>("TokenLifetimeHours");
+
+            services.Configure<PasswordResetTokenProviderOptions>(options =>
+              options.TokenLifespan = TimeSpan.FromHours(passwordResetTokenLifetimeHours));
 
             services.Configure<DataProtectionTokenProviderOptions>(options =>
               options.TokenLifespan = TimeSpan.FromHours(24));

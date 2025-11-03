@@ -32,7 +32,7 @@ namespace PegasusBackend.Controllers
         public async Task<ActionResult<AutoCompleteResponseDto>> GetSuggestions(AutocompleteRequestDto request) =>
             Generate.ActionResult(await _mapService.AutoCompleteAddreses(request));
         [HttpGet("GetLongNLat")]
-        public async Task<ActionResult<CoordinateDto>> GetCoordniates(string placeId) =>
-            Generate.ActionResult(await _mapService.GetCoordinatesByPlaceIdAsync(placeId));
+        public async Task<ActionResult<CoordinateDto>> GetCoordniates(PlaceIdRequestDto request) =>
+            Generate.ActionResult(await _mapService.GetCoordinatesByPlaceIdAsync(request));
     }
 }

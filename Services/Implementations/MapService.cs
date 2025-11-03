@@ -361,9 +361,9 @@ namespace PegasusBackend.Services.Implementations
             }
 
         }
-        public async Task<ServiceResponse<CoordinateDto>> GetCoordinatesByPlaceIdAsync(string placeIdRequest)
+        public async Task<ServiceResponse<CoordinateDto>> GetCoordinatesByPlaceIdAsync(PlaceIdRequestDto request)
         {
-            if (string.IsNullOrWhiteSpace(placeIdRequest))
+            if (string.IsNullOrWhiteSpace(request.PlaceId))
             {
                 return ServiceResponse<CoordinateDto>.FailResponse(
                    HttpStatusCode.NotFound,
@@ -372,12 +372,17 @@ namespace PegasusBackend.Services.Implementations
             }
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Get, $"https://places.googleapis.com/v1/places/{placeIdRequest}");
+                var url = $"https://places.googleapis.com/v1/places/{request.PlaceId}";
+                if (!string.IsNullOrEmpty(request.SessionToken))
+                {
+                    url += $"?sessiontoken={request.SessionToken}";
+                }
 
-                request.Headers.Add("X-Goog-FieldMask", "location");
-                request.Headers.Add("X-Goog-Api-Key", _key);
+                var httpRequest = new HttpRequestMessage(HttpMethod.Get, url);
+                httpRequest.Headers.Add("X-Goog-FieldMask", "location");
+                httpRequest.Headers.Add("X-Goog-Api-Key", _key);
 
-                var response = await _httpClient.SendAsync(request);
+                var response = await _httpClient.SendAsync(httpRequest);
 
 
                 if(!response.IsSuccessStatusCode)

@@ -43,6 +43,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IPriceService, PriceService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IPasswordResetService, PasswordResetService>();
             services.AddScoped<IDriverService, DriverService>();
             services.AddScoped<IMapService, MapService>();
             services.AddScoped<IMailjetEmailService, MailjetEmailService>();

@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.Data;
 using PegasusBackend.DTOs.AuthDTOs;
 using PegasusBackend.Helpers;
+using PegasusBackend.Services.Implementations;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
 using System.Threading.Tasks.Dataflow;
@@ -17,7 +18,7 @@ namespace PegasusBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController(IAuthService authService) : ControllerBase
+    public class AuthController(IAuthService authService, IPasswordResetService passwordResetService) : ControllerBase
     {
         [HttpPost("Login")]
         [EnableRateLimiting("AuthPolicy")]
@@ -42,5 +43,15 @@ namespace PegasusBackend.Controllers
         [HttpGet("VerifyAuth")]
         [Authorize]
         public ActionResult VerifyAuth() => Ok("Authenticated");
+
+        [HttpPost("ForgotPassword")]
+        [EnableRateLimiting("AuthPolicy")]
+        public async Task<ActionResult<string>> ForgotPassword(RequestPasswordResetDto request) =>
+     Generate.ActionResult(await passwordResetService.ForgotPasswordAsync(request));
+
+        [HttpPost("ResetPassword")]
+        [EnableRateLimiting("AuthPolicy")]
+        public async Task<ActionResult<bool>> ResetPassword(ConfirmPasswordResetDto request) =>
+            Generate.ActionResult(await passwordResetService.ResetPasswordAsync(request));
     }
 }

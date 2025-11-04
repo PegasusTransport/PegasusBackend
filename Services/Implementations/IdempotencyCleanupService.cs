@@ -2,7 +2,7 @@
 using PegasusBackend.Configurations;
 using PegasusBackend.Services.Interfaces;
 
-namespace PegasusBackend.Services.BackgroundServices
+namespace PegasusBackend.Services.Implementations
 {
     public class IdempotencyCleanupService : BackgroundService
     {

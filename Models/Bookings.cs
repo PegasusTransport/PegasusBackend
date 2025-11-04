@@ -114,4 +114,11 @@ namespace PegasusBackend.Models
         Completed
     }
 
+    public enum BookingStatusForCustomers
+    {
+        Confirmed,
+        Cancelled,
+        Completed
+    }
+
 }

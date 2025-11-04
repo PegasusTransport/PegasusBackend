@@ -43,5 +43,7 @@ namespace PegasusBackend.DTOs.BookingDTOs
         public BookingStatus Status { get; set; }
         public bool IsConfirmed { get; set; }
         public Guid? DriverId { get; set; }
+        public string? DriverName { get; set; }
+
     }
 }

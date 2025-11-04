@@ -7,7 +7,6 @@ using PegasusBackend.Data;
 using PegasusBackend.Filters;
 using PegasusBackend.Models;
 using PegasusBackend.Services.BackgroundServices;
-using PegasusBackend.Helpers;
 
 
 namespace PegasusBackend.Configurations

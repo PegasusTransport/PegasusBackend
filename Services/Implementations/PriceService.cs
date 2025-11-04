@@ -140,8 +140,8 @@ namespace PegasusBackend.Services.Implementations
                 total += secondPart.Data;
 
                 var thirdPart = await StopPriceCalculator(
+                    Dto.FirstStopAdress,
                     Dto.SecondStopAdress,
-                    Dto.DropoffAdress,
                     Dto.LastDurationMinutes,
                     Dto.LastDistanceKm,
                     zonePrice

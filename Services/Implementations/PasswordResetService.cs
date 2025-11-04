@@ -220,11 +220,24 @@ namespace PegasusBackend.Services.Implementations
                 }
 
                 var isValidToken = await _userManager.VerifyUserTokenAsync(
-                    user,
-                    "PasswordResetTokenProvider",
-                    "ResetPassword",
-                    decodedToken
-                );
+                   user,
+                   "PasswordResetTokenProvider",
+                   "ResetPassword",
+                   decodedToken
+               );
+
+                if (!isValidToken)
+                {
+                    _logger.LogWarning(
+                        "Invalid or expired password reset token for user {Email}",
+                        request.Email
+                    );
+
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.Gone,
+                        "Password reset token has expired or is invalid"
+                    );
+                }
 
                 var removePasswordResult = await _userManager.RemovePasswordAsync(user);
                 if (!removePasswordResult.Succeeded)
@@ -258,8 +271,12 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                await _userService.InvalidateRefreshTokenAsync(user);
+                // Invalidate all existing tokens by updating security stamp
+                // This prevents token reuse - all previous reset tokens are now invalid
                 await _userManager.UpdateSecurityStampAsync(user);
+
+                // Invalidate all refresh tokens to force re-login
+                await _userService.InvalidateRefreshTokenAsync(user);
 
                 _logger.LogInformation("Password successfully reset for user {Email}", user.Email);
 

@@ -21,10 +21,10 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             }
             else
             {
-                email = booking.User!.Email!;
-                firstName = booking.User.FirstName;
-                lastName = booking.User.LastName;
-                phoneNumber = booking.User.PhoneNumber!;
+                email = booking.User?.Email ?? "unknown@unknown.com";
+                firstName = booking.User?.FirstName ?? "";
+                lastName = booking.User?.LastName ?? "";
+                phoneNumber = booking.User?.PhoneNumber ?? "";
             }
 
             return new BookingResponseDto
@@ -56,7 +56,9 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 Comment = booking.Comment,
                 Status = booking.Status,
                 IsConfirmed = booking.IsConfirmed,
-                DriverId = booking.DriverIdFK
+                DriverId = booking.DriverIdFK,
+                DriverName = booking.Driver != null
+                ? $"{booking.Driver.User.FirstName} {booking.Driver.User.LastName}" : null
             };
         }
 

@@ -1,9 +1,9 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using PegasusBackend.Validators;
 using Microsoft.OpenApi.Models;
 using PegasusBackend.Configurations;
 using Scalar.AspNetCore;
+using PegasusBackend.Validators.BookingValidators;
 
 
 namespace PegasusBackend
@@ -37,6 +37,7 @@ namespace PegasusBackend
 
 
             var app = builder.Build();
+
             // Seed roles
             using (var scope = app.Services.CreateScope())
             {

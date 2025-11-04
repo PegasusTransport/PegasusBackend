@@ -8,9 +8,9 @@ namespace PegasusBackend.Services.Interfaces.BookingInterfaces
     public interface IBookingValidationService
     {
         Task<ValidationResult> ValidateBookingAsync(CreateBookingDto bookingDto);
-        ServiceResponse<BookingResponseDto>? ValidatePickupTime(DateTime pickUpDateTime);
+        Task<ServiceResponse<BookingResponseDto>> ValidatePickupTimeAsync(DateTime pickUpDateTime, int hours);
         Task<RouteValidationResult> VerifyRouteAsync(CreateBookingDto bookingDto);
-        ServiceResponse<BookingResponseDto>? ValidateArlandaRequirements(CreateBookingDto bookingDto);
+        ServiceResponse<BookingResponseDto> ValidateArlandaRequirements(CreateBookingDto bookingDto);
         Task<PriceValidationResult> CalculateAndVerifyPriceAsync(CreateBookingDto bookingDto, RouteInfoDto routeInfo);
     }
 }

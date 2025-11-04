@@ -5,8 +5,9 @@ namespace PegasusBackend.Repositorys.Interfaces
 {
     public interface IDriverRepo
     {
-        Task<List<AllDriversDto>> GetAllDrivers();
+        Task<List<Drivers>> GetAllDriversAsync();
         Task<DriverResponseDto?> GetDriverByIdAsync(Guid id);
+        Task<Drivers?> GetDriverEntityByIdAsync(Guid driverId);
         Task<DriverResponseDto?> GetDriverByUserIdAsync(string userId);
         Task<bool> CreateDriver(CreateRequestDriverDto request, string userId);
         Task<bool> UpdateDriver(UpdateRequestDriverDto request, Guid driverId);

@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.DriverDTO;
+using PegasusBackend.DTOs.MailjetDTOs;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
@@ -63,31 +65,38 @@ namespace PegasusBackend.Services.Implementations
                 return ServiceResponse<CreatedResponseDriverDto>.FailResponse(HttpStatusCode.InternalServerError, "Failed");
             }
         }
-        public async Task<ServiceResponse<List<AllDriversDto>>> GetAllDriversAsync()
+        public async Task<ServiceResponse<List<AllDriversRequestDto>>> GetAllDriversAsync()
         {
             try
             {
-                var drivers = await driverRepo.GetAllDrivers();
+                var drivers = await driverRepo.GetAllDriversAsync();
 
-                string message = drivers.Count > 0
-                    ? $"Found {drivers.Count} driver(s)"
+                var driverDtos = drivers.Select(d => new AllDriversRequestDto
+                {
+                    Id = d.DriverId,
+                    FirstName = d.User.FirstName,
+                    LastName = d.User.LastName,
+                    ProfilePicture = d.ProfilePicture,
+                }).ToList();
+
+                string message = driverDtos.Count > 0
+                    ? $"Found {driverDtos.Count} driver(s)"
                     : "No drivers found";
 
-                return ServiceResponse<List<AllDriversDto>>.SuccessResponse(
+                return ServiceResponse<List<AllDriversRequestDto>>.SuccessResponse(
                     HttpStatusCode.OK,
-                    drivers,
+                    driverDtos,
                     message
                 );
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Service error in GetAllDriversAsync");
-                return ServiceResponse<List<AllDriversDto>>.FailResponse(
+                return ServiceResponse<List<AllDriversRequestDto>>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "Failed to retrieve drivers"
                 );
             }
-
         }
         public async Task<ServiceResponse<DriverResponseDto>> GetDriverByUserIdAsync(string userId)
         {
@@ -248,6 +257,87 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
+
+
+
+        public async Task<ServiceResponse<List<BookingResponseDto>>> GetDriverBookingsAsync(string driverId, string? statusFilter)
+        {
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<ServiceResponse<BookingResponseDto>> AcceptBookingAsync(int bookingId, string driverId)
+        {
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId, string driverId)
+        {
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync(BookingFilterRequestDto? filters)
+        {
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<ServiceResponse<BookingResponseDto>> CompleteBookingAsync(int bookingId, string driverId)
+        {
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<ServiceResponse<bool>> SendReceiptAsync(ReceiptRequestDto receiptDto, string driverId)
+        {
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
         private async Task<bool> CanUpdateDriver(HttpContext httpContext, Guid driverId)
         {
             var currentUser = await _userManager.GetUserAsync(httpContext.User);

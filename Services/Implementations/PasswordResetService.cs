@@ -226,6 +226,12 @@ namespace PegasusBackend.Services.Implementations
                    decodedToken
                );
 
+                _logger.LogDebug(
+                     "Token validation result for user {Email}: {IsValid}",
+                     request.Email,
+                     isValidToken
+                );
+
                 if (!isValidToken)
                 {
                     _logger.LogWarning(
@@ -251,7 +257,7 @@ namespace PegasusBackend.Services.Implementations
 
                     return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest,
-                        $"Failed to reset password: {errors}"
+                        "Failed to reset password. Please ensure your new password meets all requirements."
                     );
                 }
 
@@ -267,16 +273,45 @@ namespace PegasusBackend.Services.Implementations
 
                     return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest,
-                        $"Failed to reset password: {errors}"
+                        "Failed to reset password. Please ensure your new password meets all requirements."
                     );
                 }
 
-                // Invalidate all existing tokens by updating security stamp
                 // This prevents token reuse - all previous reset tokens are now invalid
-                await _userManager.UpdateSecurityStampAsync(user);
+                try
+                {
+                    await _userManager.UpdateSecurityStampAsync(user);
+                    _logger.LogInformation(
+                        "Security stamp updated for user {Email}, all tokens invalidated",
+                        user.Email
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to update security stamp for user {Email}. Token reuse may be possible.",
+                        user.Email
+                    );
+                    // Continue anyway - password was changed successfully
+                }
 
                 // Invalidate all refresh tokens to force re-login
-                await _userService.InvalidateRefreshTokenAsync(user);
+                try
+                {
+                    await _userService.InvalidateRefreshTokenAsync(user);
+                    _logger.LogInformation(
+                        "Refresh tokens invalidated for user {Email}",
+                        user.Email
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to invalidate refresh tokens for user {Email}. User may remain logged in.",
+                        user.Email
+                    );
+                    // Continue anyway - password was changed successfully
+                }
 
                 _logger.LogInformation("Password successfully reset for user {Email}", user.Email);
 

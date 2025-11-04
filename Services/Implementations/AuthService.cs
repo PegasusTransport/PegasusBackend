@@ -152,6 +152,53 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
+        // REMOVE IN PRODUCTION
+        public async Task<ServiceResponse<AuthResponseDto?>> DevLoginAsync(LoginRequestDto request, HttpContext httpContext)
+        {
+            try
+            {
+                var user = await userManager.FindByEmailAsync(request.Email);
+                if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
+                {
+                    return ServiceResponse<AuthResponseDto?>.FailResponse(
+                        HttpStatusCode.Unauthorized,
+                        "Invalid credentials"
+                    );
+                }
+                var roleStrings = await userManager.GetRolesAsync(user);
+                var roles = roleStrings
+                    .Select(r => Enum.Parse<UserRoles>(r))  
+                    .ToList();
+                var tokens = new TokenResponseDto
+                {
+                    AccessToken = await GenerateAccessToken(user),
+                    RefreshToken = await CreateAndStoreRefreshToken(user),
+                };
+                HandleAuthenticationCookies.SetAuthenticationCookie(
+                    httpContext,
+                    tokens.AccessToken,
+                    tokens.RefreshToken);
+                var authResposne = new AuthResponseDto
+                {
+                    IsAuthenticated = true,
+                    Roles = roles,
+                    AccessTokenExpiresIn = configuration.GetValue<int>("JwtSetting:Expire")
+                };
+                return ServiceResponse<AuthResponseDto?>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    authResposne,
+                    "Login successful"
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error during dev login for email: {Email}", request.Email);
+                return ServiceResponse<AuthResponseDto?>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "An unexpected error occurred"
+                );
+            }
+        }
 
         public async Task<ServiceResponse<TokenResponseDto?>> RefreshTokensAsync(RefreshTokenRequestDto request)
         {

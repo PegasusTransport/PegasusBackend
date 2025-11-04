@@ -1,4 +1,4 @@
-﻿namespace PegasusBackend.Settings
+﻿namespace PegasusBackend.Configurations
 {
     public class PasswordResetSettings
     {

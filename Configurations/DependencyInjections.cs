@@ -29,6 +29,10 @@ namespace PegasusBackend.Configurations
                 configuration.GetSection("Mailjet")
             );
 
+            services.Configure<PasswordResetSettings>(
+                configuration.GetSection("PasswordResetSettings")
+            );
+
             //PaginationService
             services.Configure<PaginationSettings>(configuration.GetSection("Pagination"));
 

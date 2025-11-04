@@ -5,7 +5,7 @@ using PegasusBackend.Helpers.MailjetHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
-using PegasusBackend.Settings;
+using PegasusBackend.Configurations;
 using System.Net;
 
 namespace PegasusBackend.Services.Implementations
@@ -43,7 +43,6 @@ namespace PegasusBackend.Services.Implementations
                         "Email is required"
                     );
                 }
-
                 var user = await _userManager.FindByEmailAsync(request.Email.Trim());
 
                 if (user == null || !user.EmailConfirmed || user.IsDeleted)
@@ -52,6 +51,9 @@ namespace PegasusBackend.Services.Implementations
                         "Password reset requested for non-existent, unconfirmed, or deleted user: {Email}",
                         request.Email
                     );
+
+                    // Add delay to prevent timing attacks (match normal execution time)
+                    await Task.Delay(TimeSpan.FromMilliseconds(100));
 
                     return ServiceResponse<string>.SuccessResponse(
                         HttpStatusCode.OK,
@@ -194,7 +196,28 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                var decodedToken = Uri.UnescapeDataString(request.Token);
+                string decodedToken;
+                try
+                {
+                    decodedToken = Uri.UnescapeDataString(request.Token);
+
+                    if (string.IsNullOrWhiteSpace(decodedToken))
+                    {
+                        _logger.LogWarning("Empty token after decoding for user {Email}", request.Email);
+                        return ServiceResponse<bool>.FailResponse(
+                            HttpStatusCode.BadRequest,
+                            "Invalid token format"
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to decode token for user {Email}", request.Email);
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Invalid token format"
+                    );
+                }
 
                 var isValidToken = await _userManager.VerifyUserTokenAsync(
                     user,
@@ -202,19 +225,6 @@ namespace PegasusBackend.Services.Implementations
                     "ResetPassword",
                     decodedToken
                 );
-
-                if (!isValidToken)
-                {
-                    _logger.LogWarning(
-                        "Invalid or expired password reset token for user {Email}",
-                        request.Email
-                    );
-
-                    return ServiceResponse<bool>.FailResponse(
-                        HttpStatusCode.Gone,
-                        "Password reset token has expired or is invalid"
-                    );
-                }
 
                 var removePasswordResult = await _userManager.RemovePasswordAsync(user);
                 if (!removePasswordResult.Succeeded)

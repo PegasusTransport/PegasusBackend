@@ -45,7 +45,7 @@ namespace PegasusBackend.Controllers
         public ActionResult VerifyAuth() => Ok("Authenticated");
 
         [HttpPost("ForgotPassword")]
-        [EnableRateLimiting("AuthPolicy")]
+        [EnableRateLimiting("PasswordResetPolicy")]
         public async Task<ActionResult<string>> ForgotPassword([FromBody] RequestPasswordResetDto request) =>
                     Generate.ActionResult(await passwordResetService.ForgotPasswordAsync(request));
 

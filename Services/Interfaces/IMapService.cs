@@ -7,5 +7,7 @@ namespace PegasusBackend.Services.Interfaces
     {
         Task<ServiceResponse<RouteInfoDto>> GetRouteInfoAsync(List<CoordinateDto> coordinates);
         Task<ServiceResponse<LocationInfoDto>> GetLocationDetailsAsync(CoordinateDto coordinateDto);
+        Task<ServiceResponse<AutoCompleteResponseDto>> AutoCompleteAddreses(AutocompleteRequestDto request);
+        Task<ServiceResponse<CoordinateDto>> GetCoordinatesByPlaceIdAsync(PlaceIdRequestDto request);
     }
 }

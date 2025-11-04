@@ -42,5 +42,13 @@ namespace PegasusBackend.Controllers
         [HttpGet("VerifyAuth")]
         [Authorize]
         public ActionResult VerifyAuth() => Ok("Authenticated");
+
+        // REMOVE IN PRODUCTION
+
+        [HttpPost("DevLogin")]
+        [EnableRateLimiting("AuthPolicy")]
+        public async Task<ActionResult<AuthResponseDto?>> DevLogin(LoginRequestDto request) =>
+            Generate.ActionResult<AuthResponseDto?>(await authService.DevLoginAsync(request, HttpContext));
+
     }
 }

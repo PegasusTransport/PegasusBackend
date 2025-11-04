@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+﻿using Mailjet.Client.Resources;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using PegasusBackend.DTOs.MapDTOs;
+using PegasusBackend.DTOs.MapDTOs.GoogleResponses;
 using PegasusBackend.Helpers;
 using PegasusBackend.Models;
 using PegasusBackend.Responses;
@@ -9,15 +11,18 @@ using PegasusBackend.Services.Interfaces;
 using System;
 using System.Globalization;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
+using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
 
 namespace PegasusBackend.Services.Implementations
 {
-    public class MapService(IConfiguration config) : IMapService
+    public class MapService(IConfiguration config, IHttpClientFactory httpClientFactory, ILogger<MapService> logger) : IMapService
     {
-        private readonly HttpClient _httpClient = new();
+        private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
         private readonly string _key = config["GoogleMaps:ApiKey"]!;
 
 
@@ -277,6 +282,163 @@ namespace PegasusBackend.Services.Implementations
                 return ServiceResponse<LocationInfoDto>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     $"Unexpected error: {ex.Message}"
+                );
+            }
+        }
+
+        public async Task<ServiceResponse<AutoCompleteResponseDto>> AutoCompleteAddreses(AutocompleteRequestDto request)
+        {
+            try
+            {
+
+                if (string.IsNullOrWhiteSpace(request.Input) || request.Input.Length < 2)
+                {
+                    return ServiceResponse<AutoCompleteResponseDto>.SuccessResponse(
+                            HttpStatusCode.OK,
+                            new AutoCompleteResponseDto
+                            {
+                                Suggestions = [] // return empty list untill user entered more the 2 letters
+                            }
+                        );
+                }
+
+                var requestBody = new
+                {
+                    input = request.Input,
+                    sessionToken = request.SessionToken,
+                    includedRegionCodes = new[] { "SE" },
+                    languageCode = "sv"
+                };
+
+                var jsonContent = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                var requestMessage = new HttpRequestMessage(HttpMethod.Post, "https://places.googleapis.com/v1/places:autocomplete")
+                {
+                    Content = content
+                };
+
+                requestMessage.Headers.Add("X-Goog-Api-Key", _key);
+
+                var response = await _httpClient.SendAsync(requestMessage);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    logger.LogWarning("Google API returned error status: {StatusCode}", response.StatusCode);
+
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return ServiceResponse<AutoCompleteResponseDto>.FailResponse(
+                        response.StatusCode,
+                        $"Google API error: {errorContent}"
+                    );
+                }
+                var result = await response.Content.ReadAsStringAsync();
+
+                var googleResponse = JsonSerializer.Deserialize<GooglePlacesResponseDto>(result);
+
+                var suggestions = googleResponse?.Suggestions?
+                    .Where(s => !string.IsNullOrEmpty(s.PlacePrediction?.Text.Text)) 
+                    .Select(s => new AutoCompleteSuggestionDto
+                    {
+                        Description = s.PlacePrediction.Text.Text,
+                        PlaceId = s.PlacePrediction.PlaceId
+                    })
+                    .ToList() ?? [];
+
+
+                return ServiceResponse<AutoCompleteResponseDto>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    new AutoCompleteResponseDto
+                    {
+                        Suggestions = suggestions
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in AutoCompleteAddreses");
+
+                return ServiceResponse<AutoCompleteResponseDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    $"Error calling Google API: {ex.Message}"
+                );
+            }
+
+        }
+        public async Task<ServiceResponse<CoordinateDto>> GetCoordinatesByPlaceIdAsync(PlaceIdRequestDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.PlaceId))
+            {
+                return ServiceResponse<CoordinateDto>.FailResponse(
+                   HttpStatusCode.NotFound,
+                   $"NO PLACE ID FOUND"
+               );
+            }
+            try
+            {
+                var url = $"https://places.googleapis.com/v1/places/{request.PlaceId}";
+                if (!string.IsNullOrEmpty(request.SessionToken))
+                {
+                    url += $"?sessionToken={request.SessionToken}";
+                }
+
+                var httpRequest = new HttpRequestMessage(HttpMethod.Get, url);
+                httpRequest.Headers.Add("X-Goog-FieldMask", "location");
+                httpRequest.Headers.Add("X-Goog-Api-Key", _key);
+
+                var response = await _httpClient.SendAsync(httpRequest);
+
+
+                if(!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return ServiceResponse<CoordinateDto>.FailResponse(
+                        response.StatusCode,
+                        $"Google API error: {errorContent}"
+                    );
+                }
+
+                var result = await response.Content.ReadAsStringAsync();
+
+                var googleResponse = JsonSerializer.Deserialize<GooglePlaceLocationDetailsDto>(result);
+
+                if (googleResponse == null)
+                {
+                    logger.LogWarning("Failed to deserialize Google API response for Place ID: {PlaceId}", request.PlaceId);
+                    return ServiceResponse<CoordinateDto>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    $"Could not get coordinates"
+                    );
+                }
+
+                if (googleResponse.Location == null)
+                {
+                    logger.LogWarning("No location data found for Place ID: {PlaceId}", request.PlaceId);
+
+                    return ServiceResponse<CoordinateDto>.FailResponse(
+                    HttpStatusCode.NotFound,
+                    $"Could not get coordinates"
+                    );
+                }
+
+                return ServiceResponse<CoordinateDto>.SuccessResponse(
+                   HttpStatusCode.OK,
+                   new CoordinateDto
+                   {
+                       Latitude = googleResponse.Location.Lat,
+                       Longitude = googleResponse.Location.Lng,
+                   }
+                );
+
+
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error in AutoCompleteAddreses");
+
+                return ServiceResponse<CoordinateDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    $"Error calling Google API: {ex.Message}"
                 );
             }
         }

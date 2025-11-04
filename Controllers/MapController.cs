@@ -27,5 +27,12 @@ namespace PegasusBackend.Controllers
         [EnableRateLimiting("MapApiPolicy")]
         public async Task<ActionResult<LocationInfoDto>> GetLocationInfo([FromBody] CoordinateDto coordinate) =>
              Generate.ActionResult(await _mapService.GetLocationDetailsAsync(coordinate));
+
+        [HttpPost("AutoComplete")]
+        public async Task<ActionResult<AutoCompleteResponseDto>> GetSuggestions(AutocompleteRequestDto request) =>
+            Generate.ActionResult(await _mapService.AutoCompleteAddreses(request));
+        [HttpGet("GetLongNLat")]
+        public async Task<ActionResult<CoordinateDto>> GetCoordniates([FromQuery]PlaceIdRequestDto request) =>
+            Generate.ActionResult(await _mapService.GetCoordinatesByPlaceIdAsync(request));
     }
 }

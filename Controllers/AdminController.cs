@@ -49,10 +49,6 @@ namespace PegasusBackend.Controllers
         public async Task<ActionResult<List<AvailableDriverResponsDto>>> GetAvailableDrivers([FromRoute] int bookingId) =>
             Generate.ActionResult(await _adminService.GetAvailbleDrivers(bookingId));
 
-        [HttpDelete("deleteBooking/{bookingId}")]
-        public async Task<ActionResult<bool>> DeleteBooking([FromRoute] int bookingId) =>
-            Generate.ActionResult(await _adminService.DeleteBookingByIdAsync(bookingId));
-
         [HttpPut("CancelBooking/{bookingId}")]
         public async Task<ActionResult<bool>> CancelBooking([FromRoute] int bookingId) =>
             Generate.ActionResult(await _adminService.CancelBookingAsync(bookingId));

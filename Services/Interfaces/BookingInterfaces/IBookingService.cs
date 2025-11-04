@@ -14,7 +14,7 @@ namespace PegasusBackend.Services.Interfaces.BookingInterfaces
         Task<ServiceResponse<BookingResponseDto>> ConfirmBookingAsync(string confirmationToken);
         Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetMyBookingsAsync(BookingSearchRequestDto query);
         Task<ServiceResponse<BookingResponseDto>> UpdateBookingForUserAsync(UpdateBookingDto updateDto);
-        Task<ServiceResponse<BookingResponseDto>> GetBookingById();
+        Task<ServiceResponse<BookingResponseDto>> GetBookingByIdAsync(int bookingId);
 
         // This method can be used in driverServcie and AdminService. It only contains the logic for updating a booking! 
         Task<ServiceResponse<BookingResponseDto>> UpdateBookingInternalAsync(Bookings booking, UpdateBookingDto updateDto);

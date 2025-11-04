@@ -294,16 +294,43 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             }
         }
 
-        public async Task<ServiceResponse<BookingResponseDto>> GetBookingById()
+        public async Task<ServiceResponse<BookingResponseDto>> GetBookingByIdAsync(int bookingId)
         {
             try
             {
-                throw new NotImplementedException();
-            }
-            catch (Exception)
-            {
+                var currentUser = await GetAuthenticatedUserAsync();
+                if (currentUser == null)
+                    return ServiceResponse<BookingResponseDto>.FailResponse(
+                        HttpStatusCode.Unauthorized,
+                        "You must be logged in to view your bookings."
+                    );
 
-                throw;
+                var booking = await _bookingRepo
+                   .GetAllQueryable(true)
+                   .FirstOrDefaultAsync(b => b.BookingId == bookingId && b.UserIdFk == currentUser.Id);
+
+                if (booking is null)
+                {
+                    _logger.LogWarning("GetBookingByIdAsync: Booking {BookingId} not found for user {UserId}", bookingId, currentUser.Id);
+                    return ServiceResponse<BookingResponseDto>.FailResponse(
+                        HttpStatusCode.NotFound, 
+                        "Couldnt fetch data from database! Check that you are Authorize!");
+                }
+
+                var mappedBooking = _bookingMapper.MapToResponseDTO(booking);
+                _logger.LogInformation("GetBookingByIdAsync: Booking with ID {BookingId} retrieved.", bookingId);
+
+                return ServiceResponse<BookingResponseDto>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    mappedBooking,
+                    "Here is the booking!");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetBookingByIdAsync: Unexpected error while retrieving booking with ID {BookingId}.", bookingId);
+                return ServiceResponse<BookingResponseDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "An unexpected error occurred while retrieving the booking.");
             }
         }
 

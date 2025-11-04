@@ -10,5 +10,7 @@ namespace PegasusBackend.Services.Interfaces
         Task<ServiceResponse<TokenResponseDto?>> RefreshTokensAsync(RefreshTokenRequestDto request);
         Task<ServiceResponse<string>> RefreshTokensFromCookiesAsync(HttpContext httpContext);
         Task<ServiceResponse<bool>> LogoutAsync(HttpContext httpContext);
+        // REMOVE IN PRODUCTION
+        Task<ServiceResponse<AuthResponseDto?>> DevLoginAsync(LoginRequestDto request, HttpContext httpContext);
     }
 }

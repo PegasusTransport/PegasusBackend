@@ -27,7 +27,7 @@ namespace PegasusBackend.Controllers
 
         [HttpGet("GetAllDrivers")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<List<AllDriversDto>>> GetAllDriver() =>
+        public async Task<ActionResult<List<AllDriversRequestDto>>> GetAllDriver() =>
             Generate.ActionResult(await driverService.GetAllDriversAsync());
 
         [HttpGet("GetDriverById/{id}")]

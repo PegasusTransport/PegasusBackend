@@ -1,22 +1,26 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.MailjetDTOs;
+using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Helpers;
+using PegasusBackend.Helpers.BookingHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 using PegasusBackend.Services.Interfaces.BookingInterfaces;
-using System.Globalization;
+using System.Collections.Generic;
 using System.Net;
-using System.Security.Claims;
+using System.Runtime.CompilerServices;
 
 namespace PegasusBackend.Services.Implementations.BookingServices
 {
     public class BookingService : IBookingService
     {
+        #region Dependencies
         private readonly IBookingRepo _bookingRepo;
         private readonly UserManager<User> _userManager;
         private readonly IMailjetEmailService _mailjetEmailService;
@@ -25,7 +29,13 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         private readonly IBookingMapperService _bookingMapper;
         private readonly ILogger<BookingService> _logger;
         private readonly MailJetSettings _settings;
+        private readonly BookingRulesSettings _bookingRules;
         private readonly IWebHostEnvironment _env;
+        private readonly IUserService _userService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly PaginationSettings _paginationSettings;
+        private readonly RecalculateIfAddressChangedHelper _recalculateHelper;
+        private readonly ValidateUpdateRuleHelper _validateUpdateRuleHelper;
 
         public BookingService(
             IBookingRepo bookingRepo,
@@ -36,7 +46,13 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             IBookingMapperService bookingMapper,
             ILogger<BookingService> logger,
             IOptions<MailJetSettings> mailJetSettings,
-            IWebHostEnvironment env)
+            IOptions<BookingRulesSettings> bookingRules,
+            IWebHostEnvironment env,
+            IUserService userService,
+            IHttpContextAccessor httpContextAccessor,
+            IOptions<PaginationSettings> paginationSettings,
+            RecalculateIfAddressChangedHelper recalculateHelper,
+            ValidateUpdateRuleHelper validateUpdateRuleHelper)
         {
             _bookingRepo = bookingRepo;
             _userManager = userManager;
@@ -46,41 +62,76 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             _bookingMapper = bookingMapper;
             _logger = logger;
             _settings = mailJetSettings.Value;
+            _bookingRules = bookingRules.Value;
             _env = env;
+            _userService = userService;
+            _httpContextAccessor = httpContextAccessor;
+            _paginationSettings = paginationSettings.Value;
+            _recalculateHelper = recalculateHelper;
+            _validateUpdateRuleHelper = validateUpdateRuleHelper;
         }
+        #endregion
+
+        /* TO DO
+            – Send cancellation emails to driver, admin and customer
+        */
 
         public async Task<ServiceResponse<BookingResponseDto>> CreateBookingAsync(CreateBookingDto bookingDto)
         {
             try
             {
-                var validationResult = await _validationService.ValidateBookingAsync(bookingDto);
-                if (!validationResult.IsValid)
-                    return validationResult.ErrorResponse!;
+                var validation = await _validationService.ValidateBookingAsync(bookingDto);
+                if (!validation.IsValid)
+                    return validation.ErrorResponse!;
 
                 var user = await _userManager.FindByEmailAsync(bookingDto.Email);
-                var isGuestBooking = user == null;
-
+                var isGuest = user == null;
 
                 var booking = _bookingFactory.CreateBookingEntity(
                     bookingDto,
-                    validationResult.RouteInfo!,
-                    validationResult.CalculatedPrice,
+                    validation.RouteInfo!,
+                    validation.CalculatedPrice,
                     user,
-                    isGuestBooking);
+                    isGuest);
 
-                var createdBooking = await _bookingRepo.CreateBookingAsync(booking);
+                await _bookingRepo.CreateBookingAsync(booking);
+                await SendBookingEmailAsync(booking, bookingDto, isGuest);
 
-                await SendBookingEmailAsync(createdBooking, bookingDto, isGuestBooking);
-
-                return BuildSuccessResponse(createdBooking, isGuestBooking);
+                return BuildSuccessResponse(booking, isGuest);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating booking for email: {Email}", bookingDto.Email);
-                return ServiceResponse<BookingResponseDto>.FailResponse(
-                    HttpStatusCode.InternalServerError,
-                    "Something went wrong while creating the booking."
-                );
+                return HandleError<BookingResponseDto>(ex, "creating booking");
+            }
+        }
+
+        public async Task<ServiceResponse<BookingPreviewResponseDto>> GetBookingPreviewAsync(BookingPreviewRequestDto previewDto)
+        {
+            try
+            {
+                var bookingDto = ConvertPreviewToBookingDto(previewDto);
+                var validation = await _validationService.ValidateBookingAsync(bookingDto);
+
+                if (!validation.IsValid)
+                    return ServiceResponse<BookingPreviewResponseDto>.FailResponse(
+                        validation.ErrorResponse!.StatusCode,
+                        validation.ErrorResponse.Message);
+
+                var response = new BookingPreviewResponseDto
+                {
+                    DistanceKm = validation.RouteInfo!.DistanceKm,
+                    DurationMinutes = validation.RouteInfo.DurationMinutes,
+                    Price = Math.Round(validation.CalculatedPrice, 2),
+                    Sections = validation.RouteInfo.Sections,
+                    Message = "Calculated price for your trip."
+                };
+
+                return ServiceResponse<BookingPreviewResponseDto>.SuccessResponse(
+                    HttpStatusCode.OK, response, "Price preview calculated.");
+            }
+            catch (Exception ex)
+            {
+                return HandleError<BookingPreviewResponseDto>(ex, "getting booking preview");
             }
         }
 
@@ -89,39 +140,17 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             try
             {
                 if (string.IsNullOrEmpty(confirmationToken))
-                {
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Invalid confirmation token."
-                    );
-                }
+                    return ServiceResponse<BookingResponseDto>.FailResponse(HttpStatusCode.BadRequest, "Invalid confirmation token.");
 
                 var booking = await _bookingRepo.GetBookingByConfirmationTokenAsync(confirmationToken);
-
                 if (booking == null)
-                {
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.NotFound,
-                        "Booking not found."
-                    );
-                }
+                    return ServiceResponse<BookingResponseDto>.FailResponse(HttpStatusCode.NotFound, "Booking not found.");
 
                 if (booking.ConfirmationTokenExpiresAt < DateTime.UtcNow)
-                {
-                    await _bookingRepo.DeleteBookingAsync(booking.BookingId);
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Confirmation token has expired. The booking has been removed. Please create a new booking."
-                    );
-                }
+                    return ServiceResponse<BookingResponseDto>.FailResponse(HttpStatusCode.BadRequest, "Confirmation token has expired.");
 
                 if (booking.IsConfirmed)
-                {
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Booking is already confirmed."
-                    );
-                }
+                    return ServiceResponse<BookingResponseDto>.FailResponse(HttpStatusCode.BadRequest, "Booking is already confirmed.");
 
                 booking.Status = BookingStatus.Confirmed;
                 booking.IsConfirmed = true;
@@ -130,361 +159,319 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 booking.ConfirmationTokenExpiresAt = null;
 
                 await _bookingRepo.UpdateBookingAsync(booking);
-
                 var response = _bookingMapper.MapToResponseDTO(booking);
 
-                return ServiceResponse<BookingResponseDto>.SuccessResponse(
-                    HttpStatusCode.OK,
-                    response,
-                    "Booking confirmed successfully!"
-                );
+                return ServiceResponse<BookingResponseDto>.SuccessResponse(HttpStatusCode.OK, response, "Booking confirmed successfully.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error confirming booking with token: {Token}", confirmationToken);
-                return ServiceResponse<BookingResponseDto>.FailResponse(
-                    HttpStatusCode.InternalServerError,
-                    "Something went wrong while confirming the booking."
-                );
+                return HandleError<BookingResponseDto>(ex, "confirming booking");
             }
         }
 
-        public async Task<ServiceResponse<BookingResponseDto>> GetBookingByIdAsync(int bookingId, ClaimsPrincipal claimsPrincipal)
+        public async Task<ServiceResponse<BookingResponseDto>> UpdateBookingForUserAsync(UpdateBookingDto updateDto)
         {
             try
             {
-                var user = await _userManager.GetUserAsync(claimsPrincipal);
-                if (user == null)
-                {
+                var currentUser = await GetAuthenticatedUserAsync();
+                if (currentUser == null)
                     return ServiceResponse<BookingResponseDto>.FailResponse(
                         HttpStatusCode.Unauthorized,
-                        "User not found."
+                        "You must be logged in to view your bookings."
                     );
-                }
 
-                var booking = await _bookingRepo.GetBookingByIdAsync(bookingId);
+                var booking = await _bookingRepo
+                    .GetAllQueryable(true)
+                    .FirstOrDefaultAsync(b => b.BookingId == updateDto.BookingId && b.UserIdFk == currentUser.Id);
 
                 if (booking == null)
                 {
                     return ServiceResponse<BookingResponseDto>.FailResponse(
                         HttpStatusCode.NotFound,
-                        "Booking not found."
-                    );
+                        "Couldnt find the booking in database. Check that you are Authorize!");
                 }
 
-                if (booking.UserIdFk != user.Id)
+                if (booking.Status == BookingStatus.Completed || booking.Status == BookingStatus.Cancelled)
                 {
                     return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.Forbidden,
-                        "You don't have permission to view this booking."
-                    );
+                        HttpStatusCode.BadRequest,
+                        "Cannot update a booking that is already completed or cancelled.");
                 }
 
-                var response = _bookingMapper.MapToResponseDTO(booking);
-
-                return ServiceResponse<BookingResponseDto>.SuccessResponse(
-                    HttpStatusCode.OK,
-                    response,
-                    "Booking retrieved successfully."
-                );
+                return await UpdateBookingInternalAsync(booking, updateDto);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting booking {BookingId}", bookingId);
+                _logger.LogError(ex, "Error updating booking {BookingId}", updateDto.BookingId);
                 return ServiceResponse<BookingResponseDto>.FailResponse(
                     HttpStatusCode.InternalServerError,
-                    "Something went wrong."
-                );
+                    "Something went wrong while updating the booking.");
             }
         }
 
-        public async Task<ServiceResponse<List<BookingResponseDto>>> GetUserBookingsAsync(ClaimsPrincipal claimsPrincipal)
+        // This method can be used in driverServcie and AdminService. It only contains the logic for updating a booking without any user!! 
+        public async Task<ServiceResponse<BookingResponseDto>> UpdateBookingInternalAsync(Bookings booking, UpdateBookingDto updateDto)
         {
-            try
-            {
-                var user = await _userManager.GetUserAsync(claimsPrincipal);
-                if (user == null)
-                {
-                    return ServiceResponse<List<BookingResponseDto>>.FailResponse(
-                        HttpStatusCode.Unauthorized,
-                        "User not found."
-                    );
-                }
+            var ruleValidation = await _validateUpdateRuleHelper.ValidateUpdateRulesAsync(booking, updateDto);
+            if (ruleValidation != null)
+                return ruleValidation;
 
-                var bookings = await _bookingRepo.GetUserBookingsAsync(user.Id);
-                var response = _bookingMapper.MapToResponseDTOs(bookings);
+            var recalcResponse = await _recalculateHelper.RecalculateIfAddressChangedAsync(booking, updateDto);
+            if (recalcResponse != null)
+                return recalcResponse;
 
-                return ServiceResponse<List<BookingResponseDto>>.SuccessResponse(
-                    HttpStatusCode.OK,
-                    response,
-                    "Bookings retrieved successfully."
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting bookings for user", ex);
-                return ServiceResponse<List<BookingResponseDto>>.FailResponse(
-                    HttpStatusCode.InternalServerError,
-                    "Something went wrong."
-                );
-            }
-        }
+            UpdateBookingFields(booking, updateDto);
 
-        public async Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync()
-        {
-            try
-            {
-                var bookings = await _bookingRepo.GetAvailableBookingsAsync();
-                var response = _bookingMapper.MapToResponseDTOs(bookings);
-
-                return ServiceResponse<List<BookingResponseDto>>.SuccessResponse(
-                    HttpStatusCode.OK,
-                    response,
-                    "Available bookings retrieved successfully."
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting available bookings");
-                return ServiceResponse<List<BookingResponseDto>>.FailResponse(
-                    HttpStatusCode.InternalServerError,
-                    "Something went wrong."
-                );
-            }
-        }
-
-        public async Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId, ClaimsPrincipal claimsPrincipal)
-        {
-            try
-            {
-                var user = await _userManager.GetUserAsync(claimsPrincipal);
-                if (user == null)
-                {
-                    return ServiceResponse<bool>.FailResponse(
-                        HttpStatusCode.Unauthorized,
-                        "User not found."
-                    );
-                }
-
-                var booking = await _bookingRepo.GetBookingByIdAsync(bookingId);
-
-                if (booking == null)
-                {
-                    return ServiceResponse<bool>.FailResponse(
-                        HttpStatusCode.NotFound,
-                        "Booking not found."
-                    );
-                }
-
-                if (booking.UserIdFk != user.Id)
-                {
-                    return ServiceResponse<bool>.FailResponse(
-                        HttpStatusCode.Forbidden,
-                        "You don't have permission to cancel this booking."
-                    );
-                }
-
-                booking.Status = BookingStatus.Cancelled;
-                booking.IsAvailable = false;
-
-                await _bookingRepo.UpdateBookingAsync(booking);
-
-                return ServiceResponse<bool>.SuccessResponse(
-                    HttpStatusCode.OK,
-                    true,
-                    "Booking cancelled successfully."
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error cancelling booking {BookingId}", bookingId);
-                return ServiceResponse<bool>.FailResponse(
-                    HttpStatusCode.InternalServerError,
-                    "Something went wrong."
-                );
-            }
-        }
-
-        public async Task<ServiceResponse<BookingResponseDto>> GetBookingByIdForGuestAsync(int bookingId, string email)
-        {
-            try
-            {
-                var booking = await _bookingRepo.GetBookingByIdAsync(bookingId);
-
-                if (booking == null)
-                {
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.NotFound,
-                        "Booking not found."
-                    );
-                }
-
-                if (booking.UserIdFk != null || booking.GuestEmail?.ToLower() != email.ToLower())
-                {
-                    return ServiceResponse<BookingResponseDto>.FailResponse(
-                        HttpStatusCode.Forbidden,
-                        "You don't have permission to view this booking."
-                    );
-                }
-
-                var response = _bookingMapper.MapToResponseDTO(booking);
-
-                return ServiceResponse<BookingResponseDto>.SuccessResponse(
-                    HttpStatusCode.OK,
-                    response,
-                    "Booking retrieved successfully."
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting guest booking {BookingId}", bookingId);
+            if (!await _bookingRepo.UpdateBookingAsync(booking))
                 return ServiceResponse<BookingResponseDto>.FailResponse(
                     HttpStatusCode.InternalServerError,
-                    "Something went wrong."
+                    "Failed to update booking in the database."
                 );
-            }
+
+            var result = _bookingMapper.MapToResponseDTO(booking);
+            return ServiceResponse<BookingResponseDto>.SuccessResponse(HttpStatusCode.OK, result, "Booking updated successfully.");
         }
 
-        public async Task<ServiceResponse<BookingPreviewResponseDto>> GetBookingPreviewAsync(
-            BookingPreviewRequestDto previewDto)
+        public async Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetMyBookingsAsync(BookingSearchRequestDto query)
         {
-            try
-            {
-                // Convert to CreateBookingDto to reuse existing validation
-                var bookingDto = ConvertPreviewToBookingDto(previewDto);
-
-                // Reuses the exact same validation as CreateBookingAsync
-                var validationResult = await _validationService.ValidateBookingAsync(bookingDto);
-
-                if (!validationResult.IsValid)
-                {
-                    return ServiceResponse<BookingPreviewResponseDto>.FailResponse(
-                        validationResult.ErrorResponse!.StatusCode,
-                        validationResult.ErrorResponse.Message
-                    );
-                }
-
-                // Build response with calculated data
-                var response = new BookingPreviewResponseDto
-                {
-                    DistanceKm = validationResult.RouteInfo!.DistanceKm,
-                    DurationMinutes = validationResult.RouteInfo.DurationMinutes,
-                    Price = Math.Round(validationResult.CalculatedPrice, 2),
-                    Message = "Calculated price for your trip.",
-                    Sections = validationResult.RouteInfo.Sections
-                };
-
-                return ServiceResponse<BookingPreviewResponseDto>.SuccessResponse(
-                    HttpStatusCode.OK,
-                    response,
-                    "Price preview calculated."
+            var user = await GetAuthenticatedUserAsync();
+            if (user == null)
+                return ServiceResponse<PaginatedResult<BookingResponseDto>>.FailResponse(
+                    HttpStatusCode.Unauthorized,
+                    "You must be logged in to view your bookings."
                 );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error calculating booking preview");
-                return ServiceResponse<BookingPreviewResponseDto>.FailResponse(
-                    HttpStatusCode.InternalServerError,
-                    "Something went wrong during price calculation."
-                );
-            }
-        }
 
+            var (currentPage, pageSize, sortBy, sortOrder) = ResolvePaginationSettings(query);
+            var bookingsQuery = BuildUserBookingsQuery(user.Id, query);
 
-        #region Private Helper Methods
+            var pagedResult = await bookingsQuery.ToPagedResultAsync(currentPage, pageSize, sortBy, sortOrder);
 
-        private async Task SendBookingEmailAsync(Bookings booking, CreateBookingDto bookingDto, bool isGuestBooking)
-        {
-            var stopsText = BookingMailHelper.FormatStops(bookingDto);
-            var formattedTime = BookingMailHelper.FormatDateTime(bookingDto.PickUpDateTime);
+            var mappedResult = MapPagedResult(pagedResult);
 
-
-            var baseUrl = _env.IsDevelopment()
-            ? _settings.Links.LocalConfirmationBase
-            : _settings.Links.ProductionConfirmationBase;
-
-            var confirmationLink = $"{baseUrl}{booking.ConfirmationToken}";
-
-            if (isGuestBooking)
-            {
-
-                await _mailjetEmailService.SendEmailAsync(
-                    bookingDto.Email,
-                    Helpers.MailjetHelpers.MailjetTemplateType.PendingConfirmation,
-                    new PendingConfirmationRequestDto
-                    {
-                        Firstname = bookingDto.FirstName,
-                        PickupAddress = bookingDto.PickUpAddress,
-                        Stops = stopsText,
-                        Destination = bookingDto.DropOffAddress,
-                        PickupTime = formattedTime,
-                        TotalPrice = booking.Price,
-                        ConfirmationLink = confirmationLink,
-                    },
-                    Helpers.MailjetHelpers.MailjetSubjects.PendingConfirmation
-                    );
-            }
-            else
-            {
-                await _mailjetEmailService.SendEmailAsync(
-                    bookingDto.Email,
-                    Helpers.MailjetHelpers.MailjetTemplateType.BookingConfirmation,
-                    new BookingConfirmationRequestDto
-                    {
-                        Firstname = bookingDto.FirstName,
-                        PickupAddress = bookingDto.PickUpAddress,
-                        Stops = stopsText,
-                        Destination = bookingDto.DropOffAddress,
-                        PickupTime = formattedTime,
-                        TotalPrice = booking.Price,
-                    },
-                    Helpers.MailjetHelpers.MailjetSubjects.BookingConfirmation
-                    );
-            }
-        }
-
-
-        private ServiceResponse<BookingResponseDto> BuildSuccessResponse(Bookings booking, bool isGuestBooking)
-        {
-            var response = _bookingMapper.MapToResponseDTO(booking);
-            string message = isGuestBooking
-                ? "Booking created successfully. Please check your email to confirm."
-                : "Booking confirmed successfully!";
-
-            return ServiceResponse<BookingResponseDto>.SuccessResponse(
+            return ServiceResponse<PaginatedResult<BookingResponseDto>>.SuccessResponse(
                 HttpStatusCode.OK,
-                response,
-                message
+                mappedResult,
+                $"You have {mappedResult.Items.Count} bookings listed successfully."
             );
         }
 
-        private static CreateBookingDto ConvertPreviewToBookingDto(BookingPreviewRequestDto previewDto)
+        public async Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId)
         {
-            return new CreateBookingDto
+            try
             {
-                // Dummy customer-data (required for validation but never used)
+                var currentUser = await GetAuthenticatedUserAsync();
+                if (currentUser == null)
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.Unauthorized,
+                        "You must be logged in to view your bookings."
+                    );
+
+                var booking = await _bookingRepo
+                    .GetAllQueryable(true)
+                    .FirstOrDefaultAsync(b => b.BookingId == bookingId && b.UserIdFk == currentUser.Id);
+
+                if (booking is null)
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.NotFound, "Couldnt fetch data from database! Check that you are Authorize!");
+
+                if (booking.Status == BookingStatus.Completed || booking.Status == BookingStatus.Cancelled)
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.BadRequest, "Booking is already cancelled or completed.");
+
+                var validation = await _validationService.ValidatePickupTimeAsync(
+                    booking.PickUpDateTime, _bookingRules.MinHoursBeforePickupForChange);
+
+                if (validation.StatusCode != HttpStatusCode.OK)
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.Forbidden, "Too late to cancel. Please contact support.");
+
+                booking.Status = BookingStatus.Cancelled;
+                booking.IsAvailable = false;
+                await _bookingRepo.UpdateBookingAsync(booking);
+
+                return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true, "Booking cancelled successfully.");
+            }
+            catch (Exception ex)
+            {
+                return HandleError<bool>(ex, "cancelling booking");
+            }
+        }
+
+
+        #region Private Helpers
+        private async Task<UserResponseDto?> GetAuthenticatedUserAsync()
+        {
+            var result = await _userService.GetLoggedInUser(_httpContextAccessor.HttpContext);
+            return result?.Data;
+        }
+
+        private (int Page, int PageSize, string SortBy, string SortOrder) ResolvePaginationSettings(BookingSearchRequestDto query)
+        {
+            var settings = _paginationSettings;
+            int page = query.Page ?? settings.DefaultPage;
+            int pageSize = Math.Min(query.PageSize ?? settings.DefaultPageSize, settings.MaxPageSize);
+            string sortBy = query.SortBy ?? settings.SortBy;
+            string sortOrder = query.SortOrder.ToString().ToLower();
+
+            return (page, pageSize, sortBy, sortOrder);
+        }
+
+        private IQueryable<Bookings> BuildUserBookingsQuery(string userId, BookingSearchRequestDto query)
+        {
+            var bookings = _bookingRepo.GetAllQueryable(true)
+                .Where(b => b.UserIdFk == userId);
+
+            if (!string.IsNullOrWhiteSpace(query.Search))
+            {
+                var term = query.Search.ToLower();
+                bookings = bookings.Where(b =>
+                    b.PickUpAdress.ToLower().Contains(term) ||
+                    b.DropOffAdress.ToLower().Contains(term) ||
+                    (b.Flightnumber != null && b.Flightnumber.ToLower().Contains(term)) ||
+                    (b.Comment != null && b.Comment.ToLower().Contains(term))
+                );
+            }
+
+            if (query.MinPrice.HasValue)
+                bookings = bookings.Where(b => b.Price >= query.MinPrice.Value);
+
+            if (query.MaxPrice.HasValue)
+                bookings = bookings.Where(b => b.Price <= query.MaxPrice.Value);
+
+            if (query.FromDate.HasValue)
+                bookings = bookings.Where(b => b.PickUpDateTime >= query.FromDate.Value);
+
+            if (query.ToDate.HasValue)
+                bookings = bookings.Where(b => b.PickUpDateTime <= query.ToDate.Value);
+
+            if (query.Status.HasValue)
+            {
+                var statusValue = (BookingStatus)query.Status.Value;
+                bookings = bookings.Where(b => b.Status == statusValue);
+            }
+
+            if (query.UpcomingOnly == true)
+                bookings = bookings.Where(b => b.PickUpDateTime > DateTime.UtcNow);
+
+            return bookings;
+        }
+
+        private PaginatedResult<BookingResponseDto> MapPagedResult(PaginatedResult<Bookings> paged)
+        {
+            return new PaginatedResult<BookingResponseDto>
+            {
+                Items = _bookingMapper.MapToResponseDTOs(paged.Items),
+                TotalCount = paged.TotalCount,
+                Page = paged.Page,
+                PageSize = paged.PageSize,
+                CurrentCount = paged.CurrentCount
+            };
+        }
+
+        private void UpdateBookingFields(Bookings booking, UpdateBookingDto dto)
+        {
+            booking.PickUpDateTime = dto.PickUpDateTime;
+            booking.Flightnumber = dto.Flightnumber;
+            booking.Comment = dto.Comment;
+            booking.PickUpAdress = dto.PickUpAddress;
+            booking.PickUpLatitude = dto.PickUpLatitude;
+            booking.PickUpLongitude = dto.PickUpLongitude;
+            booking.FirstStopAddress = dto.FirstStopAddress;
+            booking.FirstStopLatitude = dto.FirstStopLatitude;
+            booking.FirstStopLongitude = dto.FirstStopLongitude;
+            booking.SecondStopAddress = dto.SecondStopAddress;
+            booking.SecondStopLatitude = dto.SecondStopLatitude;
+            booking.SecondStopLongitude = dto.SecondStopLongitude;
+            booking.DropOffAdress = dto.DropOffAddress;
+            booking.DropOffLatitude = dto.DropOffLatitude;
+            booking.DropOffLongitude = dto.DropOffLongitude;
+        }
+
+        private async Task SendBookingEmailAsync(Bookings booking, CreateBookingDto dto, bool isGuest)
+        {
+            var stops = BookingMailHelper.FormatStops(dto);
+            var time = BookingMailHelper.FormatDateTime(dto.PickUpDateTime);
+
+            var template = isGuest
+                ? Helpers.MailjetHelpers.MailjetTemplateType.PendingConfirmation
+                : Helpers.MailjetHelpers.MailjetTemplateType.BookingConfirmation;
+
+            var subject = isGuest
+                ? Helpers.MailjetHelpers.MailjetSubjects.PendingConfirmation
+                : Helpers.MailjetHelpers.MailjetSubjects.BookingConfirmation;
+
+            var baseUrl = _env.IsDevelopment()
+                ? _settings.Links.LocalConfirmationBase
+                : _settings.Links.ProductionConfirmationBase;
+
+            var confirmationLink = $"{baseUrl}{booking.ConfirmationToken}";
+
+            if (isGuest)
+            {
+                await _mailjetEmailService.SendEmailAsync(dto.Email, template, new PendingConfirmationRequestDto
+                {
+                    Firstname = dto.FirstName,
+                    PickupAddress = dto.PickUpAddress,
+                    Stops = stops,
+                    Destination = dto.DropOffAddress,
+                    PickupTime = time,
+                    TotalPrice = booking.Price,
+                    ConfirmationLink = confirmationLink
+                }, subject);
+            }
+            else
+            {
+                await _mailjetEmailService.SendEmailAsync(dto.Email, template, new BookingConfirmationRequestDto
+                {
+                    Firstname = dto.FirstName,
+                    PickupAddress = dto.PickUpAddress,
+                    Stops = stops,
+                    Destination = dto.DropOffAddress,
+                    PickupTime = time,
+                    TotalPrice = booking.Price
+                }, subject);
+            }
+        }
+
+        private ServiceResponse<T> HandleError<T>(
+            Exception ex,
+            [CallerMemberName] string action = "",
+            HttpStatusCode statusCode = HttpStatusCode.InternalServerError,
+            string? message = null)
+        {
+            _logger.LogError(ex, "Error in {Action}", action);
+            var msg = message ?? $"Something went wrong while {action}.";
+            return ServiceResponse<T>.FailResponse(statusCode, msg);
+        }
+
+        private ServiceResponse<BookingResponseDto> BuildSuccessResponse(Bookings booking, bool isGuest)
+        {
+            var response = _bookingMapper.MapToResponseDTO(booking);
+            var message = isGuest
+                ? "Booking created successfully. Please confirm via email."
+                : "Booking confirmed successfully.";
+            return ServiceResponse<BookingResponseDto>.SuccessResponse(HttpStatusCode.OK, response, message);
+        }
+
+        private static CreateBookingDto ConvertPreviewToBookingDto(BookingPreviewRequestDto dto) =>
+            new()
+            {
                 Email = string.Empty,
                 FirstName = string.Empty,
                 LastName = string.Empty,
                 PhoneNumber = string.Empty,
-
-                // Actual route data from the user
-                PickUpDateTime = previewDto.PickUpDateTime,
-                PickUpAddress = previewDto.PickUpAddress,
-                PickUpLatitude = previewDto.PickUpLatitude,
-                PickUpLongitude = previewDto.PickUpLongitude,
-                FirstStopAddress = previewDto.FirstStopAddress,
-                FirstStopLatitude = previewDto.FirstStopLatitude,
-                FirstStopLongitude = previewDto.FirstStopLongitude,
-                SecondStopAddress = previewDto.SecondStopAddress,
-                SecondStopLatitude = previewDto.SecondStopLatitude,
-                SecondStopLongitude = previewDto.SecondStopLongitude,
-                DropOffAddress = previewDto.DropOffAddress,
-                DropOffLatitude = previewDto.DropOffLatitude,
-                DropOffLongitude = previewDto.DropOffLongitude,
-                Flightnumber = previewDto.Flightnumber
+                PickUpDateTime = dto.PickUpDateTime,
+                PickUpAddress = dto.PickUpAddress,
+                PickUpLatitude = dto.PickUpLatitude,
+                PickUpLongitude = dto.PickUpLongitude,
+                FirstStopAddress = dto.FirstStopAddress,
+                FirstStopLatitude = dto.FirstStopLatitude,
+                FirstStopLongitude = dto.FirstStopLongitude,
+                SecondStopAddress = dto.SecondStopAddress,
+                SecondStopLatitude = dto.SecondStopLatitude,
+                SecondStopLongitude = dto.SecondStopLongitude,
+                DropOffAddress = dto.DropOffAddress,
+                DropOffLatitude = dto.DropOffLatitude,
+                DropOffLongitude = dto.DropOffLongitude,
+                Flightnumber = dto.Flightnumber
             };
-        }
 
         #endregion
     }

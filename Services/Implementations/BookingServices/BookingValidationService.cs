@@ -29,8 +29,8 @@ namespace PegasusBackend.Services.Implementations.BookingServices
 
         public async Task<ValidationResult> ValidateBookingAsync(CreateBookingDto bookingDto)
         {
-            var pickupValidation = ValidatePickupTime(bookingDto.PickUpDateTime);
-            if (pickupValidation != null)
+            var pickupValidation = await ValidatePickupTimeAsync(bookingDto.PickUpDateTime, 24);
+            if (pickupValidation.StatusCode != HttpStatusCode.OK)
                 return new ValidationResult { IsValid = false, ErrorResponse = pickupValidation };
 
             var routeResult = await VerifyRouteAsync(bookingDto);
@@ -38,7 +38,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 return new ValidationResult { IsValid = false, ErrorResponse = routeResult.ErrorResponse };
 
             var arlandaValidation = ValidateArlandaRequirements(bookingDto);
-            if (arlandaValidation != null)
+            if (arlandaValidation.StatusCode != HttpStatusCode.OK)
                 return new ValidationResult { IsValid = false, ErrorResponse = arlandaValidation };
 
             var priceResult = await CalculateAndVerifyPriceAsync(bookingDto, routeResult.RouteInfo!);
@@ -53,16 +53,21 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             };
         }
 
-        public ServiceResponse<BookingResponseDto>? ValidatePickupTime(DateTime pickUpDateTime)
+        public async Task<ServiceResponse<BookingResponseDto>> ValidatePickupTimeAsync(DateTime pickUpDateTime, int hours)
         {
-            if (pickUpDateTime < DateTime.UtcNow.AddHours(48))
+            if (pickUpDateTime < DateTime.UtcNow.AddHours(hours))
             {
                 return ServiceResponse<BookingResponseDto>.FailResponse(
                     HttpStatusCode.BadRequest,
-                    "PickUpDateTime must be at least 48 hours from now."
+                    $"PickUpDateTime must be at least {hours} hours from now."
                 );
             }
-            return null;
+
+            return ServiceResponse<BookingResponseDto>.SuccessResponse(
+                HttpStatusCode.OK,
+                null!,
+                "Pickup time is valid."
+            );
         }
 
         public async Task<RouteValidationResult> VerifyRouteAsync(CreateBookingDto bookingDto)
@@ -87,7 +92,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             return new RouteValidationResult { IsValid = true, RouteInfo = routeResponse.Data };
         }
 
-        public ServiceResponse<BookingResponseDto>? ValidateArlandaRequirements(CreateBookingDto bookingDto)
+        public ServiceResponse<BookingResponseDto> ValidateArlandaRequirements(CreateBookingDto bookingDto)
         {
             var allAddresses = GetAllAddresses(bookingDto);
             var hasArlanda = allAddresses.Any(a => a.Contains("arlanda", StringComparison.OrdinalIgnoreCase));
@@ -112,7 +117,11 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             }
 
             _logger.LogInformation("Arlanda validation passed");
-            return null;
+            return ServiceResponse<BookingResponseDto>.SuccessResponse(
+                HttpStatusCode.OK,
+                null!,
+                "Arlanda validation passed."
+            );
         }
 
         public async Task<PriceValidationResult> CalculateAndVerifyPriceAsync(CreateBookingDto bookingDto, RouteInfoDto routeInfo)

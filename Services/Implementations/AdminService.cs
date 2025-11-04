@@ -121,12 +121,12 @@ public class AdminService : IAdminService
         }
     }
 
-    public async Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetAllBookingsAsync(BookingSearchRequestDto searchRequestDto)
+    public async Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetAllBookingsAsync(BookingFilterRequestForAdminDto filterRequest)
     {
         try
         {
-            var (currentPage, pageSize, sortBy, sortOrder) = ResolvePaginationSettings(searchRequestDto);
-            var bookingsQuery = BuildAdminBookingsQuery(searchRequestDto);
+            var (currentPage, pageSize, sortBy, sortOrder) = ResolvePaginationSettings(filterRequest);
+            var bookingsQuery = BuildAdminBookingsQuery(filterRequest);
 
             var pageResult = await bookingsQuery.ToPagedResultAsync(currentPage, pageSize, sortBy, sortOrder);
             var mappedResult = MapPagedResult(pageResult);
@@ -471,48 +471,48 @@ public class AdminService : IAdminService
         };
     }
 
-    private IQueryable<Bookings> BuildAdminBookingsQuery(BookingSearchRequestDto query)
+    private IQueryable<Bookings> BuildAdminBookingsQuery(BookingFilterRequestForAdminDto filters)
     {
         var bookings = _bookingRepo.GetAllQueryable(true);
-        if (!string.IsNullOrWhiteSpace(query.Search))
+
+        bookings = bookings.ApplyFilters(filters);
+
+        if (!string.IsNullOrWhiteSpace(filters.Search))
         {
-            var term = query.Search.ToLower();
+            var term = filters.Search.ToLower();
+
             bookings = bookings.Where(b =>
                 b.PickUpAdress.ToLower().Contains(term) ||
                 b.DropOffAdress.ToLower().Contains(term) ||
                 (b.Flightnumber != null && b.Flightnumber.ToLower().Contains(term)) ||
-                (b.Comment != null && b.Comment.ToLower().Contains(term))
+                (b.Comment != null && b.Comment.ToLower().Contains(term)) ||
+
+                ((b.GuestFirstName + " " + b.GuestLastName).ToLower().Contains(term)) ||
+                (b.User != null && ((b.User.FirstName + " " + b.User.LastName).ToLower().Contains(term))) ||
+
+                (b.GuestEmail != null && b.GuestEmail.ToLower().Contains(term)) ||
+                (b.GuestPhoneNumber != null && b.GuestPhoneNumber.ToLower().Contains(term)) ||
+
+                (b.Driver != null && (b.Driver.User.FirstName + " " + b.Driver.User.LastName).ToLower().Contains(term)) ||
+
+                b.BookingId.ToString().Contains(term)
             );
         }
-
-        if (query.MinPrice.HasValue)
-            bookings = bookings.Where(b => b.Price >= query.MinPrice.Value);
-        if (query.MaxPrice.HasValue)
-            bookings = bookings.Where(b => b.Price <= query.MaxPrice.Value);
-        if (query.FromDate.HasValue)
-            bookings = bookings.Where(b => b.PickUpDateTime >= query.FromDate.Value);
-        if (query.ToDate.HasValue)
-            bookings = bookings.Where(b => b.PickUpDateTime <= query.ToDate.Value);
-        if (query.Status.HasValue)
-        {
-            var statusValue = (BookingStatus)query.Status.Value;
-            bookings = bookings.Where(b => b.Status == statusValue);
-        }
-        if (query.UpcomingOnly == true)
-            bookings = bookings.Where(b => b.PickUpDateTime > DateTime.UtcNow);
 
         return bookings;
     }
 
-    private (int Page, int PageSize, string SortBy, string SortOrder) ResolvePaginationSettings(BookingSearchRequestDto searchRequestDto)
+    private (int Page, int PageSize, string SortBy, string SortOrder) ResolvePaginationSettings(BookingFilterRequestForAdminDto filterRequest)
     {
         var settings = _paginationSettings;
-        int page = searchRequestDto.Page ?? settings.DefaultPage;
-        int pageSize = Math.Min(searchRequestDto.PageSize ?? settings.DefaultPageSize, settings.MaxPageSize);
-        string sortBy = searchRequestDto.SortBy ?? settings.SortBy;
-        string sortOrder = searchRequestDto.SortOrder.ToString().ToLower();
+        int page = filterRequest.Page ?? settings.DefaultPage;
+        int pageSize = Math.Min(filterRequest.PageSize ?? settings.DefaultPageSize, settings.MaxPageSize);
+
+        string sortBy = filterRequest.SortBy ?? settings.SortBy;
+        string sortOrder = filterRequest.SortOrder.ToString().ToLower();
 
         return (page, pageSize, sortBy, sortOrder);
     }
+
     #endregion
 }

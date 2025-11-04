@@ -299,7 +299,20 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        public async Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync(BookingFilterRequestDto? filters)
+        public async Task<ServiceResponse<bool>> ReassignBookingAsync()
+        {
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<ServiceResponse<List<BookingResponseDto>>> GetAvailableBookingsAsync(BookingFilterRequestForAdminDto? filters)
         {
             try
             {

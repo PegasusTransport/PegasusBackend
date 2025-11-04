@@ -294,6 +294,19 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             }
         }
 
+        public async Task<ServiceResponse<BookingResponseDto>> GetBookingById()
+        {
+            try
+            {
+                throw new NotImplementedException();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
 
         #region Private Helpers
         private async Task<UserResponseDto?> GetAuthenticatedUserAsync()

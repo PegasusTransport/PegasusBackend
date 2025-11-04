@@ -14,7 +14,7 @@ namespace PegasusBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    //[Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
@@ -34,7 +34,7 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await _adminService.CreatePricesAsync(taxiSettingsDTO));
 
         [HttpGet("getAllBookings")]
-        public async Task <ActionResult<PaginatedResult<BookingResponseDto>>> GetAllBookings([FromQuery] BookingSearchRequestDto searchRequestDto) =>
+        public async Task <ActionResult<PaginatedResult<BookingResponseDto>>> GetAllBookings([FromQuery] BookingFilterRequestForAdminDto searchRequestDto) =>
             Generate.ActionResult(await _adminService.GetAllBookingsAsync(searchRequestDto));
 
         [HttpGet("GetBookingById/{bookingId}")]

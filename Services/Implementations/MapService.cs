@@ -20,7 +20,7 @@ using static System.Net.WebRequestMethods;
 
 namespace PegasusBackend.Services.Implementations
 {
-    public class MapService(IConfiguration config, IHttpClientFactory httpClientFactory) : IMapService
+    public class MapService(IConfiguration config, IHttpClientFactory httpClientFactory, ILogger<MapService> logger) : IMapService
     {
         private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
         private readonly string _key = config["GoogleMaps:ApiKey"]!;
@@ -324,6 +324,8 @@ namespace PegasusBackend.Services.Implementations
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    logger.LogWarning("Google API returned error status: {StatusCode}", response.StatusCode);
+
                     var errorContent = await response.Content.ReadAsStringAsync();
                     return ServiceResponse<AutoCompleteResponseDto>.FailResponse(
                         response.StatusCode,
@@ -354,6 +356,8 @@ namespace PegasusBackend.Services.Implementations
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Error in AutoCompleteAddreses");
+
                 return ServiceResponse<AutoCompleteResponseDto>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     $"Error calling Google API: {ex.Message}"
@@ -398,11 +402,22 @@ namespace PegasusBackend.Services.Implementations
 
                 var googleResponse = JsonSerializer.Deserialize<GooglePlaceLocationDetailsDto>(result);
 
+                if (googleResponse == null)
+                {
+                    logger.LogWarning("Failed to deserialize Google API response for Place ID: {PlaceId}", request.PlaceId);
+                    return ServiceResponse<CoordinateDto>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    $"Could not get coordinates"
+                    );
+                }
+
                 if (googleResponse.Location == null)
                 {
+                    logger.LogWarning("No location data found for Place ID: {PlaceId}", request.PlaceId);
+
                     return ServiceResponse<CoordinateDto>.FailResponse(
                     HttpStatusCode.NotFound,
-                    $"Could not get coordniatee"
+                    $"Could not get coordinates"
                     );
                 }
 
@@ -419,6 +434,8 @@ namespace PegasusBackend.Services.Implementations
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Error in AutoCompleteAddreses");
+
                 return ServiceResponse<CoordinateDto>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     $"Error calling Google API: {ex.Message}"

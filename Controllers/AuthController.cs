@@ -44,22 +44,24 @@ namespace PegasusBackend.Controllers
         [Authorize]
         public ActionResult VerifyAuth() => Ok("Authenticated");
 
-        [HttpPost("ForgotPassword")]
-        [EnableRateLimiting("PasswordResetPolicy")]
-        public async Task<ActionResult<string>> ForgotPassword([FromBody] RequestPasswordResetDto request) =>
-                    Generate.ActionResult(await passwordResetService.ForgotPasswordAsync(request));
-
-        [HttpPost("ResetPassword")]
-        [EnableRateLimiting("AuthPolicy")]
-        public async Task<ActionResult<bool>> ResetPassword([FromBody] ConfirmPasswordResetDto request) =>
-            Generate.ActionResult(await passwordResetService.ResetPasswordAsync(request));
-
         // REMOVE IN PRODUCTION
 
         [HttpPost("DevLogin")]
         [EnableRateLimiting("AuthPolicy")]
         public async Task<ActionResult<AuthResponseDto?>> DevLogin(LoginRequestDto request) =>
             Generate.ActionResult<AuthResponseDto?>(await authService.DevLoginAsync(request, HttpContext));
+
+
+
+        [HttpPost("ForgotPassword")]
+        [EnableRateLimiting("PasswordResetPolicy")]
+        public async Task<ActionResult<string>> ForgotPassword([FromBody] RequestPasswordResetDto request) =>
+            Generate.ActionResult(await passwordResetService.ForgotPasswordAsync(request));
+
+        [HttpPost("ResetPassword")]
+        [EnableRateLimiting("AuthPolicy")]
+        public async Task<ActionResult<bool>> ResetPassword([FromBody] ConfirmPasswordResetDto request) =>
+            Generate.ActionResult(await passwordResetService.ResetPasswordAsync(request));
 
     }
 }

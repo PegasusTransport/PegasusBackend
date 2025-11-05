@@ -53,5 +53,13 @@ namespace PegasusBackend.Controllers
         [EnableRateLimiting("AuthPolicy")]
         public async Task<ActionResult<bool>> ResetPassword([FromBody] ConfirmPasswordResetDto request) =>
             Generate.ActionResult(await passwordResetService.ResetPasswordAsync(request));
+
+        // REMOVE IN PRODUCTION
+
+        [HttpPost("DevLogin")]
+        [EnableRateLimiting("AuthPolicy")]
+        public async Task<ActionResult<AuthResponseDto?>> DevLogin(LoginRequestDto request) =>
+            Generate.ActionResult<AuthResponseDto?>(await authService.DevLoginAsync(request, HttpContext));
+
     }
 }

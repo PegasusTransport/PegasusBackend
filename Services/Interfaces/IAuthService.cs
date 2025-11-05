@@ -12,5 +12,6 @@ namespace PegasusBackend.Services.Interfaces
         Task<ServiceResponse<bool>> LogoutAsync(HttpContext httpContext);
         // REMOVE IN PRODUCTION
         Task<ServiceResponse<AuthResponseDto?>> DevLoginAsync(LoginRequestDto request, HttpContext httpContext);
+        ServiceResponse<SessionLifeTimeDto> GetSessionLifetime();
     }
 }

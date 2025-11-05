@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.DTOs.AuthDTOs;
@@ -385,6 +386,30 @@ namespace PegasusBackend.Services.Implementations
             );
 
             return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
+        }
+
+        public ServiceResponse<SessionLifeTimeDto> GetSessionLifetime()
+        {
+            try
+            {
+                var sessionLifeTime = new SessionLifeTimeDto
+                {
+                    RefreshTokenLifetime = configuration.GetValue<int>("JwtSetting:RefreshTokenExpire")
+                };
+                return ServiceResponse<SessionLifeTimeDto>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    sessionLifeTime,
+                    $"Session lifetime, {sessionLifeTime.RefreshTokenLifetime} Represents days"
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving session lifetime");
+                return ServiceResponse<SessionLifeTimeDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "An unexpected error occurred"
+                );
+            }
         }
     }
 }

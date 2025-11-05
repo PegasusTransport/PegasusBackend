@@ -43,6 +43,10 @@ namespace PegasusBackend.Controllers
         [Authorize]
         public ActionResult VerifyAuth() => Ok("Authenticated");
 
+        [HttpGet("SessionLifetime")]
+        public ActionResult<SessionLifeTimeDto> GetSessionLifetime() =>
+            Generate.ActionResult(authService.GetSessionLifetime());
+
         // REMOVE IN PRODUCTION
 
         [HttpPost("DevLogin")]

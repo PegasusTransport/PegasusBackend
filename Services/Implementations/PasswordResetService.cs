@@ -39,7 +39,7 @@ namespace PegasusBackend.Services.Implementations
 
             try
             {
-                var user = await _userManager.FindByEmailAsync(request.Email.Trim());
+                var user = await _userManager.FindByEmailAsync(request.Email.Trim().ToLowerInvariant());
 
                 if (user == null || !user.EmailConfirmed || user.IsDeleted)
                 {
@@ -50,33 +50,54 @@ namespace PegasusBackend.Services.Implementations
                 }
                 else
                 {
-                    var resetToken = await _userManager.GenerateUserTokenAsync(
-                        user,
-                        "PasswordResetTokenProvider",
-                        "ResetPassword"
-                    );
-
-                    if (!string.IsNullOrEmpty(resetToken))
+                    if (string.IsNullOrWhiteSpace(_passwordResetSettings.FrontendUrl))
                     {
-                        var encodedToken = Uri.EscapeDataString(resetToken);
-                        var encodedEmail = Uri.EscapeDataString(user.Email!);
-                        var resetLink = $"{_passwordResetSettings.FrontendUrl}?token={encodedToken}&email={encodedEmail}";
+                        _logger.LogCritical("PasswordResetSettings:FrontendUrl is not configured");
+                    }
 
-                        await _mailjetEmailService.SendEmailAsync(
-                            user.Email!,
-                            MailjetTemplateType.ForgotPassword,
-                            new DTOs.MailjetDTOs.ForgotPasswordRequestDto
+                    else
+                    {
+                        await _userManager.UpdateSecurityStampAsync(user);
+
+                        var resetToken = await _userManager.GenerateUserTokenAsync(
+                            user,
+                            "PasswordResetTokenProvider",
+                            "ResetPassword"
+                        );
+
+                        if (!string.IsNullOrEmpty(resetToken))
+                        {
+                            var encodedToken = Uri.EscapeDataString(resetToken);
+                            var encodedEmail = Uri.EscapeDataString(user.Email!);
+                            var resetLink = $"{_passwordResetSettings.FrontendUrl}/reset/{encodedToken}";
+
+                            var emailResult = await _mailjetEmailService.SendEmailAsync(
+                                 user.Email!,
+                                 MailjetTemplateType.ForgotPassword,
+                                 new DTOs.MailjetDTOs.ForgotPasswordRequestDto
+                                 {
+                                     Firstname = user.FirstName,
+                                     ResetLink = resetLink
+                                 },
+                                 MailjetSubjects.ForgotPassword
+                             );
+
+                            if (emailResult.StatusCode == HttpStatusCode.OK)
                             {
-                                Firstname = user.FirstName,
-                                ResetLink = resetLink
-                            },
-                            MailjetSubjects.ForgotPassword
-                        );
-
-                        _logger.LogInformation(
-                            "Password reset email sent successfully to {Email}",
-                            user.Email
-                        );
+                                _logger.LogInformation(
+                                    "Password reset email sent successfully to {Email}",
+                                    user.Email
+                                );
+                            }
+                            else
+                            {
+                                _logger.LogError(
+                                    "Failed to send password reset email to {Email}: {Error}",
+                                    user.Email,
+                                    emailResult.Message
+                                );
+                            }
+                        }
                     }
                 }
 
@@ -118,7 +139,7 @@ namespace PegasusBackend.Services.Implementations
         {
             try
             {
-                var user = await _userManager.FindByEmailAsync(request.Email.Trim());
+                var user = await _userManager.FindByEmailAsync(request.Email.Trim().ToLowerInvariant());
 
                 if (user == null || user.IsDeleted || !user.EmailConfirmed)
                 {
@@ -141,8 +162,10 @@ namespace PegasusBackend.Services.Implementations
                         );
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _logger.LogWarning(ex, "Failed to decode token for user {Email}", request.Email);
+
                     return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "Invalid reset link. Please request a new password reset."
@@ -167,7 +190,6 @@ namespace PegasusBackend.Services.Implementations
                 }
 
                 // Invalidate all tokens and sessions
-                await _userManager.UpdateSecurityStampAsync(user);
                 await _userService.InvalidateRefreshTokenAsync(user);
 
                 _logger.LogInformation("Password successfully reset for user {Email}", user.Email);

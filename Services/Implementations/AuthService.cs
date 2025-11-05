@@ -97,7 +97,7 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        public async Task<ServiceResponse<AuthResponseDto?>> VerifyTwoFaOTP(VerifyTwoFaDto verifyTwoFaDto, HttpContext httpContext)
+        public async Task<ServiceResponse<bool?>> VerifyTwoFaOTP(VerifyTwoFaDto verifyTwoFaDto, HttpContext httpContext)
         {
             try
             {
@@ -106,17 +106,11 @@ namespace PegasusBackend.Services.Implementations
 
                 if (!isValidOtp)
                 {
-                    return ServiceResponse<AuthResponseDto?>.FailResponse(
+                    return ServiceResponse<bool?>.FailResponse(
                     HttpStatusCode.BadRequest,
                     "Wrong verifaction code"
                 );
                 }
-
-                var roleStrings = await userManager.GetRolesAsync(user!);
-
-                var roles = roleStrings
-                    .Select(r => Enum.Parse<UserRoles>(r))  
-                    .ToList();
 
                 var tokens = new TokenResponseDto
                 {
@@ -130,37 +124,31 @@ namespace PegasusBackend.Services.Implementations
                     tokens.RefreshToken,
                     configuration);
 
-                var authResposne = new AuthResponseDto
-                {
-                    IsAuthenticated = true,
-                    AccessTokenExpiresIn = configuration.GetValue<int>("JwtSetting:AccessTokenExpire")
-                };
-
-                return ServiceResponse<AuthResponseDto?>.SuccessResponse(
+                return ServiceResponse<bool?>.SuccessResponse(
                     HttpStatusCode.OK,
-                    authResposne,
+                    true,
                     "Login successful"
                 );
             }
             catch (Exception ex)
             {
 
-                logger.LogError(ex, "Error during login for email: {Email}", verifyTwoFaDto.Email);
-                return ServiceResponse<AuthResponseDto?>.FailResponse(
+                logger.LogError(ex, "Error during login for email: {Email}", verifyTwoFaDto.Email); 
+                return ServiceResponse<bool?>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "An unexpected error occurred"
                 );
             }
         }
         // REMOVE IN PRODUCTION
-        public async Task<ServiceResponse<AuthResponseDto?>> DevLoginAsync(LoginRequestDto request, HttpContext httpContext)
+        public async Task<ServiceResponse<bool?>> DevLoginAsync(LoginRequestDto request, HttpContext httpContext)
         {
             try
             {
                 var user = await userManager.FindByEmailAsync(request.Email);
                 if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
                 {
-                    return ServiceResponse<AuthResponseDto?>.FailResponse(
+                    return ServiceResponse<bool?>.FailResponse(
                         HttpStatusCode.Unauthorized,
                         "Invalid credentials"
                     );
@@ -175,21 +163,17 @@ namespace PegasusBackend.Services.Implementations
                     tokens.AccessToken,
                     tokens.RefreshToken,
                     configuration);
-                var authResposne = new AuthResponseDto
-                {
-                    IsAuthenticated = true,
-                    AccessTokenExpiresIn = configuration.GetValue<int>("JwtSetting:AccessTokenExpire")
-                };
-                return ServiceResponse<AuthResponseDto?>.SuccessResponse(
+
+                return ServiceResponse<bool?>.SuccessResponse(
                     HttpStatusCode.OK,
-                    authResposne,
+                    true,
                     "Login successful"
                 );
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error during dev login for email: {Email}", request.Email);
-                return ServiceResponse<AuthResponseDto?>.FailResponse(
+                return ServiceResponse<bool?>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "An unexpected error occurred"
                 );

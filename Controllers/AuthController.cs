@@ -26,8 +26,8 @@ namespace PegasusBackend.Controllers
 
         [HttpPost("VerifyTwoFA")]
         [EnableRateLimiting("AuthPolicy")]
-        public async Task<ActionResult<AuthResponseDto?>> VerifyTwoFA(VerifyTwoFaDto request) =>
-            Generate.ActionResult<AuthResponseDto?>(await authService.VerifyTwoFaOTP(request, HttpContext));
+        public async Task<ActionResult<bool?>> VerifyTwoFA(VerifyTwoFaDto request) =>
+            Generate.ActionResult<bool?>(await authService.VerifyTwoFaOTP(request, HttpContext));
 
         [HttpPost("RefreshToken")]
         [EnableRateLimiting("AuthPolicy")]
@@ -51,8 +51,8 @@ namespace PegasusBackend.Controllers
 
         [HttpPost("DevLogin")]
         [EnableRateLimiting("AuthPolicy")]
-        public async Task<ActionResult<AuthResponseDto?>> DevLogin(LoginRequestDto request) =>
-            Generate.ActionResult<AuthResponseDto?>(await authService.DevLoginAsync(request, HttpContext));
+        public async Task<ActionResult<bool?>> DevLogin(LoginRequestDto request) =>
+            Generate.ActionResult<bool?>(await authService.DevLoginAsync(request, HttpContext));
 
     }
 }

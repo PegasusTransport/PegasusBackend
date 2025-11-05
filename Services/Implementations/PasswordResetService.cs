@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
+using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.AuthDTOs;
 using PegasusBackend.Helpers.MailjetHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
-using PegasusBackend.Configurations;
 using System.Net;
 
 namespace PegasusBackend.Services.Implementations
@@ -32,17 +32,10 @@ namespace PegasusBackend.Services.Implementations
             _passwordResetSettings = passwordResetSettings.Value;
         }
 
-        public async Task<ServiceResponse<string>> ForgotPasswordAsync(RequestPasswordResetDto request)
+        public async Task<ServiceResponse<bool>> ForgotPasswordAsync(RequestPasswordResetDto request)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(request.Email))
-                {
-                    return ServiceResponse<string>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Email is required"
-                    );
-                }
                 var user = await _userManager.FindByEmailAsync(request.Email.Trim());
 
                 if (user == null || !user.EmailConfirmed || user.IsDeleted)
@@ -52,26 +45,25 @@ namespace PegasusBackend.Services.Implementations
                         request.Email
                     );
 
-                    // Add delay to prevent timing attacks (match normal execution time)
                     await Task.Delay(TimeSpan.FromMilliseconds(100));
 
-                    return ServiceResponse<string>.SuccessResponse(
+                    return ServiceResponse<bool>.SuccessResponse(
                         HttpStatusCode.OK,
-                        "If the email exists, a password reset link has been sent.",
-                        "Password reset email sent"
+                        true,
+                        "If the email exists, a password reset link has been sent."
                     );
                 }
 
                 var resetToken = await _userManager.GenerateUserTokenAsync(
-                user,
-                "PasswordResetTokenProvider",
-                "ResetPassword"
+                    user,
+                    "PasswordResetTokenProvider",
+                    "ResetPassword"
                 );
 
                 if (string.IsNullOrEmpty(resetToken))
                 {
                     _logger.LogError("Failed to generate password reset token for user: {Email}", user.Email);
-                    return ServiceResponse<string>.FailResponse(
+                    return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.InternalServerError,
                         "Failed to generate reset token"
                     );
@@ -79,19 +71,7 @@ namespace PegasusBackend.Services.Implementations
 
                 var encodedToken = Uri.EscapeDataString(resetToken);
                 var encodedEmail = Uri.EscapeDataString(user.Email!);
-
-                var frontendUrl = _passwordResetSettings.FrontendUrl;
-
-                if (string.IsNullOrWhiteSpace(frontendUrl))
-                {
-                    _logger.LogError("PasswordResetSettings:FrontendUrl configuration is missing");
-                    return ServiceResponse<string>.FailResponse(
-                        HttpStatusCode.InternalServerError,
-                        "Password reset configuration error"
-                    );
-                }
-
-                var resetLink = $"{frontendUrl}?token={encodedToken}&email={encodedEmail}";
+                var resetLink = $"{_passwordResetSettings.FrontendUrl}?token={encodedToken}&email={encodedEmail}";
 
                 var emailResult = await _mailjetEmailService.SendEmailAsync(
                     user.Email!,
@@ -112,7 +92,7 @@ namespace PegasusBackend.Services.Implementations
                         emailResult.Message
                     );
 
-                    return ServiceResponse<string>.FailResponse(
+                    return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.InternalServerError,
                         "Failed to send reset email"
                     );
@@ -124,16 +104,16 @@ namespace PegasusBackend.Services.Implementations
                     _passwordResetSettings.TokenLifetimeHours
                 );
 
-                return ServiceResponse<string>.SuccessResponse(
+                return ServiceResponse<bool>.SuccessResponse(
                     HttpStatusCode.OK,
-                    "If the email exists, a password reset link has been sent.",
-                    "Password reset email sent"
+                    true,
+                    "If the email exists, a password reset link has been sent."
                 );
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error processing forgot password request for {Email}", request.Email);
-                return ServiceResponse<string>.FailResponse(
+                return ServiceResponse<bool>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "An unexpected error occurred while processing your request"
                 );
@@ -144,30 +124,6 @@ namespace PegasusBackend.Services.Implementations
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(request.Email))
-                {
-                    return ServiceResponse<bool>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Email is required"
-                    );
-                }
-
-                if (string.IsNullOrWhiteSpace(request.Token))
-                {
-                    return ServiceResponse<bool>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Reset token is required"
-                    );
-                }
-
-                if (string.IsNullOrWhiteSpace(request.NewPassword))
-                {
-                    return ServiceResponse<bool>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "New password is required"
-                    );
-                }
-
                 var user = await _userManager.FindByEmailAsync(request.Email.Trim());
 
                 if (user == null || user.IsDeleted)
@@ -220,16 +176,10 @@ namespace PegasusBackend.Services.Implementations
                 }
 
                 var isValidToken = await _userManager.VerifyUserTokenAsync(
-                   user,
-                   "PasswordResetTokenProvider",
-                   "ResetPassword",
-                   decodedToken
-               );
-
-                _logger.LogDebug(
-                     "Token validation result for user {Email}: {IsValid}",
-                     request.Email,
-                     isValidToken
+                    user,
+                    "PasswordResetTokenProvider",
+                    "ResetPassword",
+                    decodedToken
                 );
 
                 if (!isValidToken)
@@ -257,7 +207,7 @@ namespace PegasusBackend.Services.Implementations
 
                     return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest,
-                        "Failed to reset password. Please ensure your new password meets all requirements."
+                        $"Failed to reset password: {errors}"
                     );
                 }
 
@@ -273,45 +223,12 @@ namespace PegasusBackend.Services.Implementations
 
                     return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest,
-                        "Failed to reset password. Please ensure your new password meets all requirements."
+                        $"Failed to reset password: {errors}"
                     );
                 }
 
-                // This prevents token reuse - all previous reset tokens are now invalid
-                try
-                {
-                    await _userManager.UpdateSecurityStampAsync(user);
-                    _logger.LogInformation(
-                        "Security stamp updated for user {Email}, all tokens invalidated",
-                        user.Email
-                    );
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex,
-                        "Failed to update security stamp for user {Email}. Token reuse may be possible.",
-                        user.Email
-                    );
-                    // Continue anyway - password was changed successfully
-                }
-
-                // Invalidate all refresh tokens to force re-login
-                try
-                {
-                    await _userService.InvalidateRefreshTokenAsync(user);
-                    _logger.LogInformation(
-                        "Refresh tokens invalidated for user {Email}",
-                        user.Email
-                    );
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex,
-                        "Failed to invalidate refresh tokens for user {Email}. User may remain logged in.",
-                        user.Email
-                    );
-                    // Continue anyway - password was changed successfully
-                }
+                await _userManager.UpdateSecurityStampAsync(user);
+                await _userService.InvalidateRefreshTokenAsync(user);
 
                 _logger.LogInformation("Password successfully reset for user {Email}", user.Email);
 

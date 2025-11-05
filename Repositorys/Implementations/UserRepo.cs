@@ -1,11 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Mailjet.Client.Resources.SMS;
+using Microsoft.EntityFrameworkCore;
 using PegasusBackend.Data;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 
 namespace PegasusBackend.Repositorys.Implementations
 {
-    public class UserRepo(AppDBContext context, ILogger<UserRepo> _logger) : IUserRepo
+    public class UserRepo(AppDBContext context, ILogger<UserRepo> _logger, IConfiguration configuration) : IUserRepo
     {
         public async Task<User?> GetUserByRefreshToken(string refreshtoken)
         {
@@ -13,8 +14,9 @@ namespace PegasusBackend.Repositorys.Implementations
         }
         public async Task<bool> HandleRefreshToken(User user, string? refreshtoken)
         {
+            var expireRefreshToken = configuration.GetValue<int>("JwtSetting:RefreshTokenExpire");
             user.RefreshToken = refreshtoken;
-            user.RefreshTokenExpireTime = DateTime.UtcNow.AddDays(7);
+            user.RefreshTokenExpireTime = DateTime.UtcNow.AddDays(expireRefreshToken);
             await context.SaveChangesAsync();
             return true;
         }

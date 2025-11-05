@@ -2,26 +2,29 @@
 
 namespace PegasusBackend.Helpers.JwtCookieOptions
 {
-    public class CookieOptionsConfig()
+    public class CookieOptionsConfig
     {
-        public static CookieOptions AccessTokenCookie()
+        public static CookieOptions AccessTokenCookie(IConfiguration configuration)
         {
+            var expire = configuration.GetValue<int>("JwtSetting:AccessTokenExpire");
             return new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Expires = DateTimeOffset.UtcNow.AddHours(1),
+                Expires = DateTimeOffset.UtcNow.AddMinutes(expire),
             };
         }
-        public static CookieOptions RefreshTokenCookie()
+        public static CookieOptions RefreshTokenCookie(IConfiguration configuration)
         {
+            var expire = configuration.GetValue<int>("JwtSetting:RefreshTokenExpire");
+
             return new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Expires = DateTimeOffset.UtcNow.AddDays(7)
+                Expires = DateTimeOffset.UtcNow.AddDays(expire)
             };
         }
     }

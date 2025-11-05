@@ -19,7 +19,7 @@ namespace PegasusBackend.Controllers
     {
         [HttpPost("Registration")]
         [EnableRateLimiting("RegistrationPolicy")]
-        public async Task<ActionResult<RegistrationResponseDto>> RegisterUser(RegistrationRequestDto request) => 
+        public async Task<ActionResult<bool>> RegisterUser(RegistrationRequestDto request) => 
             Generate.ActionResult(await userService.RegisterUserAsync(request));
 
         [HttpGet("ConfirmEmail")]

@@ -100,7 +100,6 @@ namespace PegasusBackend.Services.Implementations
         {
             try
             {
-
                 var user = await userManager.FindByEmailAsync(verifyTwoFaDto.Email);
                 var isValidOtp = await userManager.VerifyTwoFactorTokenAsync(user!, TokenOptions.DefaultEmailProvider, verifyTwoFaDto.VerificationCode);
 
@@ -127,13 +126,13 @@ namespace PegasusBackend.Services.Implementations
                 HandleAuthenticationCookies.SetAuthenticationCookie(
                     httpContext,
                     tokens.AccessToken,
-                    tokens.RefreshToken);
+                    tokens.RefreshToken,
+                    configuration);
 
                 var authResposne = new AuthResponseDto
                 {
                     IsAuthenticated = true,
-                    Roles = roles,
-                    AccessTokenExpiresIn = configuration.GetValue<int>("JwtSetting:Expire")
+                    AccessTokenExpiresIn = configuration.GetValue<int>("JwtSetting:AccessTokenExpire")
                 };
 
                 return ServiceResponse<AuthResponseDto?>.SuccessResponse(
@@ -165,10 +164,6 @@ namespace PegasusBackend.Services.Implementations
                         "Invalid credentials"
                     );
                 }
-                var roleStrings = await userManager.GetRolesAsync(user);
-                var roles = roleStrings
-                    .Select(r => Enum.Parse<UserRoles>(r))  
-                    .ToList();
                 var tokens = new TokenResponseDto
                 {
                     AccessToken = await GenerateAccessToken(user),
@@ -177,12 +172,12 @@ namespace PegasusBackend.Services.Implementations
                 HandleAuthenticationCookies.SetAuthenticationCookie(
                     httpContext,
                     tokens.AccessToken,
-                    tokens.RefreshToken);
+                    tokens.RefreshToken,
+                    configuration);
                 var authResposne = new AuthResponseDto
                 {
                     IsAuthenticated = true,
-                    Roles = roles,
-                    AccessTokenExpiresIn = configuration.GetValue<int>("JwtSetting:Expire")
+                    AccessTokenExpiresIn = configuration.GetValue<int>("JwtSetting:AccessTokenExpire")
                 };
                 return ServiceResponse<AuthResponseDto?>.SuccessResponse(
                     HttpStatusCode.OK,
@@ -270,7 +265,8 @@ namespace PegasusBackend.Services.Implementations
                 HandleAuthenticationCookies.SetAuthenticationCookie(
                     httpContext,
                     tokenResponse.Data.AccessToken,
-                    tokenResponse.Data.RefreshToken
+                    tokenResponse.Data.RefreshToken,
+                    configuration
                 );
 
                 return ServiceResponse<string>.SuccessResponse(
@@ -304,7 +300,7 @@ namespace PegasusBackend.Services.Implementations
                 }
 
                 await userService.InvalidateRefreshTokenAsync(user);
-                HandleAuthenticationCookies.ClearAuthenticationCookies(httpContext);
+                HandleAuthenticationCookies.ClearAuthenticationCookies(httpContext, configuration);
 
                 return ServiceResponse<bool>.SuccessResponse(
                     HttpStatusCode.OK,
@@ -378,7 +374,7 @@ namespace PegasusBackend.Services.Implementations
             );
 
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
-            var expire = configuration.GetValue<int>("JwtSetting:Expire");
+            var expire = configuration.GetValue<int>("JwtSetting:AccessTokenExpire");
 
             var tokenDescriptor = new JwtSecurityToken(
                 issuer: configuration["JwtSetting:Issuer"],

@@ -121,8 +121,8 @@ namespace PegasusBackend.Services.Implementations
                 HandleAuthenticationCookies.SetAuthenticationCookie(
                     httpContext,
                     tokens.AccessToken,
-                    tokens.RefreshToken,
-                    configuration);
+                    tokens.RefreshToken
+                    );
 
                 return ServiceResponse<bool?>.SuccessResponse(
                     HttpStatusCode.OK,
@@ -161,8 +161,8 @@ namespace PegasusBackend.Services.Implementations
                 HandleAuthenticationCookies.SetAuthenticationCookie(
                     httpContext,
                     tokens.AccessToken,
-                    tokens.RefreshToken,
-                    configuration);
+                    tokens.RefreshToken
+                    );
 
                 return ServiceResponse<bool?>.SuccessResponse(
                     HttpStatusCode.OK,
@@ -188,7 +188,7 @@ namespace PegasusBackend.Services.Implementations
                 if (user is null)
                 {
                     return ServiceResponse<TokenResponseDto?>.FailResponse(
-                        HttpStatusCode.BadRequest,
+                        HttpStatusCode.Unauthorized,
                         "Invalid refresh token"
                     );
                 }
@@ -217,7 +217,7 @@ namespace PegasusBackend.Services.Implementations
                 if (!httpContext.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
                 {
                     return ServiceResponse<string>.FailResponse(
-                        HttpStatusCode.NotFound,
+                        HttpStatusCode.Unauthorized,
                         "No refresh token found"
                     );
                 }
@@ -226,7 +226,7 @@ namespace PegasusBackend.Services.Implementations
                 if (user == null)
                 {
                     return ServiceResponse<string>.FailResponse(
-                        HttpStatusCode.BadRequest,
+                        HttpStatusCode.Unauthorized,
                         "Invalid or expired refresh token"
                     );
                 }
@@ -242,7 +242,7 @@ namespace PegasusBackend.Services.Implementations
                 if (tokenResponse?.Data == null)
                 {
                     return ServiceResponse<string>.FailResponse(
-                        HttpStatusCode.BadRequest,
+                        HttpStatusCode.Unauthorized,
                         "Token refresh failed"
                     );
                 }
@@ -250,8 +250,7 @@ namespace PegasusBackend.Services.Implementations
                 HandleAuthenticationCookies.SetAuthenticationCookie(
                     httpContext,
                     tokenResponse.Data.AccessToken,
-                    tokenResponse.Data.RefreshToken,
-                    configuration
+                    tokenResponse.Data.RefreshToken
                 );
 
                 return ServiceResponse<string>.SuccessResponse(
@@ -285,7 +284,7 @@ namespace PegasusBackend.Services.Implementations
                 }
 
                 await userService.InvalidateRefreshTokenAsync(user);
-                HandleAuthenticationCookies.ClearAuthenticationCookies(httpContext, configuration);
+                HandleAuthenticationCookies.ClearAuthenticationCookies(httpContext);
 
                 return ServiceResponse<bool>.SuccessResponse(
                     HttpStatusCode.OK,

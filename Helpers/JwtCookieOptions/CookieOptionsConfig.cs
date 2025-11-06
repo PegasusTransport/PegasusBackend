@@ -1,30 +1,26 @@
-﻿using Microsoft.Extensions.Configuration;
-
-namespace PegasusBackend.Helpers.JwtCookieOptions
+﻿namespace PegasusBackend.Helpers.JwtCookieOptions
 {
     public class CookieOptionsConfig
     {
-        public static CookieOptions AccessTokenCookie(IConfiguration configuration)
+        public static CookieOptions AccessTokenCookie()
         {
-            var expire = configuration.GetValue<int>("JwtSetting:AccessTokenExpire");
             return new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Expires = DateTimeOffset.UtcNow.AddMinutes(expire),
+                Expires = CookieExpirationHelper.GetAccessTokenExpiration()
             };
         }
-        public static CookieOptions RefreshTokenCookie(IConfiguration configuration)
-        {
-            var expire = configuration.GetValue<int>("JwtSetting:RefreshTokenExpire");
 
+        public static CookieOptions RefreshTokenCookie()
+        {
             return new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Expires = DateTimeOffset.UtcNow.AddDays(expire)
+                Expires = CookieExpirationHelper.GetRefreshTokenExpiration()
             };
         }
     }

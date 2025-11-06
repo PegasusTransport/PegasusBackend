@@ -2,8 +2,9 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.OpenApi.Models;
 using PegasusBackend.Configurations;
-using Scalar.AspNetCore;
+using PegasusBackend.Helpers.JwtCookieOptions;
 using PegasusBackend.Validators.BookingValidators;
+using Scalar.AspNetCore;
 
 
 namespace PegasusBackend
@@ -70,7 +71,7 @@ namespace PegasusBackend
                 });
 
             }
-
+            CookieExpirationHelper.Initialize(app.Configuration);
 
             app.UseHttpsRedirection();
             app.UseCors("AllowFrontend");

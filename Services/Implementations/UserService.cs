@@ -430,6 +430,7 @@ namespace PegasusBackend.Services.Implementations
             );
 
         }
+
         // Helper methods
         public async Task<User?> GetUserByValidRefreshTokenAsync(string refreshToken)
         {

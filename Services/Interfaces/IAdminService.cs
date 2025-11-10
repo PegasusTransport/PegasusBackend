@@ -19,5 +19,9 @@ namespace PegasusBackend.Services.Interfaces
         Task<ServiceResponse<bool>> DeleteBookingByIdAsync(int bookingId);
         Task<ServiceResponse<BookingResponseDto>> ChangeBookingById(UpdateBookingDto updateBookingDto);
         Task<ServiceResponse<bool>> CancelBookingAsync(int bookingId);
+        Task<ServiceResponse<List<AllDriversRequestDto>>> GetAllDriversAsync();
+        Task<ServiceResponse<DriverResponseDto>> GetDriverByUserIdAsync(string userId);
+        Task<ServiceResponse<DriverResponseDto>> GetDriverByIdAsync(Guid driverId);
+        Task<ServiceResponse<bool>> DeleteDriverAsync(Guid driverId);
     }
 }

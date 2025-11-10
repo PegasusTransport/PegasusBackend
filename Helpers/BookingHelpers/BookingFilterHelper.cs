@@ -28,7 +28,6 @@ public static class BookingFilterHelper
         return query;
     }
 
-
     private static IQueryable<Bookings> ApplyTimeFilters(IQueryable<Bookings> query, BookingFilterRequestForAdminDto filters)
     {
         var now = DateTime.UtcNow;
@@ -36,7 +35,7 @@ public static class BookingFilterHelper
         if (filters.Date.HasValue)
         {
             var date = filters.Date.Value.ToDateTime(TimeOnly.MinValue).Date;
-            return query.Where(b => b.PickUpDateTime.Date == date);
+            query = query.Where(b => b.PickUpDateTime.Date == date);
         }
 
         if (filters.FromDate.HasValue)
@@ -71,7 +70,9 @@ public static class BookingFilterHelper
                     query = query.Where(b => b.PickUpDateTime.Date == now.Date);
                     break;
                 case BookingPeriodHelper.ThisWeek:
-                    var weekStart = now.Date.AddDays(-(int)now.DayOfWeek + (int)DayOfWeek.Monday);
+                    // Start måndag i aktuell vecka (även korrekt för söndag)
+                    int diff = (7 + (int)now.DayOfWeek - (int)DayOfWeek.Monday) % 7;
+                    var weekStart = now.Date.AddDays(-diff);
                     var weekEnd = weekStart.AddDays(7);
                     query = query.Where(b => b.PickUpDateTime >= weekStart && b.PickUpDateTime < weekEnd);
                     break;

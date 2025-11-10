@@ -56,5 +56,24 @@ namespace PegasusBackend.Controllers
         [HttpPut("UpdateBooking")]
         public async Task<ActionResult<BookingResponseDto>> UpdateBookingById([FromBody] UpdateBookingDto updateBookingDto) =>
             Generate.ActionResult(await _adminService.ChangeBookingById(updateBookingDto));
+
+        // DriverSection
+        [HttpGet("GetAllDrivers")]
+        public async Task<ActionResult<List<AllDriversRequestDto>>> GetAllDriver() =>
+            Generate.ActionResult(await _adminService.GetAllDriversAsync());
+
+        [HttpDelete("DeleteDriver/{id}")]
+        public async Task<ActionResult<bool>> DeleteDriver(Guid id) =>
+            Generate.ActionResult(await _adminService.DeleteDriverAsync(id));
+
+        [HttpGet("GetDriverById/{id}")]
+        [Authorize]
+        public async Task<ActionResult<DriverResponseDto>> GetDriverById(Guid id) =>
+            Generate.ActionResult(await _adminService.GetDriverByIdAsync(id));
+
+        [HttpGet("GetDriverByUserId/{id}")]
+        [Authorize]
+        public async Task<ActionResult<DriverResponseDto>> GetDriverByUserId(string id) =>
+            Generate.ActionResult(await _adminService.GetDriverByUserIdAsync(id));
     }
 }

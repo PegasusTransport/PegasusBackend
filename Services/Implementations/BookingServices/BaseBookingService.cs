@@ -195,8 +195,8 @@ namespace PegasusBackend.Services.Implementations.Base
                 q = q.Where(b =>
                     b.PickUpAdress.ToLower().Contains(term) ||
                     b.DropOffAdress.ToLower().Contains(term) ||
-                    (b.Flightnumber != null && b.Flightnumber.ToLower().Contains(term)) ||
-                    (b.Comment != null && b.Comment.ToLower().Contains(term))
+                   (b.Flightnumber != null && b.Flightnumber.ToLower().Contains(term)) ||
+                   (b.Comment != null && b.Comment.ToLower().Contains(term))
                 );
             }
             if (query.MinPrice.HasValue) q = q

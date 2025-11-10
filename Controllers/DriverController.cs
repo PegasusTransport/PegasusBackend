@@ -33,7 +33,7 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await driverService.UpdateDriverAsync(id, request, HttpContext));
 
         [HttpGet("GetMyBookings")]
-        public async Task<ActionResult<PaginatedResult<BookingResponseDto>>> GetDriverBookingsAsync([FromBody] BookingSearchRequestDto query) =>
+        public async Task<ActionResult<PaginatedResult<BookingResponseDto>>> GetDriverBookingsAsync([FromQuery] BookingSearchRequestDto query) =>
             Generate.ActionResult(await driverService.GetDriverBookingsAsync(query));
 
         [HttpGet("Bookings/Available")]

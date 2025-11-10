@@ -321,7 +321,7 @@ namespace PegasusBackend.Services.Implementations
             try
             {
                 var bookingsQuery = _bookingRepo.GetAllQueryable(true)
-                    .Where(b => b.IsAvailable);
+                    .Where(b => b.IsAvailable && b.PickUpDateTime > DateTime.UtcNow);
 
                 bookingsQuery = ApplyCommonFilters(bookingsQuery, query);
 
@@ -484,8 +484,6 @@ namespace PegasusBackend.Services.Implementations
 
             return (driver, null);
         }
-
-
         #endregion
     }
 }

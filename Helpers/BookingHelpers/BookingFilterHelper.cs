@@ -107,6 +107,18 @@ public static class BookingFilterHelper
 
     private static IQueryable<Bookings> ApplyRelationFilters(IQueryable<Bookings> query, BookingFilterRequestForAdminDto filters)
     {
+        if (!string.IsNullOrWhiteSpace(filters.Search))
+        {
+            var term = filters.Search.ToLower();
+
+            query = query.Where(b =>
+              (((b.GuestFirstName ?? "") + " " + (b.GuestLastName ?? "")).ToLower().Contains(term)) ||
+                (b.User != null && (((b.User.FirstName ?? "") + " " + (b.User.LastName ?? "")).ToLower().Contains(term))) ||
+                (b.Driver != null && b.Driver.User != null &&
+              (((b.Driver.User.FirstName ?? "") + " " + (b.Driver.User.LastName ?? "")).ToLower().Contains(term)))
+            );
+        }
+
         if (!string.IsNullOrWhiteSpace(filters.CustomerName))
         {
             var term = filters.CustomerName.ToLower();

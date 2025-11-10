@@ -59,6 +59,12 @@ namespace PegasusBackend.Controllers
         [HttpPost("Bookings/SendReceipt")]
         public async Task<ActionResult<bool>> SendReceipt([FromBody] ReceiptRequestDto dto) =>
             Generate.ActionResult(await driverService.SendReceiptAsync(dto));
+        [HttpGet("DriverInformation")]
+        public async Task<ActionResult<DriverResponseDto>> GetCurrentDriver()
+        {
+            return Generate.ActionResult(await driverService.GetCurrentDriverAsync());
+        }
+
 
     }
 }

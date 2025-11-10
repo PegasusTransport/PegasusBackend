@@ -335,6 +335,7 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
+
         public async Task<ServiceResponse<BookingResponseDto>> CompleteBookingAsync(int bookingId)
         {
             try
@@ -394,6 +395,26 @@ namespace PegasusBackend.Services.Implementations
                 );
             }
         }
+
+        public async Task<ServiceResponse<DriverResponseDto>> GetCurrentDriverAsync()
+        {
+            var (driver, error) = await TryGetCurrentDriver();
+
+            if (error != null)
+            {
+                return ServiceResponse<DriverResponseDto>.FailResponse(
+                    error.StatusCode,
+                    error.Message
+                );
+            }
+
+            return ServiceResponse<DriverResponseDto>.SuccessResponse(
+                HttpStatusCode.OK,
+                driver!,
+                "Driver profile retrieved successfully."
+            );
+        }
+
 
         public async Task<ServiceResponse<bool>> SendReceiptAsync(ReceiptRequestDto receiptDto)
         {

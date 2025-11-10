@@ -23,5 +23,7 @@ namespace PegasusBackend.Services.Interfaces
         Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetAvailableBookingsAsync(BookingSearchRequestDto query);
         Task<ServiceResponse<BookingResponseDto>> CompleteBookingAsync(int bookingId);
         Task<ServiceResponse<bool>> SendReceiptAsync(ReceiptRequestDto receiptDto);
+        Task<ServiceResponse<DriverResponseDto>> GetCurrentDriverAsync();
+
     }
 }

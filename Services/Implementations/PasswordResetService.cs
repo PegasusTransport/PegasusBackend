@@ -257,18 +257,6 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                // Check if account is locked
-                if (await _userManager.IsLockedOutAsync(user))
-                {
-                    _logger.LogWarning(
-                        "Locked out user {Email} attempted to change password",
-                        user.Email
-                    );
-                    return ServiceResponse<bool>.FailResponse(
-                        HttpStatusCode.Forbidden,
-                        "Your account is locked. Please contact support."
-                    );
-                }
 
                 // Verify current password
                 var isCurrentPasswordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);

@@ -7,5 +7,6 @@ namespace PegasusBackend.Services.Interfaces
     {
         Task<ServiceResponse<bool>> ForgotPasswordAsync(RequestPasswordResetDto request);
         Task<ServiceResponse<bool>> ResetPasswordAsync(ConfirmPasswordResetDto request);
+        Task<ServiceResponse<bool>> ChangePasswordAsync(ChangePasswordDto request, HttpContext httpContext);
     }
 }

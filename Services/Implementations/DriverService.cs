@@ -233,7 +233,7 @@ namespace PegasusBackend.Services.Implementations
                     booking.PickUpDateTime, _bookingRules.MinHoursBeforePickupForChange);
 
                 if (validation.StatusCode != HttpStatusCode.OK)
-                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.Forbidden, "Too late to unassign. Please contact an admin to reassign.");
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.BadRequest, "Too late to unassign. Please contact an admin to reassign.");
 
                 booking.DriverIdFK = null;
                 booking.IsAvailable = true;
@@ -249,7 +249,7 @@ namespace PegasusBackend.Services.Implementations
                     return ServiceResponse<bool>.FailResponse(HttpStatusCode.Conflict, "State changed; release aborted.");
                 }
 
-                return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true, "Booking released back to the pool.");
+                return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true, "Booking released back to the bookingpool.");
             }
             catch (Exception ex)
             {

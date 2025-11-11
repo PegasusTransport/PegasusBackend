@@ -5,6 +5,7 @@ using PegasusBackend.Attributes;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.Helpers;
+using PegasusBackend.Services.Interfaces;
 using PegasusBackend.Services.Interfaces.BookingInterfaces;
 using System.Security.Claims;
 
@@ -44,15 +45,19 @@ namespace PegasusBackend.Controllers
         public async Task<ActionResult<PaginatedResult<BookingResponseDto>>> GetMyBookings([FromQuery] BookingSearchRequestDto query) => 
             Generate.ActionResult(await _bookingService.GetMyBookingsAsync(query));
 
+        [HttpGet("GetBookingById/{bookingId}")]
+        [Authorize]
+        public async Task<ActionResult<BookingResponseDto>> GetBookingById([FromRoute] int bookingId) =>
+            Generate.ActionResult(await _bookingService.GetBookingByIdAsync(bookingId));
+
         [HttpPut("updateBooking")]
         [Authorize]
         public async Task<ActionResult<BookingResponseDto>> updateBooking([FromBody] UpdateBookingDto updateBookingDto) =>
             Generate.ActionResult(await _bookingService.UpdateBookingForUserAsync(updateBookingDto));
 
-        [HttpDelete("deleteBooking/{bookingId}")]
+        [HttpPut("CancelBooking/{bookingId}")]
         [Authorize]
-        public async Task<ActionResult<bool>> DeleteBooking([FromRoute] int bookingId) =>
+        public async Task<ActionResult<bool>> CancelBooking([FromRoute] int bookingId) =>
             Generate.ActionResult(await _bookingService.CancelBookingAsync(bookingId));
-
     }
 }

@@ -54,6 +54,7 @@ namespace PegasusBackend.Repositorys.Implementations
             {
                 return await context.Drivers
                     .AsNoTracking()
+                    .Include(d => d.Car)
                     .Include(d => d.User)
                     .Where(d => d.UserId == userId && !d.IsDeleted && !d.User.IsDeleted)
                     .Select(d => new DriverResponseDto
@@ -62,7 +63,13 @@ namespace PegasusBackend.Repositorys.Implementations
                         FirstName = d.User.FirstName,
                         LastName = d.User.LastName,
                         ProfilePicture = d.ProfilePicture,
-                        CarId = d.CarId
+                        CarId = d.CarId,
+                        CarMake = d.Car.Make,
+                        CarModel = d.Car.Model,
+                        CarCapacity = d.Car.Capacity,
+                        CarType = d.Car.Type,
+                        CarLicensePlate = d.Car.LicensePlate
+                        
                     })
                     .FirstOrDefaultAsync();
             }

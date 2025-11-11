@@ -4,36 +4,28 @@ using Microsoft.Extensions.Options;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.MailjetDTOs;
-using PegasusBackend.DTOs.UserDTOs;
 using PegasusBackend.Helpers;
 using PegasusBackend.Helpers.BookingHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
+using PegasusBackend.Services.Implementations.Base;
 using PegasusBackend.Services.Interfaces;
 using PegasusBackend.Services.Interfaces.BookingInterfaces;
-using System.Collections.Generic;
 using System.Net;
 using System.Runtime.CompilerServices;
 
 namespace PegasusBackend.Services.Implementations.BookingServices
 {
-    public class BookingService : IBookingService
+    public class BookingService : BaseBookingService, IBookingService
     {
         #region Dependencies
-        private readonly IBookingRepo _bookingRepo;
         private readonly UserManager<User> _userManager;
         private readonly IMailjetEmailService _mailjetEmailService;
         private readonly IBookingValidationService _validationService;
         private readonly IBookingFactoryService _bookingFactory;
-        private readonly IBookingMapperService _bookingMapper;
-        private readonly ILogger<BookingService> _logger;
         private readonly MailJetSettings _settings;
-        private readonly BookingRulesSettings _bookingRules;
         private readonly IWebHostEnvironment _env;
-        private readonly IUserService _userService;
-        private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly PaginationSettings _paginationSettings;
         private readonly RecalculateIfAddressChangedHelper _recalculateHelper;
         private readonly ValidateUpdateRuleHelper _validateUpdateRuleHelper;
 
@@ -52,21 +44,18 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             IHttpContextAccessor httpContextAccessor,
             IOptions<PaginationSettings> paginationSettings,
             RecalculateIfAddressChangedHelper recalculateHelper,
-            ValidateUpdateRuleHelper validateUpdateRuleHelper)
+            ValidateUpdateRuleHelper validateUpdateRuleHelper,
+            IMapService mapService,
+            IDriverRepo driverRepo
+            
+        ) : base (bookingRepo, bookingMapper, userService, httpContextAccessor, paginationSettings, mapService, bookingRules, logger, driverRepo)
         {
-            _bookingRepo = bookingRepo;
             _userManager = userManager;
             _mailjetEmailService = mailjetEmailService;
             _validationService = validationService;
             _bookingFactory = bookingFactory;
-            _bookingMapper = bookingMapper;
-            _logger = logger;
             _settings = mailJetSettings.Value;
-            _bookingRules = bookingRules.Value;
             _env = env;
-            _userService = userService;
-            _httpContextAccessor = httpContextAccessor;
-            _paginationSettings = paginationSettings.Value;
             _recalculateHelper = recalculateHelper;
             _validateUpdateRuleHelper = validateUpdateRuleHelper;
         }
@@ -280,7 +269,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                     booking.PickUpDateTime, _bookingRules.MinHoursBeforePickupForChange);
 
                 if (validation.StatusCode != HttpStatusCode.OK)
-                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.Forbidden, "Too late to cancel. Please contact support.");
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.BadRequest, "Too late to cancel. Please contact support.");
 
                 booking.Status = BookingStatus.Cancelled;
                 booking.IsAvailable = false;
@@ -294,81 +283,51 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             }
         }
 
+        public async Task<ServiceResponse<BookingResponseDto>> GetBookingByIdAsync(int bookingId)
+        {
+            try
+            {
+                var currentUser = await GetAuthenticatedUserAsync();
+                if (currentUser == null)
+                    return ServiceResponse<BookingResponseDto>.FailResponse(
+                        HttpStatusCode.Unauthorized,
+                        "You must be logged in to view your bookings."
+                    );
+
+                var booking = await _bookingRepo
+                   .GetAllQueryable(true)
+                   .FirstOrDefaultAsync(b => b.BookingId == bookingId && b.UserIdFk == currentUser.Id);
+
+                if (booking is null)
+                {
+                    _logger.LogWarning("GetBookingByIdAsync: Booking {BookingId} not found for user {UserId}", bookingId, currentUser.Id);
+                    return ServiceResponse<BookingResponseDto>.FailResponse(
+                        HttpStatusCode.NotFound, 
+                        "Couldnt fetch data from database! Check that you are Authorize!");
+                }
+
+                var mappedBooking = _bookingMapper.MapToResponseDTO(booking);
+                _logger.LogInformation("GetBookingByIdAsync: Booking with ID {BookingId} retrieved.", bookingId);
+
+                return ServiceResponse<BookingResponseDto>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    mappedBooking,
+                    "Here is the booking!");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetBookingByIdAsync: Unexpected error while retrieving booking with ID {BookingId}.", bookingId);
+                return ServiceResponse<BookingResponseDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "An unexpected error occurred while retrieving the booking.");
+            }
+        }
+
 
         #region Private Helpers
-        private async Task<UserResponseDto?> GetAuthenticatedUserAsync()
-        {
-            var result = await _userService.GetLoggedInUser(_httpContextAccessor.HttpContext);
-            return result?.Data;
-        }
-
-        private (int Page, int PageSize, string SortBy, string SortOrder) ResolvePaginationSettings(BookingSearchRequestDto query)
-        {
-            var settings = _paginationSettings;
-            int page = query.Page ?? settings.DefaultPage;
-            int pageSize = Math.Min(query.PageSize ?? settings.DefaultPageSize, settings.MaxPageSize);
-            string sortBy = query.SortBy ?? settings.SortBy;
-            string sortOrder = query.SortOrder.ToString().ToLower();
-
-            return (page, pageSize, sortBy, sortOrder);
-        }
-
-        private IQueryable<Bookings> BuildUserBookingsQuery(string userId, BookingSearchRequestDto query)
-        {
-            var bookings = _bookingRepo.GetAllQueryable(true)
-                .Where(b => b.UserIdFk == userId);
-
-            if (!string.IsNullOrWhiteSpace(query.Search))
-            {
-                var term = query.Search.ToLower();
-                bookings = bookings.Where(b =>
-                    b.PickUpAdress.ToLower().Contains(term) ||
-                    b.DropOffAdress.ToLower().Contains(term) ||
-                    (b.Flightnumber != null && b.Flightnumber.ToLower().Contains(term)) ||
-                    (b.Comment != null && b.Comment.ToLower().Contains(term))
-                );
-            }
-
-            if (query.MinPrice.HasValue)
-                bookings = bookings.Where(b => b.Price >= query.MinPrice.Value);
-
-            if (query.MaxPrice.HasValue)
-                bookings = bookings.Where(b => b.Price <= query.MaxPrice.Value);
-
-            if (query.FromDate.HasValue)
-                bookings = bookings.Where(b => b.PickUpDateTime >= query.FromDate.Value);
-
-            if (query.ToDate.HasValue)
-                bookings = bookings.Where(b => b.PickUpDateTime <= query.ToDate.Value);
-
-            if (query.Status.HasValue)
-            {
-                var statusValue = (BookingStatus)query.Status.Value;
-                bookings = bookings.Where(b => b.Status == statusValue);
-            }
-
-            if (query.UpcomingOnly == true)
-                bookings = bookings.Where(b => b.PickUpDateTime > DateTime.UtcNow);
-
-            return bookings;
-        }
-
-        private PaginatedResult<BookingResponseDto> MapPagedResult(PaginatedResult<Bookings> paged)
-        {
-            return new PaginatedResult<BookingResponseDto>
-            {
-                Items = _bookingMapper.MapToResponseDTOs(paged.Items),
-                TotalCount = paged.TotalCount,
-                Page = paged.Page,
-                PageSize = paged.PageSize,
-                CurrentCount = paged.CurrentCount
-            };
-        }
-
         private void UpdateBookingFields(Bookings booking, UpdateBookingDto dto)
         {
             booking.PickUpDateTime = dto.PickUpDateTime;
-            booking.Flightnumber = dto.Flightnumber;
             booking.Comment = dto.Comment;
             booking.PickUpAdress = dto.PickUpAddress;
             booking.PickUpLatitude = dto.PickUpLatitude;
@@ -382,6 +341,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             booking.DropOffAdress = dto.DropOffAddress;
             booking.DropOffLatitude = dto.DropOffLatitude;
             booking.DropOffLongitude = dto.DropOffLongitude;
+            booking.Flightnumber = dto.Flightnumber;
         }
 
         private async Task SendBookingEmailAsync(Bookings booking, CreateBookingDto dto, bool isGuest)

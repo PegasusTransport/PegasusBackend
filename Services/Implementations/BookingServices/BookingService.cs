@@ -28,7 +28,6 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         private readonly IWebHostEnvironment _env;
         private readonly RecalculateIfAddressChangedHelper _recalculateHelper;
         private readonly ValidateUpdateRuleHelper _validateUpdateRuleHelper;
-        private readonly IDriverRepo _driverRepo;
 
         public BookingService(
             IBookingRepo bookingRepo,
@@ -48,10 +47,8 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             ValidateUpdateRuleHelper validateUpdateRuleHelper,
             IMapService mapService,
             IDriverRepo driverRepo
-            
-        ) : base (bookingRepo, bookingMapper, userService, httpContextAccessor, paginationSettings, mapService, bookingRules, logger, driverRepo)
-            ValidateUpdateRuleHelper validateUpdateRuleHelper,
-            IDriverRepo driverRepo)
+
+        ) : base(bookingRepo, bookingMapper, userService, httpContextAccessor, paginationSettings, mapService, bookingRules, logger, driverRepo)
         {
             _userManager = userManager;
             _mailjetEmailService = mailjetEmailService;
@@ -61,7 +58,6 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             _env = env;
             _recalculateHelper = recalculateHelper;
             _validateUpdateRuleHelper = validateUpdateRuleHelper;
-            _driverRepo = driverRepo;
         }
         #endregion
 

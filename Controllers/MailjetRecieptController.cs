@@ -19,7 +19,7 @@ namespace PegasusBackend.Controllers
 
         [HttpPost("CreateReciept")]
         public async Task<ActionResult<bool>> CreateReciept([FromBody] ReceiptRequestDto dto) =>
-            Generate.ActionResult(await _mailjet.MapRecieptAttachmentForMailjet(dto));
+            Generate.ActionResult(await _mailjet.SendReceiptEmailAsync(dto));
 
     }
 }

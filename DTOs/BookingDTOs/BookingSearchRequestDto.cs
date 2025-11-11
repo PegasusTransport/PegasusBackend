@@ -14,7 +14,7 @@ namespace PegasusBackend.DTOs.BookingDTOs
         public decimal? MaxPrice { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
-        public BookingStatusForCustomers? Status { get; set; } // Confirmed / Cancelled / Completed
+        public BookingStatus? Status { get; set; } // PendingEmailConfirm / Confirmed / Cancelled / Completed
         public bool? UpcomingOnly { get; set; }
     }
 }

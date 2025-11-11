@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using PegasusBackend.DTOs.BookingDTOs;
 
-public class BookingFilterRequestDtoValidator : AbstractValidator<BookingFilterRequestDto>
+public class BookingFilterRequestDtoValidator : AbstractValidator<BookingFilterRequestForAdminDto>
 {
     public BookingFilterRequestDtoValidator()
     {

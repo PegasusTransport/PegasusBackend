@@ -38,7 +38,6 @@ namespace PegasusBackend.Services.Implementations
             _bookingRepo = bookingRepo;
         }
 
-
         public async Task<ServiceResponse<bool>> SendEmailAsync<T>(
             string toEmail,
             MailjetTemplateType templateType,
@@ -89,7 +88,7 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        public async Task<ServiceResponse<bool>> MapRecieptAttachmentForMailjet(ReceiptRequestDto dto)
+        public async Task<ServiceResponse<bool>> SendReceiptEmailAsync(ReceiptRequestDto dto)
         {
             try
             {
@@ -154,14 +153,13 @@ namespace PegasusBackend.Services.Implementations
                     firstname = customerFirstName,
                 };
 
-
                 var emailSendResult = await SendEmailWithAttachmentAsync(
                     userEmail,
                     MailjetTemplateType.Receipt,
                     mailjetVariables,
                     MailjetSubjects.Receipt,
                     PdfBytes,
-                    $"Reciept: {customerFirstName}, {DateTime.Now:yyyyMMdd_HHmm}.pdf");
+                    $"Reciept: {customerFirstName}, {DateTime.Now:yyyy:MM:dd_HH:mm}.pdf");
 
                 return emailSendResult;
             }
@@ -172,7 +170,8 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        public async Task<ServiceResponse<bool>> SendEmailWithAttachmentAsync<T>(
+        #region private methods
+        private async Task<ServiceResponse<bool>> SendEmailWithAttachmentAsync<T>(
             string toEmail,
             MailjetTemplateType templateType,
             T variables,
@@ -326,7 +325,7 @@ namespace PegasusBackend.Services.Implementations
             });
         }
 
-
+        #endregion
 
     }
 }

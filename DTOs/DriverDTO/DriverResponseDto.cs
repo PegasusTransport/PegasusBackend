@@ -8,5 +8,11 @@
         public string ProfilePicture { get; set; } = string.Empty;
         public int? CarId { get; set; }
 
+        public string? CarMake { get; set; }
+        public string? CarModel { get; set; }
+        public int? CarCapacity { get; set; }
+        public string? CarType { get; set; }
+        public string? CarLicensePlate { get; set; }
+
     }
 }

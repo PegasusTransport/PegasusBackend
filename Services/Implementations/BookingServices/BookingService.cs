@@ -36,6 +36,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         private readonly PaginationSettings _paginationSettings;
         private readonly RecalculateIfAddressChangedHelper _recalculateHelper;
         private readonly ValidateUpdateRuleHelper _validateUpdateRuleHelper;
+        private readonly IDriverRepo _driverRepo;
 
         public BookingService(
             IBookingRepo bookingRepo,
@@ -52,7 +53,8 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             IHttpContextAccessor httpContextAccessor,
             IOptions<PaginationSettings> paginationSettings,
             RecalculateIfAddressChangedHelper recalculateHelper,
-            ValidateUpdateRuleHelper validateUpdateRuleHelper)
+            ValidateUpdateRuleHelper validateUpdateRuleHelper,
+            IDriverRepo driverRepo)
         {
             _bookingRepo = bookingRepo;
             _userManager = userManager;
@@ -69,6 +71,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             _paginationSettings = paginationSettings.Value;
             _recalculateHelper = recalculateHelper;
             _validateUpdateRuleHelper = validateUpdateRuleHelper;
+            _driverRepo = driverRepo;
         }
         #endregion
 
@@ -96,6 +99,11 @@ namespace PegasusBackend.Services.Implementations.BookingServices
 
                 await _bookingRepo.CreateBookingAsync(booking);
                 await SendBookingEmailAsync(booking, bookingDto, isGuest);
+
+                if (!isGuest && booking.Status == BookingStatus.Confirmed)
+                {
+                    await NotifyDriversAboutNewBookingAsync(booking);
+                }
 
                 return BuildSuccessResponse(booking, isGuest);
             }
@@ -159,6 +167,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 booking.ConfirmationTokenExpiresAt = null;
 
                 await _bookingRepo.UpdateBookingAsync(booking);
+                await NotifyDriversAboutNewBookingAsync(booking);
                 var response = _bookingMapper.MapToResponseDTO(booking);
 
                 return ServiceResponse<BookingResponseDto>.SuccessResponse(HttpStatusCode.OK, response, "Booking confirmed successfully.");
@@ -472,6 +481,81 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 DropOffLongitude = dto.DropOffLongitude,
                 Flightnumber = dto.Flightnumber
             };
+
+        private async Task NotifyDriversAboutNewBookingAsync(Bookings booking)
+        {
+            try
+            {
+                var drivers = await _driverRepo.GetAllDriversAsync();
+                var activeDrivers = drivers.Where(d => !d.IsDeleted && d.User?.Email != null && !d.User.IsDeleted).ToList();
+
+                if (activeDrivers.Count == 0)
+                {
+                    _logger.LogWarning("No active drivers to notify about booking {BookingId}", booking.BookingId);
+                    return;
+                }
+
+                // Format stops
+                var stops = new List<string>();
+                if (!string.IsNullOrWhiteSpace(booking.FirstStopAddress))
+                    stops.Add(booking.FirstStopAddress);
+                if (!string.IsNullOrWhiteSpace(booking.SecondStopAddress))
+                    stops.Add(booking.SecondStopAddress);
+                var stopsText = stops.Count > 0 ? string.Join(" → ", stops) : "Inga stopp";
+
+                // get portal URL from settings
+                var portalUrl = _settings.Links.DriverPortalUrl;
+                if (string.IsNullOrWhiteSpace(portalUrl))
+                {
+                    _logger.LogWarning("Driver portal URL not configured in MailJetSettings");
+                    portalUrl = "https://pegasus-driver.se"; // Fallback
+                }
+
+                var notificationData = new DriverNewBookingNotificationDto
+                {
+                    DriverFirstname = "", // will be set per driver
+                    PickupAddress = booking.PickUpAdress,
+                    PickupTime = booking.PickUpDateTime.ToString("yyyy-MM-dd HH:mm", new System.Globalization.CultureInfo("sv-SE")),
+                    Destination = booking.DropOffAdress,
+                    Stops = stopsText,
+                    EstimatedPrice = booking.Price,
+                    DistanceKm = booking.DistanceKm,
+                    PortalLink = portalUrl
+                };
+
+                var successCount = 0;
+                foreach (var driver in activeDrivers)
+                {
+                    try
+                    {
+                        // put first name for every driver
+                        notificationData.DriverFirstname = driver.User.FirstName;
+
+                        await _mailjetEmailService.SendEmailAsync(
+                            driver.User.Email!,
+                            Helpers.MailjetHelpers.MailjetTemplateType.DriverNewBooking,
+                            notificationData,
+                            Helpers.MailjetHelpers.MailjetSubjects.DriverNewBooking
+                        );
+
+                        successCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send notification to driver {DriverId} ({Email}) about booking {BookingId}",
+                            driver.DriverId, driver.User.Email, booking.BookingId);
+                    }
+                }
+
+                _logger.LogInformation("Notified {SuccessCount}/{TotalCount} drivers about new booking {BookingId}",
+                    successCount, activeDrivers.Count, booking.BookingId);
+            }
+            catch (Exception ex)
+            {
+                // we log the error but we don't let it stop the booking process
+                _logger.LogError(ex, "Failed to notify drivers about new booking {BookingId}", booking.BookingId);
+            }
+        }
 
         #endregion
     }

@@ -269,7 +269,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                     booking.PickUpDateTime, _bookingRules.MinHoursBeforePickupForChange);
 
                 if (validation.StatusCode != HttpStatusCode.OK)
-                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.Forbidden, "Too late to cancel. Please contact support.");
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.BadRequest, "Too late to cancel. Please contact support.");
 
                 booking.Status = BookingStatus.Cancelled;
                 booking.IsAvailable = false;

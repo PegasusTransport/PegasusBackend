@@ -2,17 +2,21 @@
 using Microsoft.Extensions.Options;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.AuthDTOs;
+using PegasusBackend.Helpers.JwtCookieOptions;
 using PegasusBackend.Helpers.MailjetHelpers;
 using PegasusBackend.Models;
+using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
+
 
 namespace PegasusBackend.Services.Implementations
 {
     public class PasswordResetService : IPasswordResetService
     {
         private readonly UserManager<User> _userManager;
+        private readonly IUserRepo _userRepo;
         private readonly IMailjetEmailService _mailjetEmailService;
         private readonly IUserService _userService;
         private readonly ILogger<PasswordResetService> _logger;
@@ -21,11 +25,13 @@ namespace PegasusBackend.Services.Implementations
         public PasswordResetService(
             UserManager<User> userManager,
             IMailjetEmailService mailjetEmailService,
+            IUserRepo userRepo,
             IUserService userService,
             ILogger<PasswordResetService> logger,
             IOptions<PasswordResetSettings> passwordResetSettings)
         {
             _userManager = userManager;
+            _userRepo = userRepo;
             _mailjetEmailService = mailjetEmailService;
             _userService = userService;
             _logger = logger;
@@ -204,6 +210,109 @@ namespace PegasusBackend.Services.Implementations
             {
                 _logger.LogError(ex, "Unexpected error resetting password for {Email}", request.Email);
 
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "An unexpected error occurred. Please try again or contact support."
+                );
+            }
+        }
+
+        public async Task<ServiceResponse<bool>> ChangePasswordAsync(ChangePasswordDto request, HttpContext httpContext)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(httpContext.User);
+
+                if (user == null)
+                {
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.Unauthorized,
+                        "You must be logged in to change your password."
+                    );
+                }
+
+                // Check if user is soft-deleted
+                if (user.IsDeleted)
+                {
+                    _logger.LogWarning(
+                        "Deleted user {Email} attempted to change password",
+                        user.Email
+                    );
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.Forbidden,
+                        "This account has been deleted."
+                    );
+                }
+
+                // Check if email is confirmed
+                if (!user.EmailConfirmed)
+                {
+                    _logger.LogWarning(
+                        "Unconfirmed user {Email} attempted to change password",
+                        user.Email
+                    );
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.Forbidden,
+                        "You must confirm your email before changing your password."
+                    );
+                }
+
+
+                // Verify current password
+                var isCurrentPasswordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
+                if (!isCurrentPasswordValid)
+                {
+                    _logger.LogWarning(
+                        "User {Email} provided incorrect current password",
+                        user.Email
+                    );
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Current password is incorrect."
+                    );
+                }
+
+                // Change password - this automatically updates SecurityStamp
+                var result = await _userManager.ChangePasswordAsync(
+                    user,
+                    request.CurrentPassword,
+                    request.NewPassword
+                );
+
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogWarning(
+                        "Failed to change password for user {Email}: {Errors}",
+                        user.Email,
+                        errors
+                    );
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        $"Password does not meet requirements: {errors}"
+                    );
+                }
+
+                // Invalidate refresh token using existing helper for consistency
+                await _userRepo.HandleRefreshToken(user, null);
+
+                // Clear authentication cookies to force re-login
+                HandleAuthenticationCookies.ClearAuthenticationCookies(httpContext);
+
+                _logger.LogInformation(
+                    "Password changed successfully for user {Email}. Session invalidated.",
+                    user.Email
+                );
+
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true,
+                    "Your password has been changed successfully. Please log in with your new password."
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error changing password");
                 return ServiceResponse<bool>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "An unexpected error occurred. Please try again or contact support."

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using PegasusBackend.DTOs.EmailDTO;
+using PegasusBackend.Helpers.BookingHelpers;
 using PegasusBackend.Repositorys.Implementations;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Services.Implementations;
@@ -28,6 +29,21 @@ namespace PegasusBackend.Configurations
                 configuration.GetSection("Mailjet")
             );
 
+            services.Configure<PasswordResetSettings>(
+                configuration.GetSection("PasswordResetSettings")
+            );
+
+            //PaginationService
+            services.Configure<PaginationSettings>(configuration.GetSection("Pagination"));
+
+            //bookingRule and helpers
+            services.Configure<BookingRulesSettings>(configuration.GetSection("BookingRules"));
+            services.AddSingleton(resolver =>
+                resolver.GetRequiredService<IOptions<BookingRulesSettings>>().Value);
+
+            services.AddScoped<RecalculateIfAddressChangedHelper>();
+            services.AddScoped<ValidateUpdateRuleHelper>();
+
             // Register all FluentValidators
             services.AddValidatorsFromAssemblyContaining<AccountWelcomeRequestValidator>();
 
@@ -43,6 +59,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IPriceService, PriceService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IPasswordResetService, PasswordResetService>();
             services.AddScoped<IDriverService, DriverService>();
             services.AddScoped<IMapService, MapService>();
             services.AddScoped<IMailjetEmailService, MailjetEmailService>();

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.IdentityModel.Tokens;
 using PegasusBackend.DTOs.AuthDTOs;
@@ -96,27 +97,20 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        public async Task<ServiceResponse<AuthResponseDto?>> VerifyTwoFaOTP(VerifyTwoFaDto verifyTwoFaDto, HttpContext httpContext)
+        public async Task<ServiceResponse<bool?>> VerifyTwoFaOTP(VerifyTwoFaDto verifyTwoFaDto, HttpContext httpContext)
         {
             try
             {
-
                 var user = await userManager.FindByEmailAsync(verifyTwoFaDto.Email);
                 var isValidOtp = await userManager.VerifyTwoFactorTokenAsync(user!, TokenOptions.DefaultEmailProvider, verifyTwoFaDto.VerificationCode);
 
                 if (!isValidOtp)
                 {
-                    return ServiceResponse<AuthResponseDto?>.FailResponse(
+                    return ServiceResponse<bool?>.FailResponse(
                     HttpStatusCode.BadRequest,
                     "Wrong verifaction code"
                 );
                 }
-
-                var roleStrings = await userManager.GetRolesAsync(user!);
-
-                var roles = roleStrings
-                    .Select(r => Enum.Parse<UserRoles>(r))  
-                    .ToList();
 
                 var tokens = new TokenResponseDto
                 {
@@ -127,26 +121,59 @@ namespace PegasusBackend.Services.Implementations
                 HandleAuthenticationCookies.SetAuthenticationCookie(
                     httpContext,
                     tokens.AccessToken,
-                    tokens.RefreshToken);
+                    tokens.RefreshToken
+                    );
 
-                var authResposne = new AuthResponseDto
-                {
-                    IsAuthenticated = true,
-                    Roles = roles,
-                    AccessTokenExpiresIn = configuration.GetValue<int>("JwtSetting:Expire")
-                };
-
-                return ServiceResponse<AuthResponseDto?>.SuccessResponse(
+                return ServiceResponse<bool?>.SuccessResponse(
                     HttpStatusCode.OK,
-                    authResposne,
+                    true,
                     "Login successful"
                 );
             }
             catch (Exception ex)
             {
 
-                logger.LogError(ex, "Error during login for email: {Email}", verifyTwoFaDto.Email);
-                return ServiceResponse<AuthResponseDto?>.FailResponse(
+                logger.LogError(ex, "Error during login for email: {Email}", verifyTwoFaDto.Email); 
+                return ServiceResponse<bool?>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "An unexpected error occurred"
+                );
+            }
+        }
+        // REMOVE IN PRODUCTION
+        public async Task<ServiceResponse<bool?>> DevLoginAsync(LoginRequestDto request, HttpContext httpContext)
+        {
+            try
+            {
+                var user = await userManager.FindByEmailAsync(request.Email);
+                if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
+                {
+                    return ServiceResponse<bool?>.FailResponse(
+                        HttpStatusCode.Unauthorized,
+                        "Invalid credentials"
+                    );
+                }
+                var tokens = new TokenResponseDto
+                {
+                    AccessToken = await GenerateAccessToken(user),
+                    RefreshToken = await CreateAndStoreRefreshToken(user),
+                };
+                HandleAuthenticationCookies.SetAuthenticationCookie(
+                    httpContext,
+                    tokens.AccessToken,
+                    tokens.RefreshToken
+                    );
+
+                return ServiceResponse<bool?>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true,
+                    "Login successful"
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error during dev login for email: {Email}", request.Email);
+                return ServiceResponse<bool?>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "An unexpected error occurred"
                 );
@@ -161,7 +188,7 @@ namespace PegasusBackend.Services.Implementations
                 if (user is null)
                 {
                     return ServiceResponse<TokenResponseDto?>.FailResponse(
-                        HttpStatusCode.BadRequest,
+                        HttpStatusCode.Unauthorized,
                         "Invalid refresh token"
                     );
                 }
@@ -190,7 +217,7 @@ namespace PegasusBackend.Services.Implementations
                 if (!httpContext.Request.Cookies.TryGetValue(CookieNames.RefreshToken, out var refreshToken))
                 {
                     return ServiceResponse<string>.FailResponse(
-                        HttpStatusCode.NotFound,
+                        HttpStatusCode.Unauthorized,
                         "No refresh token found"
                     );
                 }
@@ -199,7 +226,7 @@ namespace PegasusBackend.Services.Implementations
                 if (user == null)
                 {
                     return ServiceResponse<string>.FailResponse(
-                        HttpStatusCode.BadRequest,
+                        HttpStatusCode.Unauthorized,
                         "Invalid or expired refresh token"
                     );
                 }
@@ -215,7 +242,7 @@ namespace PegasusBackend.Services.Implementations
                 if (tokenResponse?.Data == null)
                 {
                     return ServiceResponse<string>.FailResponse(
-                        HttpStatusCode.BadRequest,
+                        HttpStatusCode.Unauthorized,
                         "Token refresh failed"
                     );
                 }
@@ -331,7 +358,7 @@ namespace PegasusBackend.Services.Implementations
             );
 
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
-            var expire = configuration.GetValue<int>("JwtSetting:Expire");
+            var expire = configuration.GetValue<int>("JwtSetting:AccessTokenExpire");
 
             var tokenDescriptor = new JwtSecurityToken(
                 issuer: configuration["JwtSetting:Issuer"],
@@ -342,6 +369,30 @@ namespace PegasusBackend.Services.Implementations
             );
 
             return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
+        }
+
+        public ServiceResponse<SessionLifeTimeDto> GetSessionLifetime()
+        {
+            try
+            {
+                var sessionLifeTime = new SessionLifeTimeDto
+                {
+                    RefreshTokenLifetime = configuration.GetValue<int>("JwtSetting:RefreshTokenExpire")
+                };
+                return ServiceResponse<SessionLifeTimeDto>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    sessionLifeTime,
+                    $"Session lifetime, {sessionLifeTime.RefreshTokenLifetime} Represents days"
+                );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving session lifetime");
+                return ServiceResponse<SessionLifeTimeDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "An unexpected error occurred"
+                );
+            }
         }
     }
 }

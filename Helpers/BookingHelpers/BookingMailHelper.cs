@@ -1,7 +1,7 @@
 ﻿using PegasusBackend.DTOs.BookingDTOs;
 using System.Globalization;
 
-namespace PegasusBackend.Helpers
+namespace PegasusBackend.Helpers.BookingHelpers
 {
     public static class BookingMailHelper
     {
@@ -15,7 +15,7 @@ namespace PegasusBackend.Helpers
             if (!string.IsNullOrWhiteSpace(dto.SecondStopAddress))
                 stops.Add(dto.SecondStopAddress);
 
-            return stops.Count > 0 ? string.Join(" → ", stops) : "Inga stopp angivna!";
+            return stops.Count > 0 ? string.Join(" → ", stops) : "No stops given!";
         }
 
         public static string FormatDateTime(DateTime dateTime)

@@ -6,7 +6,8 @@ using Microsoft.OpenApi.Models;
 using PegasusBackend.Data;
 using PegasusBackend.Filters;
 using PegasusBackend.Models;
-using PegasusBackend.Services.BackgroundServices;
+using PegasusBackend.Services.Implementations;
+using PegasusBackend.Helpers;
 
 
 namespace PegasusBackend.Configurations
@@ -18,12 +19,25 @@ namespace PegasusBackend.Configurations
             services.AddDbContext<AppDBContext>(options =>
                 options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
 
-            services.AddIdentity<User, IdentityRole>() // Use User and IdentityRole
-              .AddEntityFrameworkStores<AppDBContext>()
-              .AddDefaultTokenProviders();
+            // Get PasswordResetSettings from configuration
+            var passwordResetSettings = config
+                .GetSection("PasswordResetSettings")
+                .Get<PasswordResetSettings>();
 
+            var passwordResetTokenLifetimeHours = passwordResetSettings?.TokenLifetimeHours ?? 24;
+
+            services.AddIdentity<User, IdentityRole>()
+                .AddEntityFrameworkStores<AppDBContext>()
+                .AddDefaultTokenProviders()
+                .AddTokenProvider<PasswordResetTokenProvider>("PasswordResetTokenProvider");
+
+            // Configure password reset token lifetime
+            services.Configure<PasswordResetTokenProviderOptions>(options =>
+                options.TokenLifespan = TimeSpan.FromHours(passwordResetTokenLifetimeHours));
+
+            // Configure email confirmation token lifetime  
             services.Configure<DataProtectionTokenProviderOptions>(options =>
-              options.TokenLifespan = TimeSpan.FromHours(24));
+                options.TokenLifespan = TimeSpan.FromHours(24));
 
             services.Configure<IdentityOptions>(options => options.SignIn.RequireConfirmedEmail = true);
 

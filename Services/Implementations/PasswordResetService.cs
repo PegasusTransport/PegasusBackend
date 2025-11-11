@@ -1,0 +1,323 @@
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+using PegasusBackend.Configurations;
+using PegasusBackend.DTOs.AuthDTOs;
+using PegasusBackend.Helpers.JwtCookieOptions;
+using PegasusBackend.Helpers.MailjetHelpers;
+using PegasusBackend.Models;
+using PegasusBackend.Repositorys.Interfaces;
+using PegasusBackend.Responses;
+using PegasusBackend.Services.Interfaces;
+using System.Net;
+
+
+namespace PegasusBackend.Services.Implementations
+{
+    public class PasswordResetService : IPasswordResetService
+    {
+        private readonly UserManager<User> _userManager;
+        private readonly IUserRepo _userRepo;
+        private readonly IMailjetEmailService _mailjetEmailService;
+        private readonly IUserService _userService;
+        private readonly ILogger<PasswordResetService> _logger;
+        private readonly PasswordResetSettings _passwordResetSettings;
+
+        public PasswordResetService(
+            UserManager<User> userManager,
+            IMailjetEmailService mailjetEmailService,
+            IUserRepo userRepo,
+            IUserService userService,
+            ILogger<PasswordResetService> logger,
+            IOptions<PasswordResetSettings> passwordResetSettings)
+        {
+            _userManager = userManager;
+            _userRepo = userRepo;
+            _mailjetEmailService = mailjetEmailService;
+            _userService = userService;
+            _logger = logger;
+            _passwordResetSettings = passwordResetSettings.Value;
+        }
+
+        public async Task<ServiceResponse<bool>> ForgotPasswordAsync(RequestPasswordResetDto request)
+        {
+            var startTime = DateTime.UtcNow;
+            const int TARGET_RESPONSE_TIME_MS = 800; 
+
+            try
+            {
+                var user = await _userManager.FindByEmailAsync(request.Email.Trim().ToLowerInvariant());
+
+                if (user == null || !user.EmailConfirmed || user.IsDeleted)
+                {
+                    _logger.LogWarning(
+                        "Password reset requested for non-existent, unconfirmed, or deleted user: {Email}",
+                        request.Email
+                    );
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(_passwordResetSettings.FrontendUrl))
+                    {
+                        _logger.LogCritical("PasswordResetSettings:FrontendUrl is not configured");
+                    }
+
+                    else
+                    {
+                        await _userManager.UpdateSecurityStampAsync(user);
+
+                        var resetToken = await _userManager.GenerateUserTokenAsync(
+                            user,
+                            "PasswordResetTokenProvider",
+                            "ResetPassword"
+                        );
+
+                        if (!string.IsNullOrEmpty(resetToken))
+                        {
+                            var encodedToken = Uri.EscapeDataString(resetToken);
+                            var encodedEmail = Uri.EscapeDataString(user.Email!);
+                            var resetLink = $"{_passwordResetSettings.FrontendUrl}/reset/{encodedToken}";
+
+                            var emailResult = await _mailjetEmailService.SendEmailAsync(
+                                 user.Email!,
+                                 MailjetTemplateType.ForgotPassword,
+                                 new DTOs.MailjetDTOs.ForgotPasswordRequestDto
+                                 {
+                                     Firstname = user.FirstName,
+                                     ResetLink = resetLink
+                                 },
+                                 MailjetSubjects.ForgotPassword
+                             );
+
+                            if (emailResult.StatusCode == HttpStatusCode.OK)
+                            {
+                                _logger.LogInformation(
+                                    "Password reset email sent successfully to {Email}",
+                                    user.Email
+                                );
+                            }
+                            else
+                            {
+                                _logger.LogError(
+                                    "Failed to send password reset email to {Email}: {Error}",
+                                    user.Email,
+                                    emailResult.Message
+                                );
+                            }
+                        }
+                    }
+                }
+
+                var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
+                var remainingDelay = TARGET_RESPONSE_TIME_MS - elapsed;
+
+                if (remainingDelay > 0)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(remainingDelay));
+                }
+
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true,
+                    "If your email is registered, you will receive a password reset link shortly."
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error processing forgot password request");
+
+                var elapsed = (DateTime.UtcNow - startTime).TotalMilliseconds;
+                var remainingDelay = TARGET_RESPONSE_TIME_MS - elapsed;
+
+                if (remainingDelay > 0)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(remainingDelay));
+                }
+
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true,
+                    "If your email is registered, you will receive a password reset link shortly."
+                );
+            }
+        }
+
+        public async Task<ServiceResponse<bool>> ResetPasswordAsync(ConfirmPasswordResetDto request)
+        {
+            try
+            {
+                var user = await _userManager.FindByEmailAsync(request.Email.Trim().ToLowerInvariant());
+
+                if (user == null || user.IsDeleted || !user.EmailConfirmed)
+                {
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Invalid password reset request."
+                    );
+                }
+
+                string decodedToken;
+                try
+                {
+                    decodedToken = Uri.UnescapeDataString(request.Token);
+
+                    if (string.IsNullOrWhiteSpace(decodedToken))
+                    {
+                        return ServiceResponse<bool>.FailResponse(
+                            HttpStatusCode.BadRequest,
+                            "Invalid reset link. Please request a new password reset."
+                        );
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to decode token for user {Email}", request.Email);
+
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Invalid reset link. Please request a new password reset."
+                    );
+                }
+
+                var result = await _userManager.ResetPasswordAsync(user, decodedToken, request.NewPassword);
+
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogWarning(
+                        "Failed to reset password for user {Email}: {Errors}",
+                        request.Email,
+                        errors
+                    );
+
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        $"Password does not meet requirements: {errors}"
+                    );
+                }
+
+                // Invalidate all tokens and sessions
+                await _userService.InvalidateRefreshTokenAsync(user);
+
+                _logger.LogInformation("Password successfully reset for user {Email}", user.Email);
+
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true,
+                    "Your password has been reset successfully. Please log in with your new password."
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error resetting password for {Email}", request.Email);
+
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "An unexpected error occurred. Please try again or contact support."
+                );
+            }
+        }
+
+        public async Task<ServiceResponse<bool>> ChangePasswordAsync(ChangePasswordDto request, HttpContext httpContext)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(httpContext.User);
+
+                if (user == null)
+                {
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.Unauthorized,
+                        "You must be logged in to change your password."
+                    );
+                }
+
+                // Check if user is soft-deleted
+                if (user.IsDeleted)
+                {
+                    _logger.LogWarning(
+                        "Deleted user {Email} attempted to change password",
+                        user.Email
+                    );
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.Forbidden,
+                        "This account has been deleted."
+                    );
+                }
+
+                // Check if email is confirmed
+                if (!user.EmailConfirmed)
+                {
+                    _logger.LogWarning(
+                        "Unconfirmed user {Email} attempted to change password",
+                        user.Email
+                    );
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.Forbidden,
+                        "You must confirm your email before changing your password."
+                    );
+                }
+
+
+                // Verify current password
+                var isCurrentPasswordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
+                if (!isCurrentPasswordValid)
+                {
+                    _logger.LogWarning(
+                        "User {Email} provided incorrect current password",
+                        user.Email
+                    );
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Current password is incorrect."
+                    );
+                }
+
+                // Change password - this automatically updates SecurityStamp
+                var result = await _userManager.ChangePasswordAsync(
+                    user,
+                    request.CurrentPassword,
+                    request.NewPassword
+                );
+
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    _logger.LogWarning(
+                        "Failed to change password for user {Email}: {Errors}",
+                        user.Email,
+                        errors
+                    );
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        $"Password does not meet requirements: {errors}"
+                    );
+                }
+
+                // Invalidate refresh token using existing helper for consistency
+                await _userRepo.HandleRefreshToken(user, null);
+
+                // Clear authentication cookies to force re-login
+                HandleAuthenticationCookies.ClearAuthenticationCookies(httpContext);
+
+                _logger.LogInformation(
+                    "Password changed successfully for user {Email}. Session invalidated.",
+                    user.Email
+                );
+
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true,
+                    "Your password has been changed successfully. Please log in with your new password."
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error changing password");
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "An unexpected error occurred. Please try again or contact support."
+                );
+            }
+        }
+    }
+}

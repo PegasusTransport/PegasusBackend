@@ -1,6 +1,4 @@
-﻿using PegasusBackend.Data;
-
-namespace PegasusBackend.Helpers.JwtCookieOptions
+﻿namespace PegasusBackend.Helpers.JwtCookieOptions
 {
     public class HandleAuthenticationCookies
     {
@@ -10,16 +8,23 @@ namespace PegasusBackend.Helpers.JwtCookieOptions
             {
                 throw new ArgumentException("Tokens cannot be null or empty");
             }
-
+            
             httpContext.Response.Cookies.Append(CookieNames.AccessToken, accessToken, CookieOptionsConfig.AccessTokenCookie());
             httpContext.Response.Cookies.Append(CookieNames.RefreshToken, refreshToken, CookieOptionsConfig.RefreshTokenCookie());
         }
+
         public static void ClearAuthenticationCookies(HttpContext httpContext)
         {
-
-            httpContext.Response.Cookies.Delete(CookieNames.AccessToken, CookieOptionsConfig.AccessTokenCookie());
-            httpContext.Response.Cookies.Delete(CookieNames.RefreshToken, CookieOptionsConfig.RefreshTokenCookie());
+            var deletionOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTimeOffset.UtcNow.AddDays(-1)
+            };
+            
+            httpContext.Response.Cookies.Delete(CookieNames.AccessToken, deletionOptions);
+            httpContext.Response.Cookies.Delete(CookieNames.RefreshToken, deletionOptions);
         }
     }
-    
 }

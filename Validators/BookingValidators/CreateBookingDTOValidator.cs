@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using PegasusBackend.DTOs.BookingDTOs;
 
-namespace PegasusBackend.Validators
+namespace PegasusBackend.Validators.BookingValidators
 {
     public class CreateBookingDTOValidator : AbstractValidator<CreateBookingDto>
     {

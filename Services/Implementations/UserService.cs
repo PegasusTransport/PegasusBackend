@@ -69,13 +69,20 @@ namespace PegasusBackend.Services.Implementations
                         "Not authorized"
                     );
                 }
+
+                var roleStrings = await userManager.GetRolesAsync(user);
+                var roles = roleStrings
+                    .Select(r => Enum.Parse<UserRoles>(r))
+                    .ToList();
                 var userResponse = new UserResponseDto()
                 {
                     Id = user.Id,
                     FirstName = user.FirstName,
                     LastName = user.LastName!,
                     UserName = user.UserName!,
-                    Email = user.Email!
+                    Email = user.Email!,
+                    PhoneNumber = user.PhoneNumber!,
+                    Roles = roles
                 };
                 return ServiceResponse<UserResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,
@@ -105,14 +112,19 @@ namespace PegasusBackend.Services.Implementations
                     "User not found"
                     );
                 }
-
+                var roleStrings = await userManager.GetRolesAsync(user);
+                var roles = roleStrings
+                    .Select(r => Enum.Parse<UserRoles>(r))
+                    .ToList();
                 var userResponse = new UserResponseDto()
                 {
                     Id = user.Id,
                     FirstName = user.FirstName,
                     LastName = user.LastName!,
                     UserName = user.UserName!,
-                    Email = user.Email!
+                    Email = user.Email!,
+                    Roles=roles
+                    
                 };
                 return ServiceResponse<UserResponseDto>.SuccessResponse(
                     HttpStatusCode.OK,
@@ -128,14 +140,14 @@ namespace PegasusBackend.Services.Implementations
                     "Something went wrong");
             }
         }
-        public async Task<ServiceResponse<RegistrationResponseDto>> RegisterUserAsync(RegistrationRequestDto request)
+        public async Task<ServiceResponse<bool>> RegisterUserAsync(RegistrationRequestDto request)
         {
             try
             {
                 var existingUser = await userManager.FindByEmailAsync(request.Email);
                 if (existingUser != null)
                 {
-                    return ServiceResponse<RegistrationResponseDto>.FailResponse(
+                    return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "User exist"
                     );
@@ -156,7 +168,7 @@ namespace PegasusBackend.Services.Implementations
                 // Use role from request
                 if (!await roleManager.RoleExistsAsync(request.Role.ToString()))
                 {
-                    return ServiceResponse<RegistrationResponseDto>.FailResponse(
+                    return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.NotFound,
                         "Role doesn't exist"
                     );
@@ -167,32 +179,26 @@ namespace PegasusBackend.Services.Implementations
                 if (!result.Succeeded)
                 {
                     var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                    return ServiceResponse<RegistrationResponseDto>.FailResponse(
+                    return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest, 
                         $"Failed to create user: {errors}"
                     );
                 }
 
-                
-
                 await userManager.AddToRoleAsync(newUser, request.Role.ToString());
 
                 await SendVerificationAndWelcomeMailAsync(newUser);
 
-                var response = new RegistrationResponseDto
-                {
-                    FirstName = newUser.FirstName,
-                    Email = newUser.Email,
-                };
 
-                return ServiceResponse<RegistrationResponseDto>.SuccessResponse(
-                    HttpStatusCode.OK,response, 
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true, 
                     "Created User");
             }
             catch (Exception ex)
             {
                 logger.LogWarning(ex.Message, ex);
-                return ServiceResponse<RegistrationResponseDto>.FailResponse(
+                return ServiceResponse<bool>.FailResponse(
                     HttpStatusCode.InternalServerError, 
                     "Something went wrong");
             }
@@ -424,6 +430,7 @@ namespace PegasusBackend.Services.Implementations
             );
 
         }
+
         // Helper methods
         public async Task<User?> GetUserByValidRefreshTokenAsync(string refreshToken)
         {

@@ -13,6 +13,7 @@ public static class RateLimitingConfiguration
             AddRegistrationPolicy(options);
             AddBookingPolicy(options);
             AddMapAPIPolicy(options);
+            AddPasswordResetPolicy(options);
         });
 
         return services;
@@ -69,6 +70,19 @@ public static class RateLimitingConfiguration
                     PermitLimit = 100,
                     Window = TimeSpan.FromHours(1),
                     QueueLimit = 1,
+                    AutoReplenishment = true
+                }));
+    }
+    private static void AddPasswordResetPolicy(RateLimiterOptions options)
+    {
+        options.AddPolicy("PasswordResetPolicy", httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                httpContext.Connection.RemoteIpAddress?.ToString(),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 3,
+                    Window = TimeSpan.FromHours(1),
+                    QueueLimit = 0,
                     AutoReplenishment = true
                 }));
     }

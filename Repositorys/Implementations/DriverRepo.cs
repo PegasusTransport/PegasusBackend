@@ -42,12 +42,19 @@ namespace PegasusBackend.Repositorys.Implementations
                 throw; 
             }
         }
+        public async Task<Drivers?> GetDriverEntityByIdAsync(Guid driverId)
+        {
+            return await context.Drivers
+                .Include(d => d.Bookings)
+                .FirstOrDefaultAsync(d => d.DriverId == driverId);
+        }
         public async Task<DriverResponseDto?> GetDriverByUserIdAsync(string userId)
         {
             try
             {
                 return await context.Drivers
                     .AsNoTracking()
+                    .Include(d => d.Car)
                     .Include(d => d.User)
                     .Where(d => d.UserId == userId && !d.IsDeleted && !d.User.IsDeleted)
                     .Select(d => new DriverResponseDto
@@ -56,7 +63,13 @@ namespace PegasusBackend.Repositorys.Implementations
                         FirstName = d.User.FirstName,
                         LastName = d.User.LastName,
                         ProfilePicture = d.ProfilePicture,
-                        CarId = d.CarId
+                        CarId = d.CarId,
+                        CarMake = d.Car.Make,
+                        CarModel = d.Car.Model,
+                        CarCapacity = d.Car.Capacity,
+                        CarType = d.Car.Type,
+                        CarLicensePlate = d.Car.LicensePlate
+                        
                     })
                     .FirstOrDefaultAsync();
             }
@@ -66,20 +79,17 @@ namespace PegasusBackend.Repositorys.Implementations
                 return null;
             }
         }
-        public async Task<List<AllDriversDto>> GetAllDrivers()
+        public async Task<List<Drivers>> GetAllDriversAsync()
         {
             try
             {
                 var drivers = await context.Drivers
+                    .Include(d => d.User)
+                    .Include(d => d.Bookings)
+                    .Include(d => d.Car)
                     .Where(d => !d.IsDeleted && !d.User.IsDeleted)
-                    .Select(d => new AllDriversDto  
-                    {
-                        Id = d.DriverId,
-                        FirstName = d.User.FirstName,
-                        LastName = d.User.LastName,
-                        ProfilePicture = d.ProfilePicture
-                    })
                     .ToListAsync();
+
                 return drivers; 
             }
             catch (Exception ex)

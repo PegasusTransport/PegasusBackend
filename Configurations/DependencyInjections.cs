@@ -72,11 +72,6 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IBookingFactoryService, BookingFactoryService>();
             services.AddScoped<IBookingMapperService, BookingMapperService>();
 
-            // Email Configuration & Service
-            var emailConfig = configuration.GetSection("EmailConfig").Get<EmailConfig>();
-            services.AddSingleton(emailConfig!);
-
-
 
             return services;
         }

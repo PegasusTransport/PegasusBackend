@@ -66,6 +66,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IPdfService, PdfService>();
             services.AddScoped<IBookingService, BookingService>();
             services.AddScoped<IIdempotencyService, IdempotencyService>();
+            services.AddScoped<IChatbotService, ChatbotService>();
 
             // Booking-related services
             services.AddScoped<IBookingValidationService, BookingValidationService>();

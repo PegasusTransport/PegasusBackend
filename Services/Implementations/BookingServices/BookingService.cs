@@ -458,7 +458,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                     stops.Add(booking.FirstStopAddress);
                 if (!string.IsNullOrWhiteSpace(booking.SecondStopAddress))
                     stops.Add(booking.SecondStopAddress);
-                var stopsText = stops.Count > 0 ? string.Join(" → ", stops) : "Inga stopp";
+                var stopsText = stops.Count > 0 ? string.Join(" → ", stops) : "No stops";
 
                 // get portal URL from settings
                 var portalUrl = _settings.Links.DriverPortalUrl;

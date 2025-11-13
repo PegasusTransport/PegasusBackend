@@ -9,7 +9,7 @@
                 options.AddPolicy("AllowFrontend", policy =>
                 {
                     policy
-                        .WithOrigins("https://localhost:7051", "http://localhost:5173", "https://pegasustransportportal.azurewebsites.net", "https://pegasustransport.azurewebsites.net") 
+                        .WithOrigins("https://localhost:7051", "http://localhost:5173", "https://pegasustransportportal.azurewebsites.net", "https://pegasustransport.azurewebsites.net", "https://pegasusportal.onrender.com") 
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials(); 

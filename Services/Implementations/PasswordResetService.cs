@@ -75,7 +75,8 @@ namespace PegasusBackend.Services.Implementations
                         {
                             var encodedToken = Uri.EscapeDataString(resetToken);
                             var encodedEmail = Uri.EscapeDataString(user.Email!);
-                            var resetLink = $"{_passwordResetSettings.FrontendUrl}/reset/{encodedToken}";
+                            _logger.LogInformation("Frontend URL configured as: {FrontendUrl}", _passwordResetSettings.FrontendUrl);
+                            var resetLink = $"{_passwordResetSettings.FrontendUrl}?email={encodedEmail}&token={encodedToken}";
 
                             var emailResult = await _mailjetEmailService.SendEmailAsync(
                                  user.Email!,

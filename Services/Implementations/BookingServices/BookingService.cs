@@ -83,6 +83,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                     user,
                     isGuest);
 
+
                 await _bookingRepo.CreateBookingAsync(booking);
                 await SendBookingEmailAsync(booking, bookingDto, isGuest);
 

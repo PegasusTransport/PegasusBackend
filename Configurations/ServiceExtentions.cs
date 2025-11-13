@@ -16,6 +16,8 @@ namespace PegasusBackend.Configurations
     {
         public static IServiceCollection AddConnectionString(this IServiceCollection services, IConfiguration config)
         {
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
             services.AddDbContext<AppDBContext>(options =>
                 options.UseNpgsql(config.GetConnectionString("DefaultConnection")));
 

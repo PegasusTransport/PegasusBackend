@@ -48,5 +48,10 @@ namespace PegasusBackend.Controllers
         [Authorize]
         public async Task<ActionResult<bool>> DeleteUser() =>
             Generate.ActionResult(await userService.DeleteUserAsync(HttpContext));
+
+        [HttpPost("ResendVerificationEmail")]
+        [EnableRateLimiting("RegistrationPolicy")]
+        public async Task<ActionResult<bool>> ResendVerificationEmail(ResendVerificationEmailDto dto) =>
+            Generate.ActionResult(await userService.ResendVerificationEmail(dto.Email));
     }
 }

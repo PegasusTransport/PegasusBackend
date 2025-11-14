@@ -16,8 +16,10 @@ namespace PegasusBackend.Configurations
     {
         public static IServiceCollection AddConnectionString(this IServiceCollection services, IConfiguration config)
         {
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
             services.AddDbContext<AppDBContext>(options =>
-                options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
+                options.UseNpgsql(config.GetConnectionString("DefaultConnection")));
 
             // Get PasswordResetSettings from configuration
             var passwordResetSettings = config

@@ -99,8 +99,8 @@ namespace PegasusBackend.Models
         public bool IsConfirmed { get; set; } = false;
         public bool IsAvailable { get; set; } = true;
 
-        [Timestamp]
-        public byte[] RowVersion { get; set; } = default!;
+
+        public uint Version { get; set; }
 
         [ForeignKey(nameof(UserIdFk))]
         public virtual User? User { get; set; }

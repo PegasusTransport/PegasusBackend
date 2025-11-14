@@ -15,9 +15,9 @@ namespace PegasusBackend.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
             var user = modelBuilder.Entity<User>();
             var driver = modelBuilder.Entity<Drivers>();
+            var booking = modelBuilder.Entity<Bookings>(); // Add this line
             var taxiSettings = modelBuilder.Entity<TaxiSettings>();
             var idempotencyRecord = modelBuilder.Entity<IdempotencyRecord>();
 
@@ -36,6 +36,13 @@ namespace PegasusBackend.Data
                 .HasMany(d => d.Bookings)
                 .WithOne(b => b.Driver)
                 .HasForeignKey(b => b.DriverIdFK);
+
+            booking
+    .Property(b => b.Version)
+    .HasColumnName("xmin")
+    .HasColumnType("xid")
+    .ValueGeneratedOnAddOrUpdate()
+    .IsConcurrencyToken();
 
             taxiSettings
                 .Property(p => p.KmPrice)
@@ -59,10 +66,10 @@ namespace PegasusBackend.Data
 
             idempotencyRecord
                 .HasIndex(i => i.IdempotencyKey)
-                .IsUnique(); // ← Viktigt! En key kan bara finnas en gång
+                .IsUnique();
 
             idempotencyRecord
-                .HasIndex(i => i.ExpiresAt); // ← För snabb cleanup av gamla records
+                .HasIndex(i => i.ExpiresAt);
 
             idempotencyRecord
                 .HasOne(i => i.Booking)

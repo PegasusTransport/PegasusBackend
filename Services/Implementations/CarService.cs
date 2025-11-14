@@ -15,30 +15,34 @@ namespace PegasusBackend.Services.Implementations
     {
         private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
         private string? apiKey = configuration["BilUppgifterApiKey"];
-        public async Task<Cars?> CreateOrFindCar(string regNo)
+        public async Task<Cars?> CreateOrFindCarWithDriver(string regNo, Guid driverId)
         {
-
             var existingCar = await carRepo.FindCarByRegNumberAsync(regNo);
             if (existingCar != null)
             {
-                logger.LogWarning("Car exist");
+                existingCar.DriverIdFk = driverId;
+                await carRepo.UpdateCar(existingCar); 
+                logger.LogWarning("Car exists, updated driver");
                 return existingCar;
             }
-            var carDetails = await GetCarData(regNo);
 
+            var carDetails = await GetCarData(regNo);
             if (carDetails == null)
             {
                 logger.LogError("Biluppgifter API Error");
                 return null;
             }
+
             var car = new Cars
             {
-                LicensePlate = regNo,
+                LicensePlate = regNo.ToUpper(),
                 Model = carDetails.Model,
                 Make = carDetails.Make,
                 Type = carDetails.Type,
                 Capacity = carDetails.Capacity.NumberOfPassengers,
+                DriverIdFk = driverId 
             };
+
             await carRepo.SaveCar(car);
             return car;
         }

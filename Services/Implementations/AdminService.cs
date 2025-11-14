@@ -383,6 +383,9 @@ public class AdminService : BaseBookingService, IAdminService
                 FirstName = d.User.FirstName,
                 LastName = d.User.LastName,
                 ProfilePicture = d.ProfilePicture,
+                Make = d.Car.Make,
+                RegNr = d.Car.LicensePlate
+                
             }).ToList();
 
             string message = driverDtos.Count > 0

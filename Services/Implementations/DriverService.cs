@@ -57,7 +57,6 @@ namespace PegasusBackend.Services.Implementations
                     );
 
                 var user = await _userManager.FindByIdAsync(request.UserId);
-
                 if (user == null)
                     return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.NotFound,
@@ -70,35 +69,25 @@ namespace PegasusBackend.Services.Implementations
                         "Cannot create driver for deleted user"
                     );
 
-                if (await _driverRepo.CreateDriver(request))
+                var driverId = await _driverRepo.CreateDriver(request);
+                await _userManager.AddToRoleAsync(user, UserRoles.Driver.ToString());
+                if (driverId == null)
                 {
-                    return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true);
+                    _logger.LogError("Driver repo failed");
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.BadRequest, "Failed to create driver");
                 }
 
+                var car = await _carService.CreateOrFindCarWithDriver(request.LicensePlate, driverId.Value);
+                if (car == null )
+                {
+                    _logger.LogError("Failed to create or find car");
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Failed to create or find car"
+                    );
+                }
 
-
-                return ServiceResponse<bool>.FailResponse(HttpStatusCode.BadRequest, "Failed to created driver");
-
-
-
-
-
-
-                //if (await _driverRepo.CreateDriver(request))
-                //{
-                //    var newDriver = new CreatedResponseDriverDto
-                //    {
-                //        DriverName = user.FirstName,
-                //        Email = user.Email!,
-                //    };
-                //    return ServiceResponse<CreatedResponseDriverDto>.SuccessResponse(HttpStatusCode.OK, newDriver );
-                //}
-                //else
-                //{
-                //    return ServiceResponse<CreatedResponseDriverDto>.FailResponse(HttpStatusCode.BadRequest, "Failed to created driver");
-                //}
-
-
+                return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true);
             }
             catch (Exception ex)
             {

@@ -9,25 +9,55 @@ namespace PegasusBackend.Repositorys.Implementations
     {
         public async Task<Cars?> FindCarByRegNumberAsync(string licensePlate)
         {
-            var car = await context.Cars.FirstOrDefaultAsync(r => r.LicensePlate == licensePlate);
-
-            if (car == null)
+            try
             {
+                var car = await context.Cars.FirstOrDefaultAsync(r => r.LicensePlate == licensePlate);
+
+                if (car == null)
+                {
+                    return null;
+                }
+                return car;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to get car");
                 return null;
             }
-            return car;
 
         }
         public async Task<bool> SaveCar(Cars car)
         {
-            if (car == null)
+            try
             {
-                logger.LogError("Failed to savecar");
+                if (car == null)
+                {
+                    logger.LogError("Failed to savecar");
+                    return false;
+                }
+                context.Cars.Add(car);
+                await context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to save car");
                 return false;
             }
-            context.Cars.Add(car);
-            await context.SaveChangesAsync();
-            return true;
+        }
+        public async Task<bool> UpdateCar(Cars car)
+        {
+            try
+            {
+                context.Cars.Update(car);
+                await context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to update car");
+                return false;
+            }
         }
     }
 }

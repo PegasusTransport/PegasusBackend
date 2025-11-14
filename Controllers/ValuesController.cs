@@ -49,9 +49,9 @@ namespace PegasusBackend.Controllers
             return Ok(new { user!.Email, Roles = roles });
         }
         [HttpGet("GetCarinfo")]
-        public async Task<ActionResult> GetCarinfo(string regNo)
+        public async Task<ActionResult> GetCarinfo(string regNo, Guid driverID)
         {
-            var result = await carService.CreateOrFindCar(regNo);
+            var result = await carService.CreateOrFindCarWithDriver(regNo, driverID);
             if (result != null)
             {
                 return Ok(result);

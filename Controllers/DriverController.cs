@@ -23,11 +23,7 @@ namespace PegasusBackend.Controllers
     [Authorize(Roles = "Driver")]
     public class DriverController(IDriverService driverService) : ControllerBase
     {
-        [HttpPost("CreateDriver")]
-        [EnableRateLimiting("RegistrationPolicy")]
-        public async Task<ActionResult<CreatedResponseDriverDto>> CreateDriver(CreateRequestDriverDto request) =>
-            Generate.ActionResult(await driverService.CreateDriverAsync(request, HttpContext));
-
+     
         [HttpPut("UpdateDriver/{id}")]
         public async Task<ActionResult<UpdateDriverResponseDto>> UpdateDriver(Guid id, UpdateRequestDriverDto request) =>
             Generate.ActionResult(await driverService.UpdateDriverAsync(id, request, HttpContext));

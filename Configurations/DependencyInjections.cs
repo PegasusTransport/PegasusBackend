@@ -55,6 +55,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IBookingRepo, BookingRepo>();
             services.AddScoped<IDriverRepo, DriverRepo>();
             services.AddScoped<IIdempotencyRepo, IdempotencyRepo>();
+            services.AddScoped<ICarRepo, CarRepo>();
 
             // Services
             services.AddScoped<IAdminService, AdminService>();
@@ -69,6 +70,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IBookingService, BookingService>();
             services.AddScoped<IIdempotencyService, IdempotencyService>();
             services.AddScoped<IChatbotService, ChatbotService>();
+            services.AddScoped<ICarService, CarService>();
 
             // Booking-related services
             services.AddScoped<IBookingValidationService, BookingValidationService>();

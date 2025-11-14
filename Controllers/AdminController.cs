@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.TaxiDTOs;
@@ -18,10 +19,12 @@ namespace PegasusBackend.Controllers
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
+        private readonly IDriverService _driverService;
 
-        public AdminController(IAdminService adminService)
+        public AdminController(IAdminService adminService, IDriverService driverService )
         {
             _adminService = adminService;
+            _driverService = driverService;
         }
 
         [HttpGet("GetAllTaxiPrices")]
@@ -58,6 +61,11 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await _adminService.ChangeBookingById(updateBookingDto));
 
         // DriverSection
+        [HttpPost("CreateDriver")]
+        [EnableRateLimiting("RegistrationPolicy")]
+        public async Task<ActionResult<CreatedResponseDriverDto>> CreateDriver(CreateRequestDriverDto request) =>
+            Generate.ActionResult(await _driverService.CreateDriverAsync(request, HttpContext));
+
         [HttpGet("GetAllDrivers")]
         public async Task<ActionResult<List<AllDriversRequestDto>>> GetAllDriver() =>
             Generate.ActionResult(await _adminService.GetAllDriversAsync());

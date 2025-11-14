@@ -12,7 +12,7 @@ namespace PegasusBackend.Services.Interfaces
     public interface IDriverService
     {
         // This should also be for Admin!
-        Task<ServiceResponse<CreatedResponseDriverDto>> CreateDriverAsync(CreateRequestDriverDto driver, HttpContext httpContext);
+        Task<ServiceResponse<bool>> CreateDriverAsync(CreateRequestDriverDto driver);
         Task<ServiceResponse<UpdateDriverResponseDto>> UpdateDriverAsync(Guid driverId, UpdateRequestDriverDto updatedDriver, HttpContext httpContext);
 
         //// Booking features

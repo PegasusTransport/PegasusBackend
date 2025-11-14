@@ -51,12 +51,12 @@ namespace PegasusBackend.Controllers
         [HttpGet("GetCarinfo")]
         public async Task<ActionResult> GetCarinfo(string regNo)
         {
-            var result = await carService.CreateCar(regNo);
-            if (result.StatusCode == HttpStatusCode.OK)
+            var result = await carService.CreateOrFindCar(regNo);
+            if (result != null)
             {
-                return Ok(result.Data);
+                return Ok(result);
             }
-            return BadRequest(result.Message);
+            return BadRequest(result);
         }
     }
 }

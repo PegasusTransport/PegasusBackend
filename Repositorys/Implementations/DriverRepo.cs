@@ -5,11 +5,14 @@ using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
+using PegasusBackend.Responses;
 using PegasusBackend.Services.Implementations;
+using PegasusBackend.Services.Interfaces;
+using System.Net;
 
 namespace PegasusBackend.Repositorys.Implementations
 {
-    public class DriverRepo(AppDBContext context, ILogger<DriverRepo> logger) : IDriverRepo
+    public class DriverRepo(AppDBContext context, ILogger<DriverRepo> logger, ICarService _carService) : IDriverRepo
     {
         public async Task<DriverResponseDto?> GetDriverByIdAsync(Guid id)
         {
@@ -98,23 +101,31 @@ namespace PegasusBackend.Repositorys.Implementations
                 return [];
             }
         }
-        public async Task<bool> CreateDriver(CreateRequestDriverDto request, string userId)
+        public async Task<bool> CreateDriver(CreateRequestDriverDto request)
         {
 
             try
             {
-                var existingDriver = await context.Drivers.FirstOrDefaultAsync(d => d.UserId == userId);
+                var existingDriver = await context.Drivers.FirstOrDefaultAsync(d => d.UserId == request.UserId);
 
                 if (existingDriver != null)
                 {
-                    logger.LogWarning("User {UserId} is already a driver", userId);
+                    logger.LogWarning("User {UserId} is already a driver", request.UserId);
+                    return false;
+                }
+                var car = await _carService.CreateOrFindCar(request.LicensePlate);
+
+                if (car == null)
+                {
+                    logger.LogWarning("Car null");
                     return false;
                 }
                 var newDriver = new Drivers
                 {
                     DriverId = Guid.NewGuid(),
-                    UserId = userId,
-                    ProfilePicture = request.ProfilePicture
+                    UserId = request.UserId,
+                    ProfilePicture = request.ProfilePicture,
+                    CarId = car.CarId
                 };
                 context.Drivers.Add(newDriver);
                 await context.SaveChangesAsync();
@@ -122,8 +133,8 @@ namespace PegasusBackend.Repositorys.Implementations
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Failed to create driver for user {userId}");
-                return false;
+                logger.LogError(ex, $"Failed to create driver for user {request.UserId}");
+                return false;       
             }
         }
         public async Task<bool> UpdateDriver(UpdateRequestDriverDto request, Guid driverId)

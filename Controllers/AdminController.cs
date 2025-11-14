@@ -63,8 +63,8 @@ namespace PegasusBackend.Controllers
         // DriverSection
         [HttpPost("CreateDriver")]
         [EnableRateLimiting("RegistrationPolicy")]
-        public async Task<ActionResult<CreatedResponseDriverDto>> CreateDriver(CreateRequestDriverDto request) =>
-            Generate.ActionResult(await _driverService.CreateDriverAsync(request, HttpContext));
+        public async Task<ActionResult<bool>> CreateDriver(CreateRequestDriverDto request) =>
+            Generate.ActionResult(await _driverService.CreateDriverAsync(request));
 
         [HttpGet("GetAllDrivers")]
         public async Task<ActionResult<List<AllDriversRequestDto>>> GetAllDriver() =>

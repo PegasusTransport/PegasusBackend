@@ -12,6 +12,7 @@ namespace PegasusBackend.Services.Interfaces
         Task<User?> GetUserByValidRefreshTokenAsync(string refreshToken);
         Task<ServiceResponse<List<AllUserResponseDto>>> GetAllUsers();
         Task<ServiceResponse<bool>> RegisterUserAsync(RegistrationRequestDto request);
+        Task<ServiceResponse<bool>> ResendVerificationEmail(string email);
         Task<ServiceResponse<string>> ConfirmUserEmailAsync(string token, string email);
         Task<ServiceResponse<bool>> DeleteUserAsync(HttpContext httpContext);
         Task<ServiceResponse<bool>> InvalidateRefreshTokenAsync(User user);

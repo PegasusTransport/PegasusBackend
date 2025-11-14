@@ -203,6 +203,35 @@ namespace PegasusBackend.Services.Implementations
                     "Something went wrong");
             }
         }
+
+        public async Task<ServiceResponse<bool>> ResendVerificationEmail(string email)
+        {
+            try
+            {
+                var user = await userManager.FindByEmailAsync(email);
+                
+                if (user == null) 
+                    return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.NotFound,
+                    "User not found"
+                );
+
+                await SendVerificationAndWelcomeMailAsync(user);
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    true,
+                    "Email sent successfully"
+                    );
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex.Message, ex);
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    "Something went wrong");
+            }
+        }
+        
         private async Task SendVerificationAndWelcomeMailAsync(User user)
         {
             try
@@ -214,7 +243,7 @@ namespace PegasusBackend.Services.Implementations
                 var encodedMail = Uri.EscapeDataString(user.Email!);
                 var confirmationUrl = configuration["ConfirmMail:BackendUrl"];
 
-                var link = $"{confirmationUrl}?token={encodedToken}&email={encodedMail}";
+                var link = $"{confirmationUrl}?email={encodedMail}&token={encodedToken}";
 
 
                 await mailjetEmailService.SendEmailAsync(

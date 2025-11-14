@@ -113,8 +113,6 @@ namespace PegasusBackend.Controllers
                 },
                 MailjetSubjects.TwoFA));
 
-
-
     }
 }
 

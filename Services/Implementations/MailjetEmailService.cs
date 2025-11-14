@@ -284,7 +284,6 @@ namespace PegasusBackend.Services.Implementations
             MailjetTemplateType.PendingConfirmation => _settings.Templates.PendingConfirmation,
             MailjetTemplateType.BookingConfirmation => _settings.Templates.BookingConfirmation,
             MailjetTemplateType.Receipt => _settings.Templates.Receipt,
-            MailjetTemplateType.DriverNewBooking => _settings.Templates.DriverNewBooking,
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown template type")
         };
 

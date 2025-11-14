@@ -90,7 +90,7 @@ namespace PegasusBackend.Services.Implementations
                 }
 
                 var cacheSetting = new MemoryCacheEntryOptions()
-                    .SetAbsoluteExpiration(TimeSpan.FromSeconds(15))
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(20))
                     .SetSlidingExpiration(TimeSpan.FromMinutes(5))
                     .SetSize(1);
 

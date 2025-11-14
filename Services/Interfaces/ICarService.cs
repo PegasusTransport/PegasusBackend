@@ -7,6 +7,6 @@ namespace PegasusBackend.Services.Interfaces
     public interface ICarService
     {
         Task<ServiceResponse<bool>> CreateCar(string regNo);
-        Task<ServiceResponse<CarDto>> GetCarData(string regNo);
+        Task<CarDto?> GetCarData(string regNo);
     }
 }

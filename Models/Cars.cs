@@ -25,7 +25,9 @@ namespace PegasusBackend.Models
         [Required]
         [MaxLength(10)]
         public string LicensePlate { get; set; } = string.Empty;
-
+   
+        public Guid? DriverIdFk { get; set; }
+        [ForeignKey(nameof(DriverIdFk))]
         public virtual Drivers? Driver { get; set; }
     }
 }

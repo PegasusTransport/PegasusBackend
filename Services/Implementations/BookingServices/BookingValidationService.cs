@@ -55,20 +55,31 @@ namespace PegasusBackend.Services.Implementations.BookingServices
 
         public async Task<ServiceResponse<BookingResponseDto>> ValidatePickupTimeAsync(DateTime pickUpDateTime, int hours)
         {
-            if (pickUpDateTime < DateTime.UtcNow.AddHours(hours))
+            try
             {
-                return ServiceResponse<BookingResponseDto>.FailResponse(
-                    HttpStatusCode.BadRequest,
-                    $"PickUpDateTime must be at least {hours} hours from now."
+                if (pickUpDateTime < DateTime.UtcNow.AddHours(hours))
+                {
+                    return ServiceResponse<BookingResponseDto>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        $"PickUpDateTime must be at least {hours} hours from now."
+                    );
+                }
+
+                return ServiceResponse<BookingResponseDto>.SuccessResponse(
+                    HttpStatusCode.OK,
+                    null!,
+                    "Pickup time is valid."
                 );
             }
-
-            return ServiceResponse<BookingResponseDto>.SuccessResponse(
-                HttpStatusCode.OK,
-                null!,
-                "Pickup time is valid."
-            );
+            catch (Exception ex)
+            {
+                return ServiceResponse<BookingResponseDto>.FailResponse(
+                    HttpStatusCode.InternalServerError,
+                    $"An error occurred while validating pickup time: {ex.Message}"
+                );
+            }
         }
+
 
         public async Task<RouteValidationResult> VerifyRouteAsync(CreateBookingDto bookingDto)
         {

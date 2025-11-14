@@ -18,11 +18,13 @@
         public long ForgotPassword { get; set; }
         public long TwoFA { get; set; }
         public long Receipt { get; set; }
+        public long DriverNewBooking { get; set; }
     }
 
     public sealed class MailjetLinks
     {
         public string LocalConfirmationBase { get; set; } = string.Empty;
         public string ProductionConfirmationBase { get; set; } = string.Empty;
+        public string DriverPortalUrl { get; set; } = string.Empty;
     }
 }

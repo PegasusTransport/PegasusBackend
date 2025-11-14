@@ -24,6 +24,8 @@ namespace PegasusBackend.Configurations
             services.AddHttpClient();
             services.AddQuestPdfConfiguration();
 
+            services.AddMemoryCache();
+
             // Mailjet settings correct
             services.Configure<MailJetSettings>(
                 configuration.GetSection("Mailjet")
@@ -66,6 +68,7 @@ namespace PegasusBackend.Configurations
             services.AddScoped<IPdfService, PdfService>();
             services.AddScoped<IBookingService, BookingService>();
             services.AddScoped<IIdempotencyService, IdempotencyService>();
+            services.AddScoped<IChatbotService, ChatbotService>();
 
             // Booking-related services
             services.AddScoped<IBookingValidationService, BookingValidationService>();

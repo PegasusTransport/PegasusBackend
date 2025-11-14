@@ -1,7 +1,9 @@
 ﻿using Azure.AI.OpenAI;
 using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
+using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Implementations;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
@@ -19,24 +21,18 @@ namespace PegasusBackend.Services.Implementations
         private IAdminRepo _adminRepo;
         private readonly IConfiguration _configuration;
         private readonly ILogger<ChatbotService> _logger;
+        private IMemoryCache _cache;
 
-        public ChatbotService(IConfiguration configuration, IAdminRepo adminRepo, ILogger<ChatbotService> logger)
+        public ChatbotService(IConfiguration configuration, IAdminRepo adminRepo, ILogger<ChatbotService> logger, IMemoryCache memoryCache)
         {
             _logger = logger;
             _adminRepo = adminRepo;
             _configuration = configuration;
-            _deploymentName = _configuration["ChatbotSettings:DeploymenName"];
+            _cache = memoryCache;
 
+            _deploymentName = _configuration["ChatbotSettings:DeploymenName"];
             string? apiKey = _configuration["ChatbotSettings:Apikey"];
             string? endpoint = _configuration["ChatbotSettings:Endpoint"];
-
-            _logger.LogInformation("Azure OpenAI API Key status: {ApiKeyStatus}",
-       string.IsNullOrEmpty(apiKey) ? "Missing" : $"Present (length: {apiKey.Length})");
-
-            _logger.LogInformation("Azure OpenAI Endpoint configured: {Endpoint}", endpoint);
-
-            _logger.LogInformation("Azure OpenAI Deployment name: {DeploymentName}", _deploymentName);
-
             _azureClient = new AzureOpenAIClient(new Uri(endpoint!), new ApiKeyCredential(apiKey!));
         }
 
@@ -59,7 +55,7 @@ namespace PegasusBackend.Services.Implementations
                 if (response == null)
                 {
                     return ServiceResponse<bool>.FailResponse(
-                        HttpStatusCode.BadRequest, "No response founf");
+                        HttpStatusCode.BadRequest, "No response found");
                 }
 
                 return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK,
@@ -79,18 +75,34 @@ namespace PegasusBackend.Services.Implementations
         }
         private async Task<string> ContextForChatbotAsync()
         {
-            var prices = await _adminRepo.GetTaxiPricesAsync();
+            var cacheKey = "prices";
 
-
-            if (prices == null)
+            if (!_cache.TryGetValue(cacheKey, out TaxiSettings? taxiSettings))
             {
-                _logger.LogInformation("Prices are null");
-                return ContextText();
+                _logger.LogInformation("Cache miss for key: {CacheKey}. Fetching from database", cacheKey);
+
+                taxiSettings = await _adminRepo.GetTaxiPricesAsync();
+
+                if (taxiSettings == null)
+                {
+                    _logger.LogWarning("TaxiSettings returned null from database");
+                    return ContextText();
+                }
+
+                var cacheSetting = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromSeconds(15))
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(5))
+                    .SetSize(1);
+
+                _cache.Set(cacheKey, taxiSettings, cacheSetting);
+                _logger.LogInformation("TaxiSettings cached successfully for key: {CacheKey}", cacheKey);
+            }
+            else
+            {
+                _logger.LogInformation("Cache hit for key: {CacheKey}", cacheKey);
             }
 
-            return $"{ContextText()} Pegasus prices: Start price:{100}, KM price:{prices.KmPrice}, Minute price:{prices.MinutePrice} Zone price: {prices.ZonePrice}";
-
-
+            return $"{ContextText()} Pegasus prices: Start price:{taxiSettings!.StartPrice}, KM price:{taxiSettings.KmPrice}, Minute price:{taxiSettings.MinutePrice} Zone price: {taxiSettings.ZonePrice}";
         }
         private static string ContextText()
         {

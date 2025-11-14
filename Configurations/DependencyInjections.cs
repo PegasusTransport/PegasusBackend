@@ -24,6 +24,8 @@ namespace PegasusBackend.Configurations
             services.AddHttpClient();
             services.AddQuestPdfConfiguration();
 
+            services.AddMemoryCache();
+
             // Mailjet settings correct
             services.Configure<MailJetSettings>(
                 configuration.GetSection("Mailjet")

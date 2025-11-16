@@ -241,7 +241,7 @@ namespace PegasusBackend.Services.Implementations
                 var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
                 var encodedToken = Uri.EscapeDataString(token);
                 var encodedMail = Uri.EscapeDataString(user.Email!);
-                var confirmationUrl = configuration["ConfirmMail:BackendUrl"];
+                var confirmationUrl = configuration["ConfirmMail:FrontendUrl"];
 
                 var link = $"{confirmationUrl}?email={encodedMail}&token={encodedToken}";
 

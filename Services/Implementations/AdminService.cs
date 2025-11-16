@@ -384,7 +384,12 @@ public class AdminService : BaseBookingService, IAdminService
                 LastName = d.User.LastName,
                 ProfilePicture = d.ProfilePicture,
                 Make = d.Car.Make,
-                RegNr = d.Car.LicensePlate
+                Model = d.Car.Model,
+                RegNr = d.Car.LicensePlate,
+                Email = d.User.Email,
+                Phone = d.User.PhoneNumber,
+
+
                 
             }).ToList();
 

@@ -10,6 +10,7 @@ using PegasusBackend.Helpers;
 using PegasusBackend.Models;
 using PegasusBackend.Services.Implementations;
 using PegasusBackend.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace PegasusBackend.Controllers
 {
@@ -71,8 +72,18 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await _adminService.GetAllDriversAsync());
 
         [HttpDelete("DeleteDriver/{id}")]
-        public async Task<ActionResult<bool>> DeleteDriver(Guid id) =>
-            Generate.ActionResult(await _adminService.DeleteDriverAsync(id));
+        public async Task<ActionResult<bool>> DeleteDriver(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest("Id is required.");
+
+            var cleaned = Regex.Replace(id, @"\p{Cf}", string.Empty).Trim();
+
+            if (!Guid.TryParse(cleaned, out var guid))
+                return BadRequest(new { id = new[] { "The value is not a valid GUID." } });
+
+            return Generate.ActionResult(await _adminService.DeleteDriverAsync(guid));
+        }
 
         [HttpGet("GetDriverById/{id}")]
         [Authorize]

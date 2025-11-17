@@ -40,7 +40,8 @@ namespace PegasusBackend.Helpers.BookingHelpers
                 SecondStopLongitude = dto.SecondStopLongitude,
                 DropOffAddress = dto.DropOffAddress,
                 DropOffLatitude = dto.DropOffLatitude,
-                DropOffLongitude = dto.DropOffLongitude
+                DropOffLongitude = dto.DropOffLongitude,
+                Flightnumber = dto.Flightnumber
             };
 
             var arlandaValidation = _validationService.ValidateArlandaRequirements(tempDto);

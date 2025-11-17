@@ -19,7 +19,7 @@
                         "https://portal.pegasustransport.se",
                         "https://api.pegasustransport.se",
                         "https://pegasusmvc.onrender.com",
-                        "https://pegasustransport.se/"
+                        "https://pegasustransport.se"
                         ) 
                         .AllowAnyHeader()
                         .AllowAnyMethod()

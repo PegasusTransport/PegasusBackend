@@ -100,23 +100,23 @@ namespace PegasusBackend.Repositorys.Implementations
                 return [];
             }
         }
-        public async Task<Guid?> CreateDriver(CreateRequestDriverDto request)
+        public async Task<Guid?> CreateDriver(CreateRequestDriverDto request, string userId)
         {
 
             try
             {
-                var existingDriver = await context.Drivers.FirstOrDefaultAsync(d => d.UserId == request.UserId);
+                var existingDriver = await context.Drivers.FirstOrDefaultAsync(d => d.UserId == userId);
 
                 if (existingDriver != null)
                 {
-                    logger.LogWarning("User {UserId} is already a driver", request.UserId);
+                    logger.LogWarning($"User {userId} is already a driver", userId);
                     return null;
                 }
 
                 var newDriver = new Drivers
                 {
                     DriverId = Guid.NewGuid(),
-                    UserId = request.UserId,
+                    UserId = userId,
                     ProfilePicture = request.ProfilePicture,
                 };
 
@@ -128,7 +128,7 @@ namespace PegasusBackend.Repositorys.Implementations
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"Failed to create driver for user {request.UserId}");
+                logger.LogError(ex, $"Failed to create driver for user {userId}");
                 return null;       
             }
         }

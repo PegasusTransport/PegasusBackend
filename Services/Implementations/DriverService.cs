@@ -56,7 +56,13 @@ namespace PegasusBackend.Services.Implementations
                         "Profile picture is required"
                     );
 
-                var user = await _userManager.FindByIdAsync(request.UserId);
+                if (string.IsNullOrWhiteSpace(request.Email))
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Email is required"
+                    );
+
+                var user = await _userManager.FindByEmailAsync(request.Email);
                 if (user == null)
                     return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.NotFound,
@@ -69,8 +75,8 @@ namespace PegasusBackend.Services.Implementations
                         "Cannot create driver for deleted user"
                     );
 
-                var driverId = await _driverRepo.CreateDriver(request);
-                await _userManager.AddToRoleAsync(user, UserRoles.Driver.ToString());
+                var driverId = await _driverRepo.CreateDriver(request, user.Id);
+               
                 if (driverId == null)
                 {
                     _logger.LogError("Driver repo failed");
@@ -86,6 +92,8 @@ namespace PegasusBackend.Services.Implementations
                         "Failed to create or find car"
                     );
                 }
+                await _userManager.RemoveFromRoleAsync(user, UserRoles.User.ToString());
+                await _userManager.AddToRoleAsync(user, UserRoles.Driver.ToString());
 
                 return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true);
             }

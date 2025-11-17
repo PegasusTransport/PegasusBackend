@@ -6,7 +6,7 @@ namespace PegasusBackend.DTOs.DriverDTO
 {
     public class CreateRequestDriverDto
     {
-        public string UserId { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
         public string ProfilePicture { get; set; } = string.Empty;
         public string LicensePlate { get; set; } = string.Empty;
     }

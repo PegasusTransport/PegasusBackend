@@ -5,11 +5,14 @@ using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
+using PegasusBackend.Responses;
 using PegasusBackend.Services.Implementations;
+using PegasusBackend.Services.Interfaces;
+using System.Net;
 
 namespace PegasusBackend.Repositorys.Implementations
 {
-    public class DriverRepo(AppDBContext context, ILogger<DriverRepo> logger) : IDriverRepo
+    public class DriverRepo(AppDBContext context, ILogger<DriverRepo> logger, RoleManager<IdentityRole> roleManager, UserManager<User> userManager) : IDriverRepo
     {
         public async Task<DriverResponseDto?> GetDriverByIdAsync(Guid id)
         {
@@ -63,7 +66,6 @@ namespace PegasusBackend.Repositorys.Implementations
                         FirstName = d.User.FirstName,
                         LastName = d.User.LastName,
                         ProfilePicture = d.ProfilePicture,
-                        CarId = d.CarId,
                         CarMake = d.Car.Make,
                         CarModel = d.Car.Model,
                         CarCapacity = d.Car.Capacity,
@@ -98,7 +100,7 @@ namespace PegasusBackend.Repositorys.Implementations
                 return [];
             }
         }
-        public async Task<bool> CreateDriver(CreateRequestDriverDto request, string userId)
+        public async Task<Guid?> CreateDriver(CreateRequestDriverDto request, string userId)
         {
 
             try
@@ -107,23 +109,27 @@ namespace PegasusBackend.Repositorys.Implementations
 
                 if (existingDriver != null)
                 {
-                    logger.LogWarning("User {UserId} is already a driver", userId);
-                    return false;
+                    logger.LogWarning($"User {userId} is already a driver", userId);
+                    return null;
                 }
+
                 var newDriver = new Drivers
                 {
                     DriverId = Guid.NewGuid(),
                     UserId = userId,
-                    ProfilePicture = request.ProfilePicture
+                    ProfilePicture = request.ProfilePicture,
                 };
+
+
+
                 context.Drivers.Add(newDriver);
                 await context.SaveChangesAsync();
-                return true;
+                return newDriver.DriverId;
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, $"Failed to create driver for user {userId}");
-                return false;
+                return null;       
             }
         }
         public async Task<bool> UpdateDriver(UpdateRequestDriverDto request, Guid driverId)
@@ -141,9 +147,6 @@ namespace PegasusBackend.Repositorys.Implementations
                 if (!string.IsNullOrWhiteSpace(request.ProfilePicture))
                     driver.ProfilePicture = request.ProfilePicture;
 
-                if (request.CarId.HasValue)
-                    driver.CarId = request.CarId.Value;
-
                 await context.SaveChangesAsync();
                 return true;
             }
@@ -158,7 +161,9 @@ namespace PegasusBackend.Repositorys.Implementations
             using var transaction = await context.Database.BeginTransactionAsync();
             try
             {
-                var driver = await context.Drivers.FirstOrDefaultAsync(d => d.DriverId == driverId);
+                var driver = await context.Drivers
+                    .Include(c => c.Car)
+                    .FirstOrDefaultAsync(d => d.DriverId == driverId);
 
                 if (driver == null)
                 {
@@ -176,6 +181,13 @@ namespace PegasusBackend.Repositorys.Implementations
 
                 driver.IsDeleted = true;
                 driver.DeletedAt = DateTime.UtcNow;
+
+                if (driver.Car != null)
+                {
+                    context.Cars.Remove(driver.Car);
+                    logger.LogInformation("Car {CarId} deleted with driver {DriverId}",
+                        driver.Car.CarId, driverId);
+                }
 
                 await context.SaveChangesAsync();
                 await transaction.CommitAsync();

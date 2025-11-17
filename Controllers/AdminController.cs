@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.TaxiDTOs;
@@ -9,6 +10,7 @@ using PegasusBackend.Helpers;
 using PegasusBackend.Models;
 using PegasusBackend.Services.Implementations;
 using PegasusBackend.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace PegasusBackend.Controllers
 {
@@ -18,10 +20,12 @@ namespace PegasusBackend.Controllers
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
+        private readonly IDriverService _driverService;
 
-        public AdminController(IAdminService adminService)
+        public AdminController(IAdminService adminService, IDriverService driverService )
         {
             _adminService = adminService;
+            _driverService = driverService;
         }
 
         [HttpGet("GetAllTaxiPrices")]
@@ -58,13 +62,28 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await _adminService.ChangeBookingById(updateBookingDto));
 
         // DriverSection
+        [HttpPost("CreateDriver")]
+        [EnableRateLimiting("RegistrationPolicy")]
+        public async Task<ActionResult<bool>> CreateDriver(CreateRequestDriverDto request) =>
+            Generate.ActionResult(await _driverService.CreateDriverAsync(request));
+
         [HttpGet("GetAllDrivers")]
         public async Task<ActionResult<List<AllDriversRequestDto>>> GetAllDriver() =>
             Generate.ActionResult(await _adminService.GetAllDriversAsync());
 
         [HttpDelete("DeleteDriver/{id}")]
-        public async Task<ActionResult<bool>> DeleteDriver(Guid id) =>
-            Generate.ActionResult(await _adminService.DeleteDriverAsync(id));
+        public async Task<ActionResult<bool>> DeleteDriver(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest("Id is required.");
+
+            var cleaned = Regex.Replace(id, @"\p{Cf}", string.Empty).Trim();
+
+            if (!Guid.TryParse(cleaned, out var guid))
+                return BadRequest(new { id = new[] { "The value is not a valid GUID." } });
+
+            return Generate.ActionResult(await _adminService.DeleteDriverAsync(guid));
+        }
 
         [HttpGet("GetDriverById/{id}")]
         [Authorize]

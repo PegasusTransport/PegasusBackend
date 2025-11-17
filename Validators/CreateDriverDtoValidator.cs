@@ -12,8 +12,8 @@ namespace PegasusBackend.Validators
                 .MaximumLength(300).WithMessage("Profile picture URL can't exceed 300 characters.")
                 .Must(BeValidUrl).WithMessage("Profile picture must be a valid URL.");
 
-            RuleFor(x => x.CarId)
-                .GreaterThan(0).WithMessage("CarId must be greater than 0.");
+            RuleFor(x => x.LicensePlate)
+                .MaximumLength(10).WithMessage("LicensePlate cant be longer then 10");
         }
 
         private bool BeValidUrl(string url)

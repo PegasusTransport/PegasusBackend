@@ -3,12 +3,15 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PegasusBackend.Models;
+using PegasusBackend.Repositorys.Interfaces;
+using PegasusBackend.Services.Interfaces;
+using System.Net;
 
 namespace PegasusBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ValuesController(UserManager<User> _userManager) : ControllerBase
+    public class ValuesController(UserManager<User> _userManager, ICarService carService) : ControllerBase
     {
         [HttpGet("test")]
         public ActionResult Test()
@@ -44,6 +47,16 @@ namespace PegasusBackend.Controllers
             var user = await _userManager.GetUserAsync(User);
             var roles = await _userManager.GetRolesAsync(user!);
             return Ok(new { user!.Email, Roles = roles });
+        }
+        [HttpGet("GetCarinfo")]
+        public async Task<ActionResult> GetCarinfo(string regNo, Guid driverID)
+        {
+            var result = await carService.CreateOrFindCarWithDriver(regNo, driverID);
+            if (result != null)
+            {
+                return Ok(result);
+            }
+            return BadRequest(result);
         }
     }
 }

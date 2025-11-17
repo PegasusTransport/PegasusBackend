@@ -22,6 +22,7 @@ namespace PegasusBackend.Services.Implementations
         private readonly UserManager<Models.User> _userManager;
         private readonly IBookingValidationService _validationService;
         private readonly IMailjetEmailService _mailjetEmailService;
+        private readonly ICarService _carService;
 
         public DriverService(
             UserManager<Models.User> userManager,
@@ -35,62 +36,71 @@ namespace PegasusBackend.Services.Implementations
             IBookingValidationService validationService,
             IMapService mapService,
             IOptions<BookingRulesSettings> bookingRules,
-            IMailjetEmailService mailjetEmailService
+            IMailjetEmailService mailjetEmailService,
+            ICarService carService
         ) : base(bookingRepo, bookingMapper, userService, httpContextAccessor, paginationSettings, mapService, bookingRules, logger, driverRepo)
         {
             _userManager = userManager;
             _validationService = validationService;
             _mailjetEmailService = mailjetEmailService;
+            _carService = carService;
         }
 
-        public async Task<ServiceResponse<CreatedResponseDriverDto>> CreateDriverAsync(CreateRequestDriverDto request, HttpContext httpContext)
+        public async Task<ServiceResponse<bool>> CreateDriverAsync(CreateRequestDriverDto request)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(request.ProfilePicture))
-                    return ServiceResponse<CreatedResponseDriverDto>.FailResponse(
+                    return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "Profile picture is required"
                     );
 
-                var user = await _userManager.GetUserAsync(httpContext.User);
-
-                if (user == null)
-                    return ServiceResponse<CreatedResponseDriverDto>.FailResponse(
-                        HttpStatusCode.NotFound,
-                        "No user with that mail"
-                    );
-
-                if (!await _userManager.IsInRoleAsync(user, UserRoles.Driver.ToString()))
-                    return ServiceResponse<CreatedResponseDriverDto>.FailResponse(
+                if (string.IsNullOrWhiteSpace(request.Email))
+                    return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest,
-                        "Not role as Driver"
+                        "Email is required"
                     );
+
+                var user = await _userManager.FindByEmailAsync(request.Email);
+                if (user == null)
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.NotFound,
+                        "No user with that Id"
+                    );
+
                 if (user.IsDeleted)
-                    return ServiceResponse<CreatedResponseDriverDto>.FailResponse(
+                    return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest,
                         "Cannot create driver for deleted user"
                     );
-                if (await _driverRepo.CreateDriver(request, user.Id))
+
+                var driverId = await _driverRepo.CreateDriver(request, user.Id);
+               
+                if (driverId == null)
                 {
-                    var newDriver = new CreatedResponseDriverDto
-                    {
-                        DriverName = user.FirstName,
-                        Email = user.Email!,
-                    };
-                    return ServiceResponse<CreatedResponseDriverDto>.SuccessResponse(HttpStatusCode.OK, newDriver );
-                }
-                else
-                {
-                    return ServiceResponse<CreatedResponseDriverDto>.FailResponse(HttpStatusCode.BadRequest, "Failed to created driver");
+                    _logger.LogError("Driver repo failed");
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.BadRequest, "Failed to create driver");
                 }
 
+                var car = await _carService.CreateOrFindCarWithDriver(request.LicensePlate, driverId.Value);
+                if (car == null )
+                {
+                    _logger.LogError("Failed to create or find car");
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "Failed to create or find car"
+                    );
+                }
+                await _userManager.RemoveFromRoleAsync(user, UserRoles.User.ToString());
+                await _userManager.AddToRoleAsync(user, UserRoles.Driver.ToString());
 
+                return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
-                return ServiceResponse<CreatedResponseDriverDto>.FailResponse(HttpStatusCode.InternalServerError, "Failed");
+                return ServiceResponse<bool>.FailResponse(HttpStatusCode.InternalServerError, "Failed");
             }
         }
         public async Task<ServiceResponse<UpdateDriverResponseDto>> UpdateDriverAsync(Guid driverId, UpdateRequestDriverDto updatedDriver, HttpContext httpContext)

@@ -29,7 +29,7 @@ namespace PegasusBackend.Data
             driver
                 .HasOne(d => d.Car)
                 .WithOne(c => c.Driver)
-                .HasForeignKey<Drivers>(d => d.CarId)
+                .HasForeignKey<Cars>(c => c.DriverIdFk)
                 .IsRequired(false);
 
             driver
@@ -38,11 +38,11 @@ namespace PegasusBackend.Data
                 .HasForeignKey(b => b.DriverIdFK);
 
             booking
-    .Property(b => b.Version)
-    .HasColumnName("xmin")
-    .HasColumnType("xid")
-    .ValueGeneratedOnAddOrUpdate()
-    .IsConcurrencyToken();
+                .Property(b => b.Version)
+                .HasColumnName("xmin")
+                .HasColumnType("xid")
+                .ValueGeneratedOnAddOrUpdate()
+                .IsConcurrencyToken();
 
             taxiSettings
                 .Property(p => p.KmPrice)

@@ -22,9 +22,10 @@ namespace PegasusBackend.Controllers
         public async Task<ActionResult<bool>> RegisterUser(RegistrationRequestDto request) => 
             Generate.ActionResult(await userService.RegisterUserAsync(request));
 
-        [HttpGet("ConfirmEmail")]
-        public async Task<ActionResult<string>> ConfirmEmail(string token, string email) =>
-            Generate.ActionResult(await userService.ConfirmUserEmailAsync(token, email));
+        [HttpPost("ConfirmEmail")]
+        public async Task<ActionResult<string>> ConfirmEmail(ConfirmEmailDto dto) =>
+            Generate.ActionResult(await userService.ConfirmUserEmailAsync(dto.Token, dto.Email));
+            
 
         [HttpGet("GetUser/{email}")]
         [Authorize(Roles = "Admin")]

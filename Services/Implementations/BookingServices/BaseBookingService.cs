@@ -196,7 +196,14 @@ namespace PegasusBackend.Services.Implementations.Base
                     b.PickUpAdress.ToLower().Contains(term) ||
                     b.DropOffAdress.ToLower().Contains(term) ||
                    (b.Flightnumber != null && b.Flightnumber.ToLower().Contains(term)) ||
-                   (b.Comment != null && b.Comment.ToLower().Contains(term))
+                   (b.Comment != null && b.Comment.ToLower().Contains(term)) ||
+                   // Guest name
+                   (((b.GuestFirstName ?? "") + " " + (b.GuestLastName ?? "")).ToLower().Contains(term)) ||
+                   // Registered user name
+                   (b.User != null && (((b.User.FirstName ?? "") + " " + (b.User.LastName ?? "")).ToLower().Contains(term))) ||
+                   // Driver name
+                   (b.Driver != null && b.Driver.User != null &&
+                    (((b.Driver.User.FirstName ?? "") + " " + (b.Driver.User.LastName ?? "")).ToLower().Contains(term)))
                 );
             }
             if (query.MinPrice.HasValue) q = q

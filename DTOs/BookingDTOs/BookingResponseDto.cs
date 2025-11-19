@@ -44,6 +44,10 @@ namespace PegasusBackend.DTOs.BookingDTOs
         public bool IsConfirmed { get; set; }
         public Guid? DriverId { get; set; }
         public string? DriverName { get; set; }
-
+        public string? DriverProfilePicture { get; set; }
+        public string? DriverCarMake { get; set; }
+        public string? DriverCarModel { get; set; }
+        public string? DriverCarLicensePlate { get; set; }
+        public string? DriverPhoneNumber { get; set; }
     }
 }

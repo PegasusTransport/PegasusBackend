@@ -8,6 +8,7 @@ using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Helpers;
 using PegasusBackend.Helpers.BookingHelpers;
 using PegasusBackend.Models;
+using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
 using PegasusBackend.Services.Implementations.Base;
@@ -357,8 +358,8 @@ public class AdminService : BaseBookingService, IAdminService
             await _bookingRepo.UpdateBookingAsync(booking);
 
             return ServiceResponse<bool>.SuccessResponse(
-                HttpStatusCode.OK, 
-                true, 
+                HttpStatusCode.OK,
+                true,
                 "Booking cancelled successfully.");
         }
         catch (Exception)
@@ -390,7 +391,7 @@ public class AdminService : BaseBookingService, IAdminService
                 Phone = d.User.PhoneNumber,
 
 
-                
+
             }).ToList();
 
             string message = driverDtos.Count > 0
@@ -525,6 +526,63 @@ public class AdminService : BaseBookingService, IAdminService
                 HttpStatusCode.InternalServerError,
                 "Failed to delete driver"
             );
+        }
+    }
+
+    public async Task<ServiceResponse<bool>> CreateAdminAsync(string email)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    "Email cannot be empty"
+                );
+
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.NotFound,
+                    "User not found"
+                );
+            }
+
+            var userRoles = await _userManager.GetRolesAsync(user);
+
+            if (userRoles.Contains(UserRoles.Admin.ToString()))
+            {
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    "User is already an admin");
+            }
+
+            var addResult = await _userManager.AddToRoleAsync(user, UserRoles.Admin.ToString());
+            if (!addResult.Succeeded)
+            {
+                var errors = string.Join(", ", addResult.Errors.Select(e => e.Description));
+                return ServiceResponse<bool>.FailResponse(
+                    HttpStatusCode.BadRequest,
+                    $"Failed to assign admin role: {errors}"
+                );
+            }
+
+            if (userRoles.Contains(UserRoles.User.ToString()))
+            {
+                var removeResult = await _userManager.RemoveFromRoleAsync(user, UserRoles.User.ToString());
+                if (!removeResult.Succeeded)
+                {
+                    _logger.LogWarning("Failed to remove User role for {Email}: {Errors}",
+                        email, string.Join(", ", removeResult.Errors.Select(e => e.Description)));
+                }
+            }
+
+            return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating admin for email: {Email}", email);
+            return ServiceResponse<bool>.FailResponse(HttpStatusCode.InternalServerError, "Failed to create admin");
         }
     }
     #endregion

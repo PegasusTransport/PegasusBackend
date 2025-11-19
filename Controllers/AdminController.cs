@@ -16,13 +16,13 @@ namespace PegasusBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
         private readonly IDriverService _driverService;
 
-        public AdminController(IAdminService adminService, IDriverService driverService )
+        public AdminController(IAdminService adminService, IDriverService driverService)
         {
             _adminService = adminService;
             _driverService = driverService;
@@ -38,7 +38,7 @@ namespace PegasusBackend.Controllers
             Generate.ActionResult(await _adminService.CreatePricesAsync(taxiSettingsDTO));
 
         [HttpGet("getAllBookings")]
-        public async Task <ActionResult<PaginatedResult<BookingResponseDto>>> GetAllBookings([FromQuery] BookingFilterRequestForAdminDto searchRequestDto) =>
+        public async Task<ActionResult<PaginatedResult<BookingResponseDto>>> GetAllBookings([FromQuery] BookingFilterRequestForAdminDto searchRequestDto) =>
             Generate.ActionResult(await _adminService.GetAllBookingsAsync(searchRequestDto));
 
         [HttpGet("GetBookingById/{bookingId}")]
@@ -94,5 +94,10 @@ namespace PegasusBackend.Controllers
         [Authorize]
         public async Task<ActionResult<DriverResponseDto>> GetDriverByUserId(string id) =>
             Generate.ActionResult(await _adminService.GetDriverByUserIdAsync(id));
+
+        [HttpPost("CreateAdmin/{email}")]
+        [Authorize]
+        public async Task<ActionResult<bool>> CreateAdmin(string email) =>
+            Generate.ActionResult(await _adminService.CreateAdminAsync(email));
     }
 }

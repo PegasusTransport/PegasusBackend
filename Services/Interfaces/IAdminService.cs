@@ -23,5 +23,6 @@ namespace PegasusBackend.Services.Interfaces
         Task<ServiceResponse<DriverResponseDto>> GetDriverByUserIdAsync(string userId);
         Task<ServiceResponse<DriverResponseDto>> GetDriverByIdAsync(Guid driverId);
         Task<ServiceResponse<bool>> DeleteDriverAsync(Guid driverId);
+        Task<ServiceResponse<bool>> CreateAdminAsync(string email);
     }
 }

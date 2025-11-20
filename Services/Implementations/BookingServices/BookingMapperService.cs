@@ -53,12 +53,14 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 Status = booking.Status,
                 IsConfirmed = booking.IsConfirmed,
                 DriverId = booking.DriverIdFK,
-                DriverName = driverName,
-                DriverProfilePicture = driver?.ProfilePicture,
-                DriverCarMake = driverCar?.Make,
-                DriverCarModel = driverCar?.Model,
-                DriverCarLicensePlate = driverCar?.LicensePlate,
-                DriverPhoneNumber = driverUser?.PhoneNumber
+                DriverName = booking.Driver != null
+                ? $"{booking.Driver.User.FirstName} {booking.Driver.User.LastName}" : null,
+                DriverProfilePicture = booking.Driver?.ProfilePicture,
+                DriverCarMake = booking.Driver?.Car.Make,
+                DriverCarModel = booking.Driver?.Car.Model,
+                DriverCarLicensePlate = booking.Driver?.Car.LicensePlate,
+                DriverPhoneNumber = booking.Driver?.User.PhoneNumber
+
             };
         }
 

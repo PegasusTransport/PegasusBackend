@@ -23,7 +23,9 @@ namespace PegasusBackend.Repositorys.Implementations
                 query = query
                     .Include(b => b.User)
                     .Include(b => b.Driver)
-                        .ThenInclude(d => d.User);
+                        .ThenInclude(d => d.User)
+                     .Include(b => b.Driver)
+                        .ThenInclude(d => d.Car);
             }
 
             return query;

@@ -10,22 +10,18 @@ namespace PegasusBackend.Services.Implementations.BookingServices
         {
             bool isGuestBooking = booking.UserIdFk == null;
 
-            string email, firstName, lastName, phoneNumber;
+            var email = isGuestBooking ? booking.GuestEmail ?? "" : booking.User?.Email ?? "unknown@unknown.com";
+            var firstName = isGuestBooking ? booking.GuestFirstName ?? "" : booking.User?.FirstName ?? "";
+            var lastName = isGuestBooking ? booking.GuestLastName ?? "" : booking.User?.LastName ?? "";
+            var phoneNumber = isGuestBooking ? booking.GuestPhoneNumber ?? "" : booking.User?.PhoneNumber ?? "";
 
-            if (isGuestBooking)
-            {
-                email = booking.GuestEmail!;
-                firstName = booking.GuestFirstName!;
-                lastName = booking.GuestLastName!;
-                phoneNumber = booking.GuestPhoneNumber!;
-            }
-            else
-            {
-                email = booking.User?.Email ?? "unknown@unknown.com";
-                firstName = booking.User?.FirstName ?? "";
-                lastName = booking.User?.LastName ?? "";
-                phoneNumber = booking.User?.PhoneNumber ?? "";
-            }
+            var driver = booking.Driver;
+            var driverUser = driver?.User;
+            var driverCar = driver?.Car;
+
+            string? driverName = null;
+            if (driverUser != null)
+                driverName = $"{driverUser.FirstName} {driverUser.LastName}".Trim();
 
             return new BookingResponseDto
             {

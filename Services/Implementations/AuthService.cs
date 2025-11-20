@@ -16,6 +16,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace PegasusBackend.Services.Implementations
 {
@@ -33,7 +34,7 @@ namespace PegasusBackend.Services.Implementations
             {
                 var user = await userManager.FindByEmailAsync(request.Email);
 
-  
+
                 bool isPasswordValid = false;
                 if (user != null)
                 {
@@ -52,14 +53,14 @@ namespace PegasusBackend.Services.Implementations
                 {
                     return ServiceResponse<LoginResponseDto>.FailResponse(
                         HttpStatusCode.Unauthorized,
-                        "Invalid credentials" 
+                        "Invalid credentials"
                     );
                 }
 
                 if (await userManager.IsLockedOutAsync(user))
                 {
                     return ServiceResponse<LoginResponseDto>.FailResponse(
-                        HttpStatusCode.Forbidden, 
+                        HttpStatusCode.Forbidden,
                         "Account is locked. Please contact support."
                     );
                 }
@@ -133,7 +134,7 @@ namespace PegasusBackend.Services.Implementations
             catch (Exception ex)
             {
 
-                logger.LogError(ex, "Error during login for email: {Email}", verifyTwoFaDto.Email); 
+                logger.LogError(ex, "Error during login for email: {Email}", verifyTwoFaDto.Email);
                 return ServiceResponse<bool?>.FailResponse(
                     HttpStatusCode.InternalServerError,
                     "An unexpected error occurred"
@@ -393,6 +394,52 @@ namespace PegasusBackend.Services.Implementations
                     "An unexpected error occurred"
                 );
             }
+        }
+        public async Task<ServiceResponse<bool>> Resend2FACode(ResendVericationTwoFaRequestDto request)
+        {
+            try
+            {
+                var user = await userManager.FindByEmailAsync(request.Email);
+                if (user == null)
+                {
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.NotFound, "User not found");
+                }
+                if (user.IsDeleted || !user.EmailConfirmed)
+                {
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.BadRequest, "User in deleted or didn't confirm email");
+                }
+                if (await userManager.IsLockedOutAsync(user))
+                {
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.Forbidden, "User is locked out");
+                }
+                var otpToken = await userManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
+
+                var emailResult = await mailjetEmailService.SendEmailAsync(
+                         user.Email!,
+                         MailjetTemplateType.TwoFA,
+                         new TwoFARequestDto
+                         {
+                             Firstname = user.FirstName,
+                             VerificationCode = otpToken
+                         },
+                         MailjetSubjects.TwoFA);
+                if (emailResult.StatusCode != HttpStatusCode.OK)
+                {
+                    logger.LogWarning("Failed to send 2FA code to {Email}: {Message}", user.Email, emailResult);
+                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.InternalServerError, "Failed to send verification code");
+
+                }
+
+                return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true, $"Verification code resent to {user.Email}");
+            }
+            catch (Exception ex)
+            {
+
+                logger.LogError(ex, "Error resending the 2FA code to {Email}", request.Email);
+                return ServiceResponse<bool>.FailResponse(HttpStatusCode.InternalServerError, "An unexpected error occurred");
+
+            }
+
         }
     }
 }

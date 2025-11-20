@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -29,14 +30,15 @@ namespace PegasusBackend.Tests.Services
             // Arrange 
             var mockUserManager = new Mock<UserManager<User>>(
                 new Mock<IUserStore<User>>().Object,
-                It.IsAny<IOptions<IdentityOptions>>(),
-                It.IsAny<IPasswordHasher<User>>(),
-                It.IsAny<IEnumerable<IUserValidator<User>>>(),
-                It.IsAny<IEnumerable<IPasswordValidator<User>>>(),
-                It.IsAny<ILookupNormalizer>(),
-                It.IsAny<IdentityErrorDescriber>(),
-                It.IsAny<IServiceProvider>(),
-                It.IsAny<ILogger<UserManager<User>>>());
+                null!,
+                null!,
+                null!,
+                null!,
+                null!,
+                null!,
+                null!,
+                null!
+            );
 
             var mockMailjetService = new Mock<IMailjetEmailService>();
 
@@ -105,5 +107,67 @@ namespace PegasusBackend.Tests.Services
             Assert.IsType<LoginResponseDto>(result.Data);
             Assert.Equal($"A verification Code has been sent to {testUser.Email}", result.Message);
         }
+        [Fact]
+        public async Task VerifyTwoFaOTPAndLogin_FailAndLog_WhenOTPIsWrong()
+        {
+            // Arrange 
+            var mockUserManager = new Mock<UserManager<User>>(
+                new Mock<IUserStore<User>>().Object,
+                null!,
+                null!,
+                null!,
+                null!,
+                null!,
+                null!,
+                null!,
+                null!
+            );
+
+            var mockConfiguration = new Mock<IConfiguration>();
+            var mockUserRepo = new Mock<IUserRepo>();
+            var mockUserService = new Mock<IUserService>();
+            var mockLogger = new Mock<ILogger<AuthService>>();
+            var mockMailjetService = new Mock<IMailjetEmailService>();
+
+            var authService = new AuthService(
+                mockUserManager.Object,
+                mockConfiguration.Object,
+                mockUserRepo.Object,
+                mockUserService.Object,
+                mockLogger.Object,
+                mockMailjetService.Object
+            );
+
+            var mockHttpContext = new Mock<HttpContext>();
+
+            var verifyTwoFaDto = new VerifyTwoFaDto
+            {
+                Email = "TestEmail@gmail.com",
+                VerificationCode = "WrongCode"
+            };
+            var testUser = new User
+            {
+                Email = "test@example.com",
+                IsDeleted = false,
+                EmailConfirmed = true,
+                FirstName = "Test"
+            };
+            
+
+            mockUserManager
+            .Setup(x => x.FindByEmailAsync(It.IsAny<string>()))
+            .ReturnsAsync(testUser);
+
+            mockUserManager
+                .Setup(v => v.VerifyTwoFactorTokenAsync(testUser, TokenOptions.DefaultEmailProvider, verifyTwoFaDto.VerificationCode))
+                .ReturnsAsync(false);
+
+            //act
+            var result = await authService.VerifyTwoFaOTPAndLogin(verifyTwoFaDto, mockHttpContext.Object);
+
+            // assert
+            Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
+        }
+
     }
 }

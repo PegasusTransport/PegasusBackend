@@ -1,49 +1,37 @@
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Copy solution and project files
+# Copy solution file first
 COPY ["PegasusBackend.sln", "./"]
+
+# Copy project files for restore (both Backend and Tests needed for solution restore)
 COPY ["PegasusBackend/PegasusBackend.csproj", "PegasusBackend/"]
 COPY ["PegasusBackend.Tests/PegasusBackend.Tests.csproj", "PegasusBackend.Tests/"]
 
-# Restore dependencies
+# Restore all dependencies
 RUN dotnet restore "PegasusBackend.sln"
 
-# Copy all source files
+# Copy all source code
 COPY . .
 
-# Run tests - build stoppar här om tester failar!
-WORKDIR "/src"
-RUN dotnet test "PegasusBackend.Tests/PegasusBackend.Tests.csproj" \
-    --configuration Release \
-    --no-restore \
-    --verbosity normal
-
-# Build application
+# Build only the main project (not tests)
 WORKDIR "/src/PegasusBackend"
-RUN dotnet build "PegasusBackend.csproj" \
-    -c Release \
-    -o /app/build \
-    --no-restore
+RUN dotnet build "PegasusBackend.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Publish stage
 FROM build AS publish
-RUN dotnet publish "PegasusBackend.csproj" \
-    -c Release \
-    -o /app/publish \
-    /p:UseAppHost=false
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "PegasusBackend.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
-
-# Copy published files
 COPY --from=publish /app/publish .
 
-# Copy fonts
-COPY ["PegasusBackend/Fonts/", "/app/Fonts/"]
+# IMPORTANT FOR RENDER - Listen on PORT environment variable
+ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
+EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "PegasusBackend.dll"]

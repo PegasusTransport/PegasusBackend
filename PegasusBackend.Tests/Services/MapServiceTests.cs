@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
+using PegasusBackend.DTOs.AuthDTOs;
 using PegasusBackend.DTOs.MapDTOs;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Services.Implementations;
@@ -25,51 +26,59 @@ namespace PegasusBackend.Tests.Services
             // Arrange
             var coordinates = new List<CoordinateDto>
             {
-                new() { Latitude = 59.649762m, Longitude = 17.923781m },
-                new() { Latitude = 59.293938m, Longitude = 18.083374m },
+                new() { Latitude = 0, Longitude = 0 },
+                new() { Latitude = 0, Longitude = 0 },
             };
+
             var jsonResponse = @"
+            {
+              ""status"": ""OK"",
+              ""routes"": [
                 {
-                  ""status"": ""OK"",
-                  ""routes"": [
+                  ""legs"": [
                     {
-                      ""legs"": [
-                        {
-                          ""distance"": {
-                            ""value"": 45000,
-                            ""text"": ""45.0 km""
-                          },
-                          ""duration"": {
-                            ""value"": 2700,
-                            ""text"": ""45 mins""
-                          }
-                        }
-                      ]
+                      ""start_address"": ""Stockholm, Sweden"",
+                      ""end_address"": ""Västerås, Sweden"",
+                      ""distance"": {
+                        ""value"": 45000,
+                        ""text"": ""45.0 km""
+                      },
+                      ""duration"": {
+                        ""value"": 2700,
+                        ""text"": ""45 mins""
+                      }
                     }
                   ]
-                }";
+                }
+              ]
+            }";
 
+            // 1. Setup mock HTTP handler
             var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
-
             mockHttpMessageHandler
                 .Protected()
                 .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(), // Match any request
-                ItExpr.IsAny<CancellationToken>()) // Match any cancellation token
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
-                    Content = new StringContent(jsonResponse),
+                    Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json"),
                 });
 
             var httpClient = new HttpClient(mockHttpMessageHandler.Object);
 
-
+            // 2. Setup configuration mock
             var mockConfiguration = new Mock<IConfiguration>();
-            var mockLogger = new Mock<ILogger<MapService>>();
-            var mockIHttpClientFactory=  new Mock<IHttpClientFactory>();
+            mockConfiguration
+                .Setup(x => x["GoogleMaps:ApiKey"])
+                .Returns("test-api-key");
 
+            var mockLogger = new Mock<ILogger<MapService>>();
+
+            // 3. Setup factory mock to return our mocked HTTP client
+            var mockIHttpClientFactory = new Mock<IHttpClientFactory>();
             mockIHttpClientFactory
                 .Setup(x => x.CreateClient(It.IsAny<string>()))
                 .Returns(httpClient);
@@ -77,9 +86,12 @@ namespace PegasusBackend.Tests.Services
             var mapService = new MapService(mockConfiguration.Object, mockIHttpClientFactory.Object, mockLogger.Object);
 
             // Act
-
+            var result = await mapService.GetRouteInfoAsync(coordinates);
 
             // Assert
+            Assert.NotNull(result);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+            Assert.NotNull(result.Data);
         }
     }
 }

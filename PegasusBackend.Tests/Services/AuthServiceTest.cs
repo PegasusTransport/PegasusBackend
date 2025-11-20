@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using PegasusBackend.DTOs.AuthDTOs;
 using PegasusBackend.DTOs.MailjetDTOs;
+using PegasusBackend.DTOs.MapDTOs;
 using PegasusBackend.Helpers.MailjetHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;

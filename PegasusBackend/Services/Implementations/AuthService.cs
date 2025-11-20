@@ -27,7 +27,7 @@ namespace PegasusBackend.Services.Implementations
         ILogger<AuthService> logger,
         IMailjetEmailService mailjetEmailService) : IAuthService
     {
-        public async Task<ServiceResponse<LoginResponseDto>> LoginAsync(LoginRequestDto request)
+        public async Task<ServiceResponse<LoginResponseDto>> SendTwoFaAsync(LoginRequestDto request)
         {
             try
             {
@@ -97,7 +97,7 @@ namespace PegasusBackend.Services.Implementations
             }
         }
 
-        public async Task<ServiceResponse<bool?>> VerifyTwoFaOTP(VerifyTwoFaDto verifyTwoFaDto, HttpContext httpContext)
+        public async Task<ServiceResponse<bool?>> VerifyTwoFaOTPAndLogin(VerifyTwoFaDto verifyTwoFaDto, HttpContext httpContext)
         {
             try
             {

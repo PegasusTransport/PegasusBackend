@@ -53,7 +53,7 @@ namespace PegasusBackend.Tests.Services
               ]
             }";
 
-            // 1. Setup mock HTTP handler
+        
             var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
             mockHttpMessageHandler
                 .Protected()
@@ -69,7 +69,6 @@ namespace PegasusBackend.Tests.Services
 
             var httpClient = new HttpClient(mockHttpMessageHandler.Object);
 
-            // 2. Setup configuration mock
             var mockConfiguration = new Mock<IConfiguration>();
             mockConfiguration
                 .Setup(x => x["GoogleMaps:ApiKey"])
@@ -77,7 +76,6 @@ namespace PegasusBackend.Tests.Services
 
             var mockLogger = new Mock<ILogger<MapService>>();
 
-            // 3. Setup factory mock to return our mocked HTTP client
             var mockIHttpClientFactory = new Mock<IHttpClientFactory>();
             mockIHttpClientFactory
                 .Setup(x => x.CreateClient(It.IsAny<string>()))

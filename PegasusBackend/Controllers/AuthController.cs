@@ -70,6 +70,10 @@ namespace PegasusBackend.Controllers
         [EnableRateLimiting("PasswordResetPolicy")]
         public async Task<ActionResult<bool>> ResetPassword([FromBody] ConfirmPasswordResetDto request) =>
             Generate.ActionResult(await passwordResetService.ResetPasswordAsync(request));
+        [HttpPost("Resend2FA")]
+        [EnableRateLimiting("AuthPolicy")]
+        public async Task<ActionResult<bool>> Resend2FA([FromBody] ResendVericationTwoFaRequestDto request)=>
+            Generate.ActionResult(await authService.Resend2FACode(request));
 
     }
 }

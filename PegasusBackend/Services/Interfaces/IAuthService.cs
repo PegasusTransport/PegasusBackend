@@ -13,5 +13,6 @@ namespace PegasusBackend.Services.Interfaces
         // REMOVE IN PRODUCTION
         Task<ServiceResponse<bool?>> DevLoginAsync(LoginRequestDto request, HttpContext httpContext);
         ServiceResponse<SessionLifeTimeDto> GetSessionLifetime();
+        Task<ServiceResponse<bool>> Resend2FACode(ResendVericationTwoFaRequestDto request);
     }
 }

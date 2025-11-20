@@ -168,6 +168,5 @@ namespace PegasusBackend.Tests.Services
             // assert
             Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
         }
-
     }
 }

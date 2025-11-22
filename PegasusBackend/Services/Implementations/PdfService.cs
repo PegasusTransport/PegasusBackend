@@ -40,7 +40,7 @@ namespace PegasusBackend.Services.Implementations
                 var logoData = await TryDownloadLogoAsync(settings.LogoUrl);
                 var totalDuration = ParseDurationInMinutes(receipt.DurationMinutes);
                 var pdfDocument = BuildReceiptDocument(receipt, settings, logoData, totalDuration);
-                var pdfBytes = pdfDocument.GeneratePdf();
+                var pdfBytes = GeneratePdf(pdfDocument);
 
                 _logger.LogInformation("[PDF] Successfully generated receipt for {CustomerName}", receipt.CustomerFirstname);
 
@@ -254,6 +254,11 @@ namespace PegasusBackend.Services.Implementations
                     text.Span(settings.CompanyName).Bold();
                     text.Span("!");
                 });
+        }
+
+        protected virtual byte[] GeneratePdf(Document doc)
+        {
+            return doc.GeneratePdf();
         }
     }
 

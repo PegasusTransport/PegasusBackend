@@ -62,11 +62,17 @@ namespace PegasusBackend.Services.Implementations
                         "Email is required"
                     );
 
+                if (string.IsNullOrWhiteSpace(request.LicensePlate))
+                    return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.BadRequest,
+                        "License plate is required"
+                    );
+
                 var user = await _userManager.FindByEmailAsync(request.Email);
                 if (user == null)
                     return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.NotFound,
-                        "No user with that Id"
+                        "No user with that email"
                     );
 
                 if (user.IsDeleted)
@@ -76,31 +82,57 @@ namespace PegasusBackend.Services.Implementations
                     );
 
                 var driverId = await _driverRepo.CreateDriver(request, user.Id);
-               
+
                 if (driverId == null)
                 {
-                    _logger.LogError("Driver repo failed");
+                    _logger.LogError("DriverRepo.CreateDriver returned null for user {UserId}", user.Id);
                     return ServiceResponse<bool>.FailResponse(HttpStatusCode.BadRequest, "Failed to create driver");
                 }
 
+                // Try to create or attach a car. If this fails we rollback the created driver to keep DB consistent.
                 var car = await _carService.CreateOrFindCarWithDriver(request.LicensePlate, driverId.Value);
-                if (car == null )
+                if (car == null)
                 {
-                    _logger.LogError("Failed to create or find car");
+                    _logger.LogError("CreateOrFindCarWithDriver failed for reg {Reg} and driver {DriverId}", request.LicensePlate, driverId.Value);
+
+                    // attempt rollback so we don't leave a half-created driver
+                    try
+                    {
+                        var deleteResult = await _driverRepo.DeleteDriver(driverId.Value);
+                        if (!deleteResult)
+                            _logger.LogWarning("Rollback: failed to delete driver {DriverId} after car creation failure", driverId.Value);
+                        else
+                            _logger.LogInformation("Rollback: deleted driver {DriverId} after car creation failure", driverId.Value);
+                    }
+                    catch (Exception exRollback)
+                    {
+                        _logger.LogError(exRollback, "Rollback: exception while deleting driver {DriverId}", driverId.Value);
+                    }
+
                     return ServiceResponse<bool>.FailResponse(
                         HttpStatusCode.BadRequest,
-                        "Failed to create or find car"
+                        "Failed to create or link car to driver"
                     );
                 }
-                await _userManager.RemoveFromRoleAsync(user, UserRoles.User.ToString());
-                await _userManager.AddToRoleAsync(user, UserRoles.Driver.ToString());
+
+                // Update roles and check results
+                var removeResult = await _userManager.RemoveFromRoleAsync(user, UserRoles.User.ToString());
+                if (!removeResult.Succeeded)
+                    _logger.LogWarning("Failed to remove 'User' role from {Email}: {Errors}", user.Email, string.Join(", ", removeResult.Errors.Select(e => e.Description)));
+
+                var addResult = await _userManager.AddToRoleAsync(user, UserRoles.Driver.ToString());
+                if (!addResult.Succeeded)
+                {
+                    _logger.LogWarning("Failed to add 'Driver' role to {Email}: {Errors}", user.Email, string.Join(", ", addResult.Errors.Select(e => e.Description)));
+                    // Not rolling back driver here since car exists; decide business policy if you want rollback on role failure.
+                }
 
                 return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex.Message);
-                return ServiceResponse<bool>.FailResponse(HttpStatusCode.InternalServerError, "Failed");
+                _logger.LogError(ex, "CreateDriverAsync: unexpected error for email {Email}", request?.Email);
+                return ServiceResponse<bool>.FailResponse(HttpStatusCode.InternalServerError, "Failed to create driver");
             }
         }
         public async Task<ServiceResponse<UpdateDriverResponseDto>> UpdateDriverAsync(Guid driverId, UpdateRequestDriverDto updatedDriver, HttpContext httpContext)

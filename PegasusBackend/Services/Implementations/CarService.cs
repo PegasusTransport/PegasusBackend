@@ -1,5 +1,7 @@
 ﻿using Azure;
+using Org.BouncyCastle.Crypto;
 using PegasusBackend.DTOs.CarDTOs;
+using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.MapDTOs;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
@@ -8,6 +10,7 @@ using PegasusBackend.Services.Interfaces;
 using System.Net;
 using System.Reflection.Metadata;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace PegasusBackend.Services.Implementations
 {
@@ -15,37 +18,41 @@ namespace PegasusBackend.Services.Implementations
     {
         private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
         private string? apiKey = configuration["BilUppgifterApiKey"];
-        public async Task<Cars?> CreateOrFindCarWithDriver(string regNo, Guid driverId)
+
+        public async Task<Cars?> CreateOrFindCarWithDriver(string regNo, Guid driverId, CreateRequestDriverDto? driverRequest = null)
         {
             var existingCar = await carRepo.FindCarByRegNumberAsync(regNo);
             if (existingCar != null)
             {
                 existingCar.DriverIdFk = driverId;
-                await carRepo.UpdateCar(existingCar); 
-                logger.LogWarning("Car exists, updated driver");
+                await carRepo.UpdateCar(existingCar);
+                logger.LogInformation("Car with registration {RegNo} exists, updated driver to {DriverId}", regNo, driverId);
                 return existingCar;
-            }
-
-            var carDetails = await GetCarData(regNo);
-            if (carDetails == null)
-            {
-                logger.LogError("Biluppgifter API Error");
-                return null;
             }
 
             var car = new Cars
             {
                 LicensePlate = regNo.ToUpper(),
-                Model = carDetails.Model,
-                Make = carDetails.Make,
-                Type = carDetails.Type,
-                Capacity = carDetails.Capacity.NumberOfPassengers,
-                DriverIdFk = driverId 
+                Make = driverRequest?.CarMake ?? "Unknown", 
+                Model = driverRequest?.CarModel ?? "Unknown",
+                Type = driverRequest?.CarType ?? "Sedan",
+                Capacity = driverRequest?.CarCapacity ?? 4,
+                DriverIdFk = driverId
             };
 
-            await carRepo.SaveCar(car);
-            return car;
+            try
+            {
+                await carRepo.SaveCar(car);
+                logger.LogInformation("Successfully created new car with registration {RegNo} for driver {DriverId}", regNo, driverId);
+                return car;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to save car with registration {RegNo}", regNo);
+                return null;
+            }
         }
+
         public async Task<CarDto?> GetCarData(string regNo)
         {
             try

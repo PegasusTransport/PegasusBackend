@@ -90,7 +90,7 @@ namespace PegasusBackend.Services.Implementations
                 }
 
                 // Try to create or attach a car. If this fails we rollback the created driver to keep DB consistent.
-                var car = await _carService.CreateOrFindCarWithDriver(request.LicensePlate, driverId.Value);
+                var car = await _carService.CreateOrFindCarWithDriver(request.LicensePlate, driverId.Value, request);
                 if (car == null)
                 {
                     _logger.LogError("CreateOrFindCarWithDriver failed for reg {Reg} and driver {DriverId}", request.LicensePlate, driverId.Value);

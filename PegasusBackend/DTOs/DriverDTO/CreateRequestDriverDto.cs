@@ -9,5 +9,9 @@ namespace PegasusBackend.DTOs.DriverDTO
         public string Email { get; set; } = string.Empty;
         public string ProfilePicture { get; set; } = string.Empty;
         public string LicensePlate { get; set; } = string.Empty;
+        public string? CarMake { get; set; }
+        public string? CarModel { get; set; }
+        public string? CarType { get; set; }
+        public int? CarCapacity { get; set; }
     }
 }

@@ -97,11 +97,11 @@ namespace PegasusBackend.Services.Implementations
                     {
                         existingDriver.IsDeleted = false;
                         existingDriver.DeletedAt = null;
+                        existingDriver.ProfilePicture = request.ProfilePicture;
                         existingDriver.User.IsDeleted = false;
                         existingDriver.User.DeletedAt = null;
                         await _driverRepo.UpdateDriver(existingDriver, existingDriver.DriverId);
                     }
-
                     driverId = existingDriver.DriverId;
                 }
 

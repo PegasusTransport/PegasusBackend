@@ -381,16 +381,14 @@ public class AdminService : BaseBookingService, IAdminService
             var driverDtos = drivers.Select(d => new AllDriversRequestDto
             {
                 Id = d.DriverId,
-                FirstName = d.User.FirstName,
-                LastName = d.User.LastName,
-                ProfilePicture = d.ProfilePicture,
-                Make = d.Car.Make,
-                Model = d.Car.Model,
-                RegNr = d.Car.LicensePlate,
-                Email = d.User.Email,
-                Phone = d.User.PhoneNumber,
-
-
+                FirstName = d.User?.FirstName ?? string.Empty,
+                LastName = d.User?.LastName ?? string.Empty,
+                ProfilePicture = d.ProfilePicture ?? string.Empty,
+                Make = d.Car?.Make ?? string.Empty,
+                Model = d.Car?.Model ?? string.Empty,
+                RegNr = d.Car?.LicensePlate ?? string.Empty,
+                Email = d.User?.Email ?? string.Empty,
+                Phone = d.User?.PhoneNumber ?? string.Empty,
 
             }).ToList();
 

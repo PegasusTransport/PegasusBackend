@@ -61,9 +61,6 @@ namespace PegasusBackend.Controllers
             }
             return BadRequest(result);
         }
-        [HttpPost("ChatWithHistory")]
-        public async Task<ActionResult<bool>> ChatWithHistory(
-            [FromBody] ChatbotRequest request) =>
-            Generate.ActionResult(await chatbotService.GetAiResponseWithHistory(request));
+
     }
 }

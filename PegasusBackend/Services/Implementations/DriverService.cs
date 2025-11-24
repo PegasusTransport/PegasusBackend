@@ -81,32 +81,50 @@ namespace PegasusBackend.Services.Implementations
                         "Cannot create driver for deleted user"
                     );
 
-                var driverId = await _driverRepo.CreateDriver(request, user.Id);
+                var existingDriver = await _driverRepo.GetDriverByEmailAsync(request.Email);
 
-                if (driverId == null)
+                Guid driverId;
+
+                if (existingDriver == null)
                 {
-                    _logger.LogError("DriverRepo.CreateDriver returned null for user {UserId}", user.Id);
-                    return ServiceResponse<bool>.FailResponse(HttpStatusCode.BadRequest, "Failed to create driver");
+                    var newDriverId = await _driverRepo.CreateDriver(request, user.Id);
+
+                    if (newDriverId == null)
+                        return ServiceResponse<bool>.FailResponse(
+                            HttpStatusCode.BadRequest,
+                            "Failed to create driver"
+                        );
+
+                    driverId = newDriverId.Value;
+                }
+                else
+                {
+                    if (existingDriver.IsDeleted)
+                    {
+                        existingDriver.IsDeleted = false;
+                        existingDriver.DeletedAt = null;
+                        await _driverRepo.UpdateDriver(existingDriver, existingDriver.DriverId);
+                    }
+
+                    driverId = existingDriver.DriverId;
                 }
 
-                // Try to create or attach a car. If this fails we rollback the created driver to keep DB consistent.
-                var car = await _carService.CreateOrFindCarWithDriver(request.LicensePlate, driverId.Value, request);
+                var car = await _carService.CreateOrFindCarWithDriver(request.LicensePlate, driverId, request);
                 if (car == null)
                 {
-                    _logger.LogError("CreateOrFindCarWithDriver failed for reg {Reg} and driver {DriverId}", request.LicensePlate, driverId.Value);
+                    _logger.LogError("CreateOrFindCarWithDriver failed for reg {Reg} and driver {DriverId}", request.LicensePlate, driverId);
 
-                    // attempt rollback so we don't leave a half-created driver
                     try
                     {
-                        var deleteResult = await _driverRepo.DeleteDriver(driverId.Value);
+                        var deleteResult = await _driverRepo.DeleteDriver(driverId);
                         if (!deleteResult)
-                            _logger.LogWarning("Rollback: failed to delete driver {DriverId} after car creation failure", driverId.Value);
+                            _logger.LogWarning("Rollback: failed to delete driver {DriverId} after car creation failure", driverId);
                         else
-                            _logger.LogInformation("Rollback: deleted driver {DriverId} after car creation failure", driverId.Value);
+                            _logger.LogInformation("Rollback: deleted driver {DriverId} after car creation failure", driverId);
                     }
                     catch (Exception exRollback)
                     {
-                        _logger.LogError(exRollback, "Rollback: exception while deleting driver {DriverId}", driverId.Value);
+                        _logger.LogError(exRollback, "Rollback: exception while deleting driver {DriverId}", driverId);
                     }
 
                     return ServiceResponse<bool>.FailResponse(
@@ -115,7 +133,6 @@ namespace PegasusBackend.Services.Implementations
                     );
                 }
 
-                // Update roles and check results
                 var removeResult = await _userManager.RemoveFromRoleAsync(user, UserRoles.User.ToString());
                 if (!removeResult.Succeeded)
                     _logger.LogWarning("Failed to remove 'User' role from {Email}: {Errors}", user.Email, string.Join(", ", removeResult.Errors.Select(e => e.Description)));
@@ -124,7 +141,6 @@ namespace PegasusBackend.Services.Implementations
                 if (!addResult.Succeeded)
                 {
                     _logger.LogWarning("Failed to add 'Driver' role to {Email}: {Errors}", user.Email, string.Join(", ", addResult.Errors.Select(e => e.Description)));
-                    // Not rolling back driver here since car exists; decide business policy if you want rollback on role failure.
                 }
 
                 return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true);
@@ -135,7 +151,8 @@ namespace PegasusBackend.Services.Implementations
                 return ServiceResponse<bool>.FailResponse(HttpStatusCode.InternalServerError, "Failed to create driver");
             }
         }
-        public async Task<ServiceResponse<UpdateDriverResponseDto>> UpdateDriverAsync(Guid driverId, UpdateRequestDriverDto updatedDriver, HttpContext httpContext)
+
+        public async Task<ServiceResponse<UpdateDriverResponseDto>> UpdateDriverAsync(Guid driverId, Drivers updatedDriver, HttpContext httpContext)
         {
             try
             {

@@ -45,6 +45,23 @@ namespace PegasusBackend.Repositorys.Implementations
                 throw; 
             }
         }
+
+        public async Task<Drivers?> GetDriverByEmailAsync(string email)
+        {
+            try
+            {
+                var driver = await context.Drivers.Include(u => u.User)
+                    .FirstOrDefaultAsync(d => d.User.Email == email);
+
+                return driver;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error finding driver by email {email}", email);
+                return null;
+            }
+        }
+
         public async Task<Drivers?> GetDriverEntityByIdAsync(Guid driverId)
         {
             return await context.Drivers
@@ -132,7 +149,7 @@ namespace PegasusBackend.Repositorys.Implementations
                 return null;       
             }
         }
-        public async Task<bool> UpdateDriver(UpdateRequestDriverDto request, Guid driverId)
+        public async Task<bool> UpdateDriver(Drivers request, Guid driverId)
         {
             try
             {
@@ -163,6 +180,7 @@ namespace PegasusBackend.Repositorys.Implementations
             {
                 var driver = await context.Drivers
                     .Include(c => c.Car)
+                    .Include(u => u.User)
                     .FirstOrDefaultAsync(d => d.DriverId == driverId);
 
                 if (driver == null)
@@ -181,6 +199,8 @@ namespace PegasusBackend.Repositorys.Implementations
 
                 driver.IsDeleted = true;
                 driver.DeletedAt = DateTime.UtcNow;
+                driver.User.IsDeleted = true;
+                driver.User.DeletedAt = DateTime.UtcNow;
 
                 if (driver.Car != null)
                 {

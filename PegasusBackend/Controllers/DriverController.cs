@@ -25,7 +25,7 @@ namespace PegasusBackend.Controllers
     {
      
         [HttpPut("UpdateDriver/{id}")]
-        public async Task<ActionResult<UpdateDriverResponseDto>> UpdateDriver(Guid id, UpdateRequestDriverDto request) =>
+        public async Task<ActionResult<UpdateDriverResponseDto>> UpdateDriver(Guid id, Drivers request) =>
             Generate.ActionResult(await driverService.UpdateDriverAsync(id, request, HttpContext));
 
         [HttpGet("GetMyBookings")]

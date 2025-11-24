@@ -13,7 +13,7 @@ namespace PegasusBackend.Services.Interfaces
     {
         // This should also be for Admin!
         Task<ServiceResponse<bool>> CreateDriverAsync(CreateRequestDriverDto driver);
-        Task<ServiceResponse<UpdateDriverResponseDto>> UpdateDriverAsync(Guid driverId, UpdateRequestDriverDto updatedDriver, HttpContext httpContext);
+        Task<ServiceResponse<UpdateDriverResponseDto>> UpdateDriverAsync(Guid driverId, Drivers updatedDriver, HttpContext httpContext);
 
         //// Booking features
         Task<ServiceResponse<PaginatedResult<BookingResponseDto>>> GetDriverBookingsAsync([FromBody] BookingSearchRequestDto query);

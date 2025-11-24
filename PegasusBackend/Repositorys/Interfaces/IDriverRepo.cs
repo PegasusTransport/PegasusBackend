@@ -10,8 +10,9 @@ namespace PegasusBackend.Repositorys.Interfaces
         Task<Drivers?> GetDriverEntityByIdAsync(Guid driverId);
         Task<DriverResponseDto?> GetDriverByUserIdAsync(string userId);
         Task<Guid?> CreateDriver(CreateRequestDriverDto request, string userId);
-        Task<bool> UpdateDriver(UpdateRequestDriverDto request, Guid driverId);
+        Task<bool> UpdateDriver(Drivers request, Guid driverId);
         Task<bool> DeleteDriver(Guid driverId);
+        Task<Drivers?> GetDriverByEmailAsync(string email);
 
 
     }

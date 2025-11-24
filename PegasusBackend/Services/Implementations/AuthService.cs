@@ -103,7 +103,13 @@ namespace PegasusBackend.Services.Implementations
             try
             {
                 var user = await userManager.FindByEmailAsync(verifyTwoFaDto.Email);
+                if (user == null)
+                    return ServiceResponse<bool?>.FailResponse(
+                        HttpStatusCode.NotFound,
+                        "No user with this email");
+
                 var isValidOtp = await userManager.VerifyTwoFactorTokenAsync(user!, TokenOptions.DefaultEmailProvider, verifyTwoFaDto.VerificationCode);
+
 
                 if (!isValidOtp)
                 {

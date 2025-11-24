@@ -77,7 +77,7 @@ namespace PegasusBackend
             app.UseCors("AllowFrontend");
             app.UseAuthentication();
             app.UseAuthorization();
-            //app.UseRateLimiter();
+            app.UseRateLimiter();
             app.MapControllers();
 
             app.Run();

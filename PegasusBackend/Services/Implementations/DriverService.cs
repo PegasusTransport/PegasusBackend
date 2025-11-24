@@ -75,12 +75,6 @@ namespace PegasusBackend.Services.Implementations
                         "No user with that email"
                     );
 
-                if (user.IsDeleted)
-                    return ServiceResponse<bool>.FailResponse(
-                        HttpStatusCode.BadRequest,
-                        "Cannot create driver for deleted user"
-                    );
-
                 var existingDriver = await _driverRepo.GetDriverByEmailAsync(request.Email);
 
                 Guid driverId;

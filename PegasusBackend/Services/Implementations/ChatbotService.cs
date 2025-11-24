@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
+using Org.BouncyCastle.Utilities.Collections;
+using PegasusBackend.DTOs.ChatbotDTOs;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Implementations;
 using PegasusBackend.Repositorys.Interfaces;
@@ -73,6 +75,66 @@ namespace PegasusBackend.Services.Implementations
             }
 
         }
+        public async Task<ServiceResponse<bool>> GetAiResponseWithHistory(ChatbotRequest request)
+        {
+            try
+            {
+                var casheKey = $"ChatSession_{request.SessionId}";
+
+                if (!_cache.TryGetValue(casheKey, out ChatSession? chatSession))
+                {
+                    chatSession = new ChatSession();
+                }
+
+                chatSession!.Messages.Add(new ChatMessageDto
+                {
+                    Role = "user",
+                    Content = request.Input,
+                    Timestamp = DateTime.UtcNow
+                });
+
+                var messages = new List<ChatMessage>
+                {
+                    new SystemChatMessage(await ContextForChatbotAsync())
+                };
+
+                foreach (var msg in chatSession.Messages)
+                {
+                    if (msg.Role == "user")
+                        messages.Add(new UserChatMessage(msg.Content));
+                    else if (msg.Role == "assistant")
+                        messages.Add(new AssistantChatMessage(msg.Content));
+                }
+
+                var chatClient = _azureClient.GetChatClient(_deploymentName);
+                var chatCompletion = await chatClient.CompleteChatAsync(messages);
+                string response = chatCompletion.Value.Content[0].Text;
+
+
+                chatSession.Messages.Add(new ChatMessageDto
+                {
+                    Role = "assistant",
+                    Content = response,
+                    Timestamp = DateTime.UtcNow
+                });
+                chatSession.LastActivity = DateTime.UtcNow;
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(30))
+                    .SetSize(1);
+
+                _cache.Set(casheKey, chatSession, cacheOptions);
+
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK, true, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{ex.Message} failed");
+
+                return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.InternalServerError, "Something went wrong");
+            }
+        }
         private async Task<string> ContextForChatbotAsync()
         {
             var cacheKey = "prices";
@@ -90,7 +152,7 @@ namespace PegasusBackend.Services.Implementations
                 }
 
                 var cacheSetting = new MemoryCacheEntryOptions()
-                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(20))
+                    .SetAbsoluteExpiration(TimeSpan.FromDays(1))
                     .SetSlidingExpiration(TimeSpan.FromMinutes(5))
                     .SetSize(1);
 

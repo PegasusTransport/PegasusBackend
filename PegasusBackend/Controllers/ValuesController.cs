@@ -2,8 +2,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using PegasusBackend.DTOs.ChatbotDTOs;
+using PegasusBackend.Helpers;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
+using PegasusBackend.Services.Implementations;
 using PegasusBackend.Services.Interfaces;
 using System.Net;
 
@@ -11,7 +14,7 @@ namespace PegasusBackend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ValuesController(UserManager<User> _userManager, ICarService carService) : ControllerBase
+    public class ValuesController(UserManager<User> _userManager, ICarService carService, IChatbotService chatbotService) : ControllerBase
     {
         [HttpGet("test")]
         public ActionResult Test()
@@ -58,5 +61,9 @@ namespace PegasusBackend.Controllers
             }
             return BadRequest(result);
         }
+        [HttpPost("ChatWithHistory")]
+        public async Task<ActionResult<bool>> ChatWithHistory(
+            [FromBody] ChatbotRequest request) =>
+            Generate.ActionResult(await chatbotService.GetAiResponseWithHistory(request));
     }
 }

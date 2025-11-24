@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
+using Org.BouncyCastle.Utilities.Collections;
+using PegasusBackend.DTOs.ChatbotDTOs;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Implementations;
 using PegasusBackend.Repositorys.Interfaces;
@@ -73,6 +75,66 @@ namespace PegasusBackend.Services.Implementations
             }
 
         }
+        public async Task<ServiceResponse<bool>> GetAiResponseWithHistory(ChatbotRequest request)
+        {
+            try
+            {
+                var casheKey = $"ChatSession_{request.SessionId}";
+
+                if (!_cache.TryGetValue(casheKey, out ChatSession? chatSession))
+                {
+                    chatSession = new ChatSession();
+                }
+
+                chatSession!.Messages.Add(new ChatMessageDto
+                {
+                    Role = "user",
+                    Content = request.Input,
+                    Timestamp = DateTime.UtcNow
+                });
+
+                var messages = new List<ChatMessage>
+                {
+                    new SystemChatMessage(await ContextForChatbotAsync())
+                };
+
+                foreach (var msg in chatSession.Messages)
+                {
+                    if (msg.Role == "user")
+                        messages.Add(new UserChatMessage(msg.Content));
+                    else if (msg.Role == "assistant")
+                        messages.Add(new AssistantChatMessage(msg.Content));
+                }
+
+                var chatClient = _azureClient.GetChatClient(_deploymentName);
+                var chatCompletion = await chatClient.CompleteChatAsync(messages);
+                string response = chatCompletion.Value.Content[0].Text;
+
+
+                chatSession.Messages.Add(new ChatMessageDto
+                {
+                    Role = "assistant",
+                    Content = response,
+                    Timestamp = DateTime.UtcNow
+                });
+                chatSession.LastActivity = DateTime.UtcNow;
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(30))
+                    .SetSize(1);
+
+                _cache.Set(casheKey, chatSession, cacheOptions);
+
+                return ServiceResponse<bool>.SuccessResponse(
+                    HttpStatusCode.OK, true, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"{ex.Message} failed");
+
+                return ServiceResponse<bool>.FailResponse(
+                        HttpStatusCode.InternalServerError, "Something went wrong");
+            }
+        }
         private async Task<string> ContextForChatbotAsync()
         {
             var cacheKey = "prices";
@@ -90,7 +152,7 @@ namespace PegasusBackend.Services.Implementations
                 }
 
                 var cacheSetting = new MemoryCacheEntryOptions()
-                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(20))
+                    .SetAbsoluteExpiration(TimeSpan.FromDays(1))
                     .SetSlidingExpiration(TimeSpan.FromMinutes(5))
                     .SetSize(1);
 
@@ -108,7 +170,7 @@ namespace PegasusBackend.Services.Implementations
         {
 
             return "You are a professional customer service representative for Pegasus — a reliable and service-minded taxi company operating in Stockholm, Uppsala, and Arlanda. Your job is to assist customers with bookings, questions, and information in a friendly, efficient, and professional manner.\r\n\r\nAlways reply in the same language that the customer uses.\r\n\r\nYour main responsibilities:\r\n\r\n- Help customers book taxi rides quickly and easily  \r\n- Provide accurate information about prices, travel times, and availability  \r\n- Handle inquiries about our services (standard trips, airport transfers, medical transport, etc.)  \r\n- Resolve any issues or complaints with empathy and professionalism  \r\n- Provide directions and local information when needed  \r\n\r\nImportant guidelines:\r\n\r\n- Always be friendly, helpful, and patient  \r\n- Always confirm key details such as pickup address, destination, and time  \r\n- Inform customers about the estimated arrival time of the vehicle  \r\n- Offer alternative solutions if the requested time is not available  \r\n- Always follow up with a booking number and contact information  \r\n- In case of problems: listen actively, show understanding, and offer concrete solutions  \r\n\r\nEssential practical information to keep in mind:\r\n\r\n- Current pricing and fare rates  \r\n- Operating hours and availability  \r\n- Special services (wheelchair-accessible vehicles, child seats, etc.)  \r\n- Payment options  \r\n- Support contact channels  \r\n\r\nRemember: You represent the Pegasus brand in every interaction. The goal is for every customer to feel safe, welcomed, and satisfied with our service.\r\n";
-                   
+
         }
     }
 }

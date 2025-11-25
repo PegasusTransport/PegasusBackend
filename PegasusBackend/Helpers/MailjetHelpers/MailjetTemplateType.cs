@@ -8,7 +8,8 @@
         PendingConfirmation, //When booking wihtout acc
         BookingConfirmation,//when booking is confirmed
         Receipt, //reciept
-        DriverNewBooking // notification to all drivers when a booking is confirmed
+        DriverNewBooking, // notification to all drivers when a booking is confirmed
+        AssignedDriver // when new driver accepts the booking or admin assigns new driver
         // need to implement customerWelcome, and Driver Welcome for registrering!
     }
 }

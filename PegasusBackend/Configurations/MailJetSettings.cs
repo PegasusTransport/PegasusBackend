@@ -19,6 +19,7 @@
         public long TwoFA { get; set; }
         public long Receipt { get; set; }
         public long DriverNewBooking { get; set; }
+        public long AssignedDriver { get; set; }
     }
 
     public sealed class MailjetLinks

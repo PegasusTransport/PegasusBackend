@@ -66,6 +66,7 @@ namespace PegasusBackend.Repositorys.Implementations
         {
             return await context.Drivers
                 .Include(d => d.Bookings)
+                .Include(d => d.User)
                 .FirstOrDefaultAsync(d => d.DriverId == driverId);
         }
         public async Task<DriverResponseDto?> GetDriverByUserIdAsync(string userId)

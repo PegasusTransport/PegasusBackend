@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Mailjet.Client.Resources;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PegasusBackend.Configurations;
@@ -6,6 +7,7 @@ using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.DriverDTO;
 using PegasusBackend.DTOs.MailjetDTOs;
 using PegasusBackend.Helpers;
+using PegasusBackend.Helpers.MailjetHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
@@ -254,6 +256,32 @@ namespace PegasusBackend.Services.Implementations
                 {
                     return ServiceResponse<BookingResponseDto>.FailResponse(HttpStatusCode.Conflict, "Booking was taken by someone else.");
                 }
+
+
+                var recipientEmail = booking.User?.Email ?? booking.GuestEmail!;
+
+                await _mailjetEmailService.SendEmailAsync(
+                    recipientEmail,
+                    MailjetTemplateType.AssignedDriver,
+                    new AssignedDriverEmailDto
+                    {
+                        FirstName = booking.User?.FirstName ?? booking.GuestFirstName,
+                        PickupAddress = booking.PickUpAdress,
+                        Stops =
+                                $"{(booking.FirstStopAddress ?? "No first stop")}"
+                                + (booking.SecondStopAddress != null
+                                ? $" and {booking.SecondStopAddress}"
+                                : " and no second stop"),
+
+                        Destination = booking.DropOffAdress,
+                        DriverName = $"{driver.FirstName} {driver.LastName}",
+                        DriverNumber = driverEntity.User.PhoneNumber,
+                        LicensePlate = driver.CarLicensePlate,
+                        PickupTime = booking.PickUpDateTime.ToString("yyyy-MM-dd HH:mm"),
+                        TotalPrice = Math.Round(booking.Price, 2)
+                    },
+                    MailjetSubjects.AssigndDriver
+                );
 
                 var mappedBooking = _bookingMapper.MapToResponseDTO(booking);
                 _logger.LogInformation("AcceptBookingAsync: Driver {DriverId} accepted booking {BookingId}.", driver.DriverId, bookingId);

@@ -6,6 +6,7 @@ using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.MailjetDTOs;
 using PegasusBackend.Helpers;
 using PegasusBackend.Helpers.BookingHelpers;
+using PegasusBackend.Helpers.MailjetHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
@@ -156,6 +157,8 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 await _bookingRepo.UpdateBookingAsync(booking);
                 await NotifyDriversAboutNewBookingAsync(booking);
                 var response = _bookingMapper.MapToResponseDTO(booking);
+
+                await SendBookingEmailFromBookingAsync(booking);
 
                 return ServiceResponse<BookingResponseDto>.SuccessResponse(HttpStatusCode.OK, response, "Booking confirmed successfully.");
             }
@@ -351,9 +354,30 @@ namespace PegasusBackend.Services.Implementations.BookingServices
             booking.Flightnumber = dto.Flightnumber;
         }
 
+        private async Task SendBookingEmailFromBookingAsync(Bookings booking)
+        {
+            var stops = BookingMailHelper.FormatStops(booking.FirstStopAddress, booking.SecondStopAddress);
+            var time = BookingMailHelper.FormatDateTime(booking.PickUpDateTime);
+
+            await _mailjetEmailService.SendEmailAsync(
+                booking.GuestEmail!,
+                MailjetTemplateType.BookingConfirmation,
+                new BookingConfirmationRequestDto
+                {
+                    Firstname = booking.User?.FirstName ?? booking.GuestFirstName!,
+                    PickupAddress = booking.PickUpAdress,
+                    Stops = stops,
+                    Destination = booking.DropOffAdress,
+                    PickupTime = time,
+                    TotalPrice = booking.Price
+                },
+                MailjetSubjects.BookingConfirmation
+            );
+        }
+
         private async Task SendBookingEmailAsync(Bookings booking, CreateBookingDto dto, bool isGuest)
         {
-            var stops = BookingMailHelper.FormatStops(dto);
+            var stops = BookingMailHelper.FormatStops(dto.FirstStopAddress, dto.SecondStopAddress);
             var time = BookingMailHelper.FormatDateTime(dto.PickUpDateTime);
 
             var template = isGuest

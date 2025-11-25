@@ -258,12 +258,14 @@ namespace PegasusBackend.Services.Implementations
                 }
 
 
+                var recipientEmail = booking.User?.Email ?? booking.GuestEmail!;
+
                 await _mailjetEmailService.SendEmailAsync(
-                    booking.User.Email,
+                    recipientEmail,
                     MailjetTemplateType.AssignedDriver,
                     new AssignedDriverEmailDto
                     {
-                        FirstName = booking.User.FirstName,
+                        FirstName = booking.User?.FirstName ?? booking.GuestFirstName,
                         PickupAddress = booking.PickUpAdress,
                         Stops =
                                 $"{(booking.FirstStopAddress ?? "No first stop")}"

@@ -364,7 +364,7 @@ namespace PegasusBackend.Services.Implementations.BookingServices
                 MailjetTemplateType.BookingConfirmation,
                 new BookingConfirmationRequestDto
                 {
-                    Firstname = booking.User.FirstName,
+                    Firstname = booking.User?.FirstName ?? booking.GuestFirstName!,
                     PickupAddress = booking.PickUpAdress,
                     Stops = stops,
                     Destination = booking.DropOffAdress,

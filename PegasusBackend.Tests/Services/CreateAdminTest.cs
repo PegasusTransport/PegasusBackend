@@ -27,6 +27,7 @@ namespace PegasusBackend.Tests.Services
         {
             //arrange
             var userStore = new Mock<IUserStore<User>>().Object;
+            var mailjetEmailServiceMock = new Mock<IMailjetEmailService>();
             var userManagerMock = new Mock<UserManager<User>>(
                 userStore, null!, null!, null!, null!, null!, null!, null!, null!
                 );
@@ -71,7 +72,8 @@ namespace PegasusBackend.Tests.Services
                 validationServiceMock.Object,
                 userServiceMock.Object,
                 httpContextAccessorMock.Object,
-                userManagerMock.Object
+                userManagerMock.Object,
+                mailjetEmailServiceMock.Object
             );
 
             //act

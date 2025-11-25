@@ -1,22 +1,25 @@
 ﻿using PegasusBackend.DTOs.BookingDTOs;
+using PegasusBackend.Models;
 using System.Globalization;
 
 namespace PegasusBackend.Helpers.BookingHelpers
 {
     public static class BookingMailHelper
     {
-        public static string FormatStops(CreateBookingDto dto)
+        public static string FormatStops(string? firstStop, string? secondStop)
         {
             var stops = new List<string>();
 
-            if (!string.IsNullOrWhiteSpace(dto.FirstStopAddress))
-                stops.Add(dto.FirstStopAddress);
+            if (!string.IsNullOrWhiteSpace(firstStop))
+                stops.Add(firstStop);
 
-            if (!string.IsNullOrWhiteSpace(dto.SecondStopAddress))
-                stops.Add(dto.SecondStopAddress);
+            if (!string.IsNullOrWhiteSpace(secondStop))
+                stops.Add(secondStop);
 
             return stops.Count > 0 ? string.Join(" → ", stops) : "No stops given!";
         }
+
+
 
         public static string FormatDateTime(DateTime dateTime)
         {

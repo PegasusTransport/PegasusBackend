@@ -9,7 +9,7 @@
         public const string BookingConfirmation = "✅ Your taxi booking is confirmed";
         public const string Receipt = "Thank you for your trip with Pegasus Transport 🚖";
         public const string DriverNewBooking = "🚖 New Trip Available - Pegasus Transport";
-        //public const string CustomerWelcome = "👋 Välkommen som kund hos Pegasus Transport";
+        public const string AssigndDriver = "🚗 Your Driver Has Been Assigned";
         //public const string DriverWelcome = "🚗 Välkommen till Pegasus Transport 🚗";
     }
 }

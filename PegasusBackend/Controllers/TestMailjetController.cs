@@ -113,6 +113,38 @@ namespace PegasusBackend.Controllers
                 },
                 MailjetSubjects.TwoFA));
 
+        [HttpGet("testAssignedDriverMail")]
+        public async Task<ActionResult<bool>> TestAssignedDriverMail(
+        string yourEmail,
+        string firstName,
+        string pickupAddress,
+        string? stops,
+        string destination,
+        string pickupTime,
+        string driverName,
+        string driverNumber,
+        string licensePlate,
+        decimal totalPrice)
+            => Generate.ActionResult(await _mailjet.SendEmailAsync(
+                yourEmail,
+                MailjetTemplateType.AssignedDriver,
+                new AssignedDriverEmailDto
+                {
+                    FirstName = firstName,
+                    PickupAddress = pickupAddress,
+                    Stops = string.IsNullOrWhiteSpace(stops)
+                        ? "No stops provided"
+                        : stops,
+
+                    Destination = destination,
+                    PickupTime = pickupTime, // redan formaterad string
+                    DriverName = driverName,
+                    DriverNumber = driverNumber,
+                    LicensePlate = licensePlate,
+                    TotalPrice = totalPrice
+                },
+                MailjetSubjects.AssigndDriver
+            ));
 
 
     }

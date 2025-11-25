@@ -4,13 +4,16 @@ using Microsoft.Extensions.Options;
 using PegasusBackend.Configurations;
 using PegasusBackend.DTOs.BookingDTOs;
 using PegasusBackend.DTOs.DriverDTO;
+using PegasusBackend.DTOs.MailjetDTOs;
 using PegasusBackend.DTOs.TaxiDTOs;
 using PegasusBackend.Helpers;
 using PegasusBackend.Helpers.BookingHelpers;
+using PegasusBackend.Helpers.MailjetHelpers;
 using PegasusBackend.Models;
 using PegasusBackend.Models.Roles;
 using PegasusBackend.Repositorys.Interfaces;
 using PegasusBackend.Responses;
+using PegasusBackend.Services.Implementations;
 using PegasusBackend.Services.Implementations.Base;
 using PegasusBackend.Services.Interfaces;
 using PegasusBackend.Services.Interfaces.BookingInterfaces;
@@ -25,6 +28,7 @@ public class AdminService : BaseBookingService, IAdminService
     private readonly IBookingService _bookingService;
     private readonly IBookingValidationService _validationService;
     private readonly UserManager<User> _userManager;
+    private readonly IMailjetEmailService _mailjetEmailService;
 
     public AdminService(
         IAdminRepo adminRepo,
@@ -41,7 +45,8 @@ public class AdminService : BaseBookingService, IAdminService
         IBookingValidationService validationService,
         IUserService userService,
         IHttpContextAccessor httpContextAccessor,
-        UserManager<User> userManager)
+        UserManager<User> userManager,
+        IMailjetEmailService mailjetEmailService)
         : base(bookingRepo, bookingMapperService, userService, httpContextAccessor, paginationOptions, mapService, bookingRules, logger, driverRepo)
     {
         _adminRepo = adminRepo;
@@ -50,6 +55,7 @@ public class AdminService : BaseBookingService, IAdminService
         _bookingService = bookingService;
         _validationService = validationService;
         _userManager = userManager;
+        _mailjetEmailService = mailjetEmailService;
     }
     #endregion
 
@@ -208,7 +214,28 @@ public class AdminService : BaseBookingService, IAdminService
                 return ServiceResponse<bool>.FailResponse(HttpStatusCode.Conflict, "Someone else assigned this booking first.");
             }
 
-            // --------------------TODO: Send email to customer and driver -----------------------------------///
+            await _mailjetEmailService.SendEmailAsync(
+                booking.User.Email,
+                MailjetTemplateType.AssignedDriver,
+                new AssignedDriverEmailDto
+                {
+                    FirstName = booking.User.FirstName,
+                    PickupAddress = booking.PickUpAdress,
+                    Stops =
+                            $"{(booking.FirstStopAddress ?? "No first stop")}"
+                            + (booking.SecondStopAddress != null
+                            ? $" and {booking.SecondStopAddress}"
+                            : " and no second stop"),
+
+                    Destination = booking.DropOffAdress,
+                    DriverName = $"{booking.Driver!.User.FirstName} {booking.Driver.User.LastName}",
+                    DriverNumber = booking.Driver.User.PhoneNumber!,
+                    LicensePlate = booking.Driver.Car.LicensePlate,
+                    PickupTime = booking.PickUpDateTime.ToString("yyyy-MM-dd HH:mm"),
+                    TotalPrice = Math.Round(booking.Price, 2)
+                },
+                MailjetSubjects.AssigndDriver
+            );
 
             _logger.LogInformation("AssignDriverAsync: Driver {DriverId} assigned to booking {BookingId}.", driverId, bookingId);
             return ServiceResponse<bool>.SuccessResponse(HttpStatusCode.OK, true, "Driver is assigned successfully");

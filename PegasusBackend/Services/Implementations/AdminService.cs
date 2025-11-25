@@ -214,6 +214,7 @@ public class AdminService : BaseBookingService, IAdminService
                 return ServiceResponse<bool>.FailResponse(HttpStatusCode.Conflict, "Someone else assigned this booking first.");
             }
 
+            booking = await _bookingRepo.GetBookingByIdAsync(bookingId);
             var recipientEmail = booking.User?.Email ?? booking.GuestEmail!;
 
             await _mailjetEmailService.SendEmailAsync(
@@ -232,7 +233,7 @@ public class AdminService : BaseBookingService, IAdminService
                     Destination = booking.DropOffAdress,
                     DriverName = $"{booking.Driver!.User.FirstName} {booking.Driver.User.LastName}",
                     DriverNumber = booking.Driver.User.PhoneNumber!,
-                    LicensePlate = booking.Driver.Car.LicensePlate,
+                    LicensePlate = booking.Driver.Car.LicensePlate ?? "N/A",
                     PickupTime = booking.PickUpDateTime.ToString("yyyy-MM-dd HH:mm"),
                     TotalPrice = Math.Round(booking.Price, 2)
                 },

@@ -257,7 +257,7 @@ namespace PegasusBackend.Services.Implementations
                     return ServiceResponse<BookingResponseDto>.FailResponse(HttpStatusCode.Conflict, "Booking was taken by someone else.");
                 }
 
-
+                booking = await _bookingRepo.GetBookingByIdAsync(bookingId);
                 var recipientEmail = booking.User?.Email ?? booking.GuestEmail!;
 
                 await _mailjetEmailService.SendEmailAsync(
@@ -276,7 +276,7 @@ namespace PegasusBackend.Services.Implementations
                         Destination = booking.DropOffAdress,
                         DriverName = $"{driver.FirstName} {driver.LastName}",
                         DriverNumber = driverEntity.User.PhoneNumber,
-                        LicensePlate = driver.CarLicensePlate,
+                        LicensePlate = driver.CarLicensePlate ?? "N/A",
                         PickupTime = booking.PickUpDateTime.ToString("yyyy-MM-dd HH:mm"),
                         TotalPrice = Math.Round(booking.Price, 2)
                     },
